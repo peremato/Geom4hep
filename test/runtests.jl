@@ -1,5 +1,9 @@
 using Test
 using Geom4hep, LinearAlgebra
 
-include("testBox.jl")
+
+@testset "Geom4hep tests" verbose = true begin 
+    include("testTransformation3D.jl")
+    #include("testBox.jl")
+end
 

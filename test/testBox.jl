@@ -255,7 +255,7 @@
 
 end
 
-@testset "Box_VECGEOM_431" begin
+@testset "Box_VG_431" begin
     vx = Vector3(1., 0., 0.)
     vy = Vector3(0., 1., 0.)
     vz = Vector3(0., 0., 1.)

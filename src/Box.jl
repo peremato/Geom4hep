@@ -52,3 +52,8 @@ end
 function safetyToIn(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     maximum(abs.(point) - box.fDimensions)
 end
+
+function toMesh(box::Box{T}) where T<:AbstractFloat
+    orig, dest = extent(box)
+    GeometryBasics.mesh(Rect3{T}(orig, dest-orig))
+end
