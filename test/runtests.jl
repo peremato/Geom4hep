@@ -4,6 +4,6 @@ using Geom4hep, LinearAlgebra
 
 @testset "Geom4hep tests" verbose = true begin 
     include("testTransformation3D.jl")
-    #include("testBox.jl")
+    include("testBox.jl")
 end
 
