@@ -10,14 +10,14 @@ using Rotations
     @test transform(t0, point) == point
     @test t0 * point == point
 
-    t1 = Transformation3D{T}(2,2,2)
+    t1 = Transformation3D{T}(-2,-2,-2)
     @test !isone(t1)
     @test hastranslation(t1)
     @test !hasrotation(t1) 
     @test t1 * point == Point3{T}(1, 3, 4)
 
 
-    t2 = Transformation3D{T}(-2, -2, -2)
+    t2 = Transformation3D{T}(2, 2, 2)
     @test t2 * (t1 * point) == point
     @test (t2 * t1) * point == point
 
@@ -28,5 +28,7 @@ using Rotations
     @test t3 * point ≈ Point3{T}(1,-1, 2)
 
     t4 = Transformation3D{T}(0, 0, 1., RotXYZ{T}(0,0,π/4))
-    @test t4 * Point3{T}(1,0,0) ≈ Point3{T}(√2/2, √2/2, 1)
+    @test t4 * Point3{T}(1,0,0) ≈ Point3{T}(√2/2, √2/2, -1)
+    
+    @test (t4 * Point3{T}(1,2,3)) * t4 ≈ Point3{T}(1,2,3)
 end

@@ -1,17 +1,15 @@
 #---Box-------------------------------------------------------------------------
 struct Box{T<:AbstractFloat} <: AbstractShape{T}
     fDimensions::SVector{3,T} # the HALF lengths of the box
-    #dx::T
-    #dy::T
-    #dz::T
 end
-Box(x,y,z) = Box(SVector(x,y,z))
+Box(x::T,y::T,z::T) where T<:AbstractFloat = Box{T}(SVector{3,T}(x,y,z))
+Box{T}(x::Number, y::Number, z::Number) where T<:AbstractFloat = Box{T}(SVector{3,T}(x,y,z))
 Base.getindex(b::Box, s::Symbol) = b.fDimensions[coordmap[s]]
 Base.getindex(b::Box, i::Int64) = b.fDimensions[i]
 #Base.getproperty(b::Box, s::Symbol) = (s in keys(coordmap) ? getfield(b, :fDimensions)[coordmap[s]] : getfield(b,s))
 capacity(b::Box) = 8.0 * prod(b.fDimensions)
 surface(b::Box) = 8.0(b.fDimensions[1] * b.fDimensions[2] + b.fDimensions[2] * b.fDimensions[3] + b.fDimensions[1] * b.fDimensions[3])
-extent(b::Box) = (-b.fDimensions, b.fDimensions)
+extent(b::Box{T}) where T<:AbstractFloat = (Point3{T}(-b.fDimensions), Point3{T}(b.fDimensions))
 
 function normal(box::Box{T}, point::Point3{T}) where T
     safety = abs.(abs.(point) - box.fDimensions)

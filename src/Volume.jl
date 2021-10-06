@@ -4,9 +4,9 @@ abstract type AbstractMaterial{T<:AbstractFloat} end
 
 struct Material{T<:AbstractFloat} <: AbstractMaterial{T}
     label::String
+    density::T
 end
-Material(label::String) = Material{Float64}(label)
-
+Material(label::String, density::Float64) = Material{Float64}(label,density)
 
 
 #---Volume-------------------------------------------------------------------------
@@ -20,27 +20,20 @@ end
 
 #---PlacedVolume-------------------------------------------------------------------
 struct PlacedVolume{T<:AbstractFloat} <: AbstractPlacedVolume{T}
-    tranformation::Transformation3D{T}
+    transformation::Transformation3D{T}
     volume::Volume{T}
 end
 
+contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pvol.volume.shape, pvol.transformation * p) == kInside::EInside
+contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside::EInside
+distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 
-function Volume(l::String, s::Geom4hep.AbstractShape{T}, m::AbstractMaterial{T} ) where T <: AbstractFloat
-    Volume{T}(l, s, m,[])
+function Volume(label::String, shape::Geom4hep.AbstractShape{T}, material::AbstractMaterial{T}) where T<:AbstractFloat
+    Volume{T}(label, shape, material, [])
 end
-function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T <: AbstractFloat
+
+function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
     push!(volume.daughters, PlacedVolume(placement,subvol))
 end
 
-using GLMakie
-function draw(vol::Volume) 
-    scene = mesh(toMesh(vol.shape), color=:yellow, transparency=true, ambient=0.7, visible= vol.label == "world" ? false : true)
-    for daughter in vol.daughters
-        m = toMesh(daughter.volume.shape)
-        points = GeometryBasics.coordinates(m)
-        faces  = GeometryBasics.faces(m)
-        map!(c -> daughter.tranformation * c, points, points)
-        mesh!(points, faces, color=:blue, transparency=true, ambient=0.7)
-    end
-    display(scene)
-end
+
