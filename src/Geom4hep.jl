@@ -18,7 +18,7 @@ Base.:-(p1::Point3, p2::Point3) = Vector3(p1[i]-p2[i] for i = 1:3)
 project(p::Point3{T}, idx::Int64) where T<:AbstractFloat = Point3{T}([idx == i ? 0 : p[i] for i = 1:3]...)
 const kTolerance = 1e-9
 
-# enums are neded to be exported
+#= enums are neded to be exported
 macro exported_enum(name, args...)
     esc(quote
         @enum($name, $(args...))
@@ -26,7 +26,12 @@ macro exported_enum(name, args...)
         $([:(export $arg) for arg in args]...)
         end)
 end
-@exported_enum EInside kInside kSurface kOutside
+@exported_enum EInside 
+=#
+const kInside  = 0
+const kSurface = 1
+const kOutside = 2
+export kInside, kSurface, kOutside
 
 abstract type AbstractShape{T<:AbstractFloat} end
 abstract type AbstractMaterial{T<:AbstractFloat} end

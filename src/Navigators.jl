@@ -72,7 +72,7 @@ function computeStep!(state::NavigatorState, gpoint::Point3{T}, gdir::Vector3{T}
     if candidate != nothing
         step += kTolerance # to ensure that do not stay in the surface of the daughter
         push!(state.volstack, candidate)
-        state.tolocal = candidate.transformation * state.tolocal
+        @time lmul!(candidate.transformation, state.tolocal)
     end
     return step
 end

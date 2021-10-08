@@ -172,23 +172,23 @@
     @test dist ≈ 0. && norm ≈ vmz
 
     # Check Inside
-    @test inside(b1, pzero) == kInside::EInside
-    @test inside(b1, pbigz) == kOutside::EInside
-    @test inside(b1, ponxside) == kSurface::EInside
-    @test inside(b1, ponyside) == kSurface::EInside
-    @test inside(b1, ponzside) == kSurface::EInside
+    @test inside(b1, pzero) == kInside
+    @test inside(b1, pbigz) == kOutside
+    @test inside(b1, ponxside) == kSurface
+    @test inside(b1, ponyside) == kSurface
+    @test inside(b1, ponzside) == kSurface
 
-    @test inside(b2, pzero) == kInside::EInside
-    @test inside(b2, pbigz) == kOutside::EInside
-    @test inside(b2, ponxside) == kOutside::EInside
-    @test inside(b2, ponyside) == kOutside::EInside
-    @test inside(b2, ponzside) == kOutside::EInside
-    @test inside(b2, Point3(10., 0., 0.)) == kSurface::EInside
-    @test inside(b2, Point3(0., 10., 0.)) == kSurface::EInside
-    @test inside(b2, Point3(0., 0., 10.)) == kSurface::EInside
-    @test inside(b2, Point3(20., 20., 10.)) == kOutside::EInside
-    @test inside(b2, Point3(100., 10., 30.)) == kOutside::EInside
-    @test inside(b2, Point3(10., 20., 20.)) == kOutside::EInside
+    @test inside(b2, pzero) == kInside
+    @test inside(b2, pbigz) == kOutside
+    @test inside(b2, ponxside) == kOutside
+    @test inside(b2, ponyside) == kOutside
+    @test inside(b2, ponzside) == kOutside
+    @test inside(b2, Point3(10., 0., 0.)) == kSurface
+    @test inside(b2, Point3(0., 10., 0.)) == kSurface
+    @test inside(b2, Point3(0., 0., 10.)) == kSurface
+    @test inside(b2, Point3(20., 20., 10.)) == kOutside
+    @test inside(b2, Point3(100., 10., 30.)) == kOutside
+    @test inside(b2, Point3(10., 20., 20.)) == kOutside
 
     # SafetyToOut(P)
     @test safetyToOut(b1, pzero) ≈ 20

@@ -24,8 +24,8 @@ struct PlacedVolume{T<:AbstractFloat} <: AbstractPlacedVolume{T}
     volume::Volume{T}
 end
 
-contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pvol.volume.shape, pvol.transformation * p) == kInside::EInside
-contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside::EInside
+contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pvol.volume.shape, pvol.transformation * p) == kInside
+contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
 distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 
 function Volume(label::String, shape::Geom4hep.AbstractShape{T}, material::AbstractMaterial{T}) where T<:AbstractFloat
