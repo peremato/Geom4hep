@@ -4,9 +4,9 @@ export Point3, Vector3, project
 export AbstractShape, AbstractMaterial
 export Box, getindex, capacity, surface, extent, normal, distanceToOut, distanceToIn, inside, safetyToOut, safetyToIn, toMesh
 export Material
-export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv
+export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
 export Volume, placeDaughter!, draw
-export NavigatorState, computeStep!, locateGlobalPoint!, currentVolume
+export NavigatorState, computeStep!, locateGlobalPoint!, currentVolume, getClosestDaughter
 export kTolerance
 
 using StaticArrays, GeometryBasics, LinearAlgebra, Rotations

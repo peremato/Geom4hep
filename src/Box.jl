@@ -65,8 +65,9 @@ function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T}) wher
     distout = Inf
     for i in 1:3
         din  = (-copysign(box.fDimensions[i],direction[i]) - point[i])/direction[i]
-        dout = ( copysign(box.fDimensions[i],direction[i]) - point[i])/direction[i]
-        dsur = copysign(dout, direction[i])
+        tout =   copysign(box.fDimensions[i],direction[i]) - point[i]
+        dout = tout/direction[i]
+        dsur = copysign(tout, direction[i])
         if din > distance 
             distance = din 
         end
