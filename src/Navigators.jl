@@ -8,11 +8,13 @@ end
 
 mutable struct NavigatorState{T<:AbstractFloat} <: AbstractNavigatorState
     top::Volume{T}                               # Typically the unplaced world
-    volstack::Vector{AbstractPlacedVolume{T}}    # Stack of daughters 
+    currvol::Volume{T}                           # Current volume
+    #volstack::Vector{AbstractPlacedVolume{T}}    # Stack of daughters 
     #tolocal::Transformation3D{T}                 # Composed transform of daughters
+    volstack::Vector{Int64}                      # keep the indexes of all daughters up to the current one 
     tolocal::Vector{Transformation3D{T}}         # Stack of transformations
     function NavigatorState{T}(top::Volume{T}) where T<:AbstractFloat
-        x = new{T}(top, Vector{AbstractPlacedVolume{T}}(), Vector{Transformation3D{T}}()) 
+        x = new{T}(top, top, Vector{Int64}(), Vector{Transformation3D{T}}()) 
         sizehint!(x.volstack,16)
         sizehint!(x.tolocal,16)
         x
@@ -20,13 +22,14 @@ mutable struct NavigatorState{T<:AbstractFloat} <: AbstractNavigatorState
 end
 
 #NavigatorState(top::Volume{T}) where T<:AbstractFloat =  NavigatorState{T}(top, Vector{AbstractPlacedVolume{T}}(), Vector{Transformation3D{T}}())
-currentVolume(state::NavigatorState) = isempty(state.volstack) ? state.top : last(state.volstack).volume
+currentVolume(state::NavigatorState) = state.currvol
 
-function collectDaughters!(path::Vector{AbstractPlacedVolume{T}}, vol::Volume{T}, point::Point3{T}) where T<:AbstractFloat
-    for daughter in vol.daughters
+function collectDaughters!(path::Vector{Int64}, transforms::Vector{Transformation3D{T}}, vol::Volume{T}, point::Point3{T}) where T<:AbstractFloat
+    for (idx, daughter) in enumerate(vol.daughters)
         if contains(daughter, point)
-            push!(path, daughter)
-            collectDaughters!(path, daughter.volume, daughter.transformation * point)
+            push!(path, idx)
+            push!(transforms, daughter.transformation)
+            collectDaughters!(path, transforms, daughter.volume, daughter.transformation * point)
             break
         end
     end
@@ -35,13 +38,10 @@ end
 #---Locate global point and initialize state 
 function locateGlobalPoint!(state::NavigatorState{T}, gpoint::Point3{T}) where T<:AbstractFloat
     vol = state.top
-    state.volstack = Vector{AbstractPlacedVolume{T}}()
-    #state.tolocal = one(Transformation3D{T})
-    state.tolocal = Vector{Transformation3D{T}}()
+    empty!(state.volstack)
+    empty!(state.tolocal)
     if contains(vol, gpoint)
-        collectDaughters!(state.volstack, vol, gpoint)
-        #state.tolocal = prod(x -> getfield(x,:transformation), state.volstack, init = one(Transformation3D{T}))
-        state.tolocal = [pv.transformation for pv in state.volstack]
+        collectDaughters!(state.volstack, state.tolocal, vol, gpoint)
         return true
     end
     return false
@@ -65,12 +65,19 @@ function getClosestDaughter(volume::Volume{T}, point::Point3{T}, dir::Vector3{T}
     return step, candidate
 end
 
+function getDaughter(vol::Volume{T}, path::Vector{Int64}) where T<:AbstractFloat
+    for idx in path
+        vol = vol.daughters[idx].volume
+    end
+    return vol
+end
+
 #---Update the NavigatorState and get the step (distance)
 function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where T<:AbstractFloat
     #lpoint, ldir = isone(state.tolocal) ? (gpoint, gdir) : (state.tolocal * gpoint, state.tolocal * gdir)
     lpoint = transform(state.tolocal, gpoint)
     ldir = transform(state.tolocal, gdir)
-    volume = isempty(state.volstack) ? state.top : last(state.volstack).volume
+    volume = state.currvol
 
     step, idx = getClosestDaughter(volume, lpoint, ldir, step_limit)
 
@@ -82,17 +89,17 @@ function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3
             if !isempty(state.volstack) 
                 pop!(state.volstack)
                 pop!(state.tolocal)
+                state.currvol = getDaughter(state.top, state.volstack)
             end
-            #state.tolocal = prod(x -> getfield(x,:transformation), state.volstack, init = one(Transformation3D{T}))
         end
     end
     #---We hit a daughter, push it into the stack
-    @time if idx != 0
+    if idx != 0
         step += kTolerance # to ensure that do not stay in the surface of the daughter
         pvol = volume.daughters[idx]
-        push!(state.volstack, pvol)
-        push!(state.tolocal, pvol.transformation)   
-        #state.tolocal = candidate.transformation * state.tolocal
+        push!(state.volstack, idx)
+        push!(state.tolocal, pvol.transformation)
+        state.currvol = pvol.volume   
     end
     return step
 end

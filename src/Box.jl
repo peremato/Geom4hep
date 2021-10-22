@@ -2,8 +2,12 @@
 struct Box{T<:AbstractFloat} <: AbstractShape{T}
     fDimensions::SVector{3,T} # the HALF lengths of the box
 end
+
+#---Contructors-----------------------------------------------------------------
 Box(x::T,y::T,z::T) where T<:AbstractFloat = Box{T}(SVector{3,T}(x,y,z))
 Box{T}(x::Number, y::Number, z::Number) where T<:AbstractFloat = Box{T}(SVector{3,T}(x,y,z))
+
+#---Basic functions-------------------------------------------------------------
 Base.getindex(b::Box, s::Symbol) = b.fDimensions[coordmap[s]]
 Base.getindex(b::Box, i::Int64) = b.fDimensions[i]
 #Base.getproperty(b::Box, s::Symbol) = (s in keys(coordmap) ? getfield(b, :fDimensions)[coordmap[s]] : getfield(b,s))

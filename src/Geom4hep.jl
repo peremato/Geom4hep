@@ -2,7 +2,8 @@ module Geom4hep
 
 export Point3, Vector3, project
 export AbstractShape, AbstractMaterial
-export Box, getindex, capacity, surface, extent, normal, distanceToOut, distanceToIn, inside, safetyToOut, safetyToIn, toMesh
+export Box, Trd
+export getindex, capacity, surface, extent, normal, distanceToOut, distanceToIn, inside, safetyToOut, safetyToIn, toMesh
 export Material
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
 export Volume, placeDaughter!, draw
@@ -40,6 +41,7 @@ const coordmap = Dict(:dx => 1, :dy => 2, :dz => 3)
 
 include("Transformation3D.jl")
 include("Box.jl")
+include("Trd.jl")
 include("Volume.jl")
 include("Navigators.jl")
 include("Drawing.jl")
