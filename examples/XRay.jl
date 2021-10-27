@@ -14,6 +14,8 @@ function buildGeom(T::Type)
     placeDaughter!(world, Transformation3D{T}(-50,-50, 50, RotXYZ{Float64}(0, 0, π/4)), box1)
     placeDaughter!(world, Transformation3D{T}(-50, 50,-50, RotXYZ{Float64}(π/4, 0, 0)), box1)
     placeDaughter!(world, Transformation3D{T}(-50,-50,-50, RotXYZ{Float64}(0, π/4, 0)), box1)
+    trd1 = Volume("trd1", Trd{T}(30,10,30,10,20), Material("water", 10.0))
+    placeDaughter!(world, Transformation3D{T}(0,0,0), trd1)
     return world
 end
 

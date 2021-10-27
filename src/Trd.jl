@@ -138,19 +138,80 @@ end
 safetyToOut(trd::Trd{T}, point::Point3{T}) where T = safety(trd,point)
 safetyToIn(trd::Trd{T}, point::Point3{T}) where T = -safety(trd,point)
 
-function distanceToOut(Trd::Trd{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+
+function faceIntersection(trd::Trd{T}, pos::Point3{T}, dir::Vector3{T}, 
+                          forY::Bool, mirroredPoint::Bool, toInside::Bool) where T<:AbstractFloat
+    x, y, z = pos
+    dx, dy, dz = dir
+    if forY
+        alongV    = trd.y2minusy1
+        v1        = trd.y1
+        posV      = y
+        posK      = x
+        dirV      = dy
+        dirK      = dx
+        fK        = trd.fx
+        fV        = trd.fy
+        halfKplus = trd.halfx1plusx2
+    else
+        alongV    = trd.x2minusx1
+        v1        = trd.x1
+        posV      = x
+        posK      = y
+        dirV      = dx
+        dirK      = dy
+        fK        = trd.fy
+        fV        = trd.fx
+        halfKplus = trd.halfy1plusy2
+    end
+    if mirroredPoint
+        posV *= -1.
+        dirV *= -1.
+    end
+    ndotv = dirV + fV * dz
+    if toInside
+        ok = ndotv < 0.
+    else
+        ok = ndotv > 0.
+    end
+    if !ok
+        return ok, 0.0
+    end
+    alongZ = 2.0 * trd.z
+    # distance from trajectory to face
+    dist = (alongZ * (posV - v1) - alongV * (z + trd.z)) / (dz * alongV - dirV * alongZ)
+    ok &= dist > kTolerance
+    if ok
+        # need to make sure z hit falls within bounds
+        hitz = z + dist * dz
+        ok &= abs(hitz) <= trd.z
+        # need to make sure hit on varying dimension falls within bounds
+        hitk = posK + dist * dirK
+        dK   = halfKplus - fK * hitz; # calculate the width of the varying dimension at hitz
+        ok &= abs(hitk) <= dK
+        if ok && abs(dist) < kTolerance/2
+            dist = 0.
+        end
+    end
+    return ok, dist
+end
+
+
+function distanceToOut(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
 
     x, y, z = point
-    dx, dy, dz = direction
+    dx, dy, dz = dir
     distance::T = 0
 
     # hit top Z face?
+    trd.calfx 
+    trd.calfy 
     safz = trd.z - abs(z)
-    out = safz < kTolerance/2
+    out = safz < -kTolerance/2
     distx = trd.halfx1plusx2 - trd.fx * z
-    out |= (distx - abs(x)) * trd.calfx < kTolerance/2
+    out |= (distx - abs(x)) * trd.calfx < -kTolerance/2
     disty = trd.halfy1plusy2 - trd.fy * z
-    out |= (disty - abs(y)) * trd.calfy < kTolerance/2
+    out |= (disty - abs(y)) * trd.calfy < -kTolerance/2
     out && return -1.
     if dz > 0.
         distz = (trd.z - z)/abs(dz)
@@ -158,7 +219,7 @@ function distanceToOut(Trd::Trd{T}, point::Point3{T}, direction::Vector3{T}) whe
         hity = abs(y + distz * dy)
         if hitx <= trd.x2 && hity <= trd.y2
             distance = distz
-            abs(distance) < kTolerance/2 && return 0. 
+            abs(distance) < -kTolerance/2 && return 0. 
         end
     end
     # hit bottom Z face?
@@ -168,11 +229,97 @@ function distanceToOut(Trd::Trd{T}, point::Point3{T}, direction::Vector3{T}) whe
         hity = abs(y + distz * dy)
         if hitx <= trd.x1 && hity <= trd.y1
             distance = distz
-            abs(distance) < kTolerance/2 && return 0. 
+            abs(distance) < -kTolerance/2 && return 0. 
         end
     end
 
     # hitting X faces?
- 
+    okx, distx = faceIntersection(trd, point, dir, false, false, false)
+    if okx
+        distance = distx
+        return distx < kTolerance/2 ? 0.0 : distx 
+    end
+    okx, distx = faceIntersection(trd, point, dir, false, true, false)
+    if okx
+        distance = distx
+        return distx < kTolerance/2 ? 0.0 : distx 
+    end
+
+    # hitting Y faces?
+    oky, disty = faceIntersection(trd, point, dir, true, false, false)
+    if oky
+        distance = disty
+        return disty < kTolerance/2 ? 0.0 : disty 
+    end
+    oky, disty = faceIntersection(trd, point, dir, true, true, false)
+    if oky
+        distance = disty
+        return disty < kTolerance/2 ? 0.0 : disty 
+    end
+    return distance 
 end
- 
+
+function distanceToIn(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+    x, y, z = point
+    dx, dy, dz = dir
+    distance::T = Inf
+
+    inz = abs(z) < (trd.z - kTolerance/2)
+    distx = trd.halfx1plusx2 - trd.fx * z
+    inx = (distx - abs(x)) * trd.calfx > kTolerance/2
+    disty = trd.halfy1plusy2 - trd.fx * z
+    iny = (disty - abs(y)) * trd.calfy > kTolerance/2
+
+    inside = inx && iny && inz
+    if inside
+        distance = -1.
+    end
+    done = inside
+    okz = z * dz < 0
+    okz &= !inz
+    if okz
+        distz = (abs(z) - trd.z)/abs(dz)
+        hitx = abs(x + distz * dx)
+        hity = abs(y + distz * dy)
+        okzt = z > (trd.z - kTolerance/2) && hitx <= trd.x2 && hity <= trd.y2
+        okzb = z < (-trd.z + kTolerance/2) && hitx <= trd.x2 && hity <= trd.y2
+        okz &= ( okzt || okzb )
+        if okz
+            distance = distz 
+        end
+    end
+    done |= okz
+    if done
+        return abs(distance) < kTolerance/2 ? 0. : distance
+    end
+
+    # hitting X faces?
+    okx = false
+    if !inx
+        okx, distx = faceIntersection(trd, point, dir, false, false, true)
+        if okx distance = distx end
+        okx, distx = faceIntersection(trd, point, dir, false, true, true)
+        if okx distance = distx end
+    end
+    done |= okx
+    if done
+        return abs(distance) < kTolerance/2 ? 0. : distance
+    end
+    if !iny
+        oky, disty = faceIntersection(trd, point, dir, true, false, true)
+        if oky distance = disty end
+        oky, disty = faceIntersection(trd, point, dir, true, true, true)
+        if oky distance = disty end
+    end
+    return abs(distance) < kTolerance/2 ? 0. : distance
+end
+
+function toMesh(trd::Trd{T}) where T<:AbstractFloat
+    P = Point3{T}
+    Q = QuadFace{Int}
+    x1,x2, y1, y2, z = [getfield(trd,f) for f in fieldnames(Trd{T})]
+    positions = [P(-x1,-y1,-z), P( x1,-y1,-z), P(-x1, y1,-z), P( x1, y1,-z),
+                 P(-x2,-y2, z), P( x2,-y2, z), P(-x2, y2, z), P( x2, y2, z)]
+    faces = [Q(1,2,4,3),Q(1,3,7,5), Q(1,5,6,2), Q(8,6,5,7), Q(8,7,3,4), Q(8,4,2,6)] 
+    return GeometryBasics.Mesh(positions, faces)
+end
