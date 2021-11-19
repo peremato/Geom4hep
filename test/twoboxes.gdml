@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<!-- \file twoBoxes.gdml -->
+<!-- \brief geometry of two boxes without material -->
+<!-- \authors Author: Dmitry Savin -->
+<!-- \license Distributed under the Apache license 2.0 -->
+<!-- parsed with TGDMLParse -->
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+  <define>
+  </define>
+
+  <materials>
+    <material Z="13" name="Aluminium" state="solid">
+      <T unit="K" value="293.15"/>
+      <MEE unit="eV" value="166"/>
+      <D unit="g/cm3" value="2.69999857937074"/>
+      <atom unit="g/mole" value="26.9799858042305"/>
+    </material>
+    <material name="Steel" state="solid">
+      <T unit="K" value="293.15"/>
+      <MEE unit="eV" value="282.826129008861"/>
+      <D unit="g/cm3" value="8.01999578020493"/>
+    </material>    
+    <isotope N="14" Z="7" name="N14">
+       <atom unit="g/mole" value="14.0031"/>
+    </isotope>
+    <isotope N="15" Z="7" name="N15">
+      <atom unit="g/mole" value="15.0001"/>
+    </isotope>
+    <element name="Nitrogen">
+      <fraction n="0.99632" ref="N14"/>
+      <fraction n="0.00368" ref="N15"/>
+    </element>
+    <isotope N="16" Z="8" name="O16">
+      <atom unit="g/mole" value="15.9949"/>
+    </isotope>
+    <isotope N="17" Z="8" name="O17">
+      <atom unit="g/mole" value="16.9991"/>
+    </isotope>
+    <isotope N="18" Z="8" name="O18">
+      <atom unit="g/mole" value="17.9992"/>
+    </isotope>
+    <element name="Oxygen">
+      <fraction n="0.99757" ref="O16"/>
+      <fraction n="0.00038" ref="O17"/>
+      <fraction n="0.00205" ref="O18"/>
+    </element>
+    <isotope N="36" Z="18" name="Ar36">
+      <atom unit="g/mole" value="35.9675"/>
+    </isotope>
+    <isotope N="38" Z="18" name="Ar38">
+      <atom unit="g/mole" value="37.9627"/>
+    </isotope>
+    <isotope N="40" Z="18" name="Ar40">
+      <atom unit="g/mole" value="39.9624"/>
+    </isotope>
+    <element name="Argon">
+      <fraction n="0.003365" ref="Ar36"/>
+      <fraction n="0.000632" ref="Ar38"/>
+      <fraction n="0.996003" ref="Ar40"/>
+    </element>
+    <isotope N="1" Z="1" name="H1">
+      <atom unit="g/mole" value="1.00782503081372"/>
+    </isotope>
+    <isotope N="2" Z="1" name="H2">
+      <atom unit="g/mole" value="2.01410199966617"/>
+    </isotope>
+    <element name="Hidrogen">
+      <fraction n="0.999885" ref="H1"/>
+      <fraction n="0.000115" ref="H2"/>
+    </element>
+    <material name="Air" state="gas">
+      <T unit="K" value="293.15"/>
+      <MEE unit="eV" value="85.5379282211833"/>
+      <D unit="g/cm3" value="0.00121399936124299"/>
+      <fraction n="0.7494" ref="Nitrogen"/>
+      <fraction n="0.2369" ref="Oxygen"/>
+      <fraction n="0.0129" ref="Argon"/>
+      <fraction n="0.0008" ref="Hidrogen"/>
+    </material>
+  </materials>
+
+  <solids>
+    <box lunit="cm" name="detector" x="80" y="80" z="80" />
+    <box lunit="cm" name="world" x="100" y="100" z="100" />
+    <trd lunit="mm" name="trd1" x1="400" x2="250" y1="260" y2="260" z="150"/>
+  </solids>
+
+  <structure>
+    <volume name="Detector">
+      <materialref ref="Aluminium"/>
+      <solidref ref="detector"/>
+    </volume>
+    <volume name="TRD">
+      <materialref ref="Steel"/>
+      <solidref ref="trd1"/>
+    </volume>
+    <volume name="World">
+      <materialref ref="Air"/>
+      <solidref ref="world"/>
+      <!--physvol>
+        <volumeref ref="Detector"/>
+      </physvol-->
+      <physvol>
+        <volumeref ref="TRD"/>
+        <position name="trd1_pos" unit="mm" x="0" y="0" z="200"/>
+        <rotation name="trd1_rot" unit="deg" x="0" y="0" z="45"/>
+      </physvol>
+    </volume>
+  </structure>
+
+  <setup name="default" version="1.0">
+    <world ref="World"/>
+  </setup>
+
+</gdml>

@@ -13,7 +13,9 @@ Base.getindex(b::Box, i::Int64) = b.fDimensions[i]
 #Base.getproperty(b::Box, s::Symbol) = (s in keys(coordmap) ? getfield(b, :fDimensions)[coordmap[s]] : getfield(b,s))
 capacity(b::Box) = 8.0 * prod(b.fDimensions)
 surface(b::Box) = 8.0(b.fDimensions[1] * b.fDimensions[2] + b.fDimensions[2] * b.fDimensions[3] + b.fDimensions[1] * b.fDimensions[3])
-extent(b::Box{T}) where T<:AbstractFloat = (Point3{T}(-b.fDimensions), Point3{T}(b.fDimensions))
+function extent(b::Box{T}) where T<:AbstractFloat
+    (Point3{T}(-b.fDimensions), Point3{T}(b.fDimensions))
+end
 
 function normal(box::Box{T}, point::Point3{T}) where T
     safety = abs.(abs.(point) - box.fDimensions)
@@ -101,6 +103,47 @@ function safetyToIn(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
 end
 
 function toMesh(box::Box{T}) where T<:AbstractFloat
-    orig, dest = extent(box)
-    GeometryBasics.mesh(Rect3{T}(orig, dest-orig))
+    x, y, z = box.fDimensions
+    positions = Point3{T}[(-x,-y,-z), ( x,-y,-z), (-x, y,-z), ( x, y,-z),
+                          (-x,-y, z), ( x,-y, z), (-x, y, z), ( x, y, z)]
+    faces = TriangleFace{Int64}[(1,2,4), (4,3,1), (1,3,7), (7,5,1), (1,5,6), (6,2,1), 
+                                (8,6,5), (5,7,8), (8,7,3), (3,4,8), (8,4,2), (2,6,8)] 
+    return GeometryBasics.Mesh(positions, faces)
 end
+
+#-------------------------------------------------------------------------------
+#---TBox------------------------------------------------------------------------
+const box_faces = [(1,2,4), (4,3,1), (1,3,7), (7,5,1), (1,5,6), (6,2,1), 
+                   (8,6,5), (5,7,8), (8,7,3), (3,4,8), (8,4,2), (2,6,8)]
+
+struct TBox{T<:AbstractFloat} <: AbstractShape{T}
+    dx::T # the HALF lengths of the box
+    dy::T
+    dz::T
+    triangles::Vector{Triangle{T}}
+    function TBox{T}(dx::Number, dy::Number, dz::Number) where T<:AbstractFloat
+        vertices = Point3{T}[(-dx,-dy,-dz), ( dx,-dy,-dz), (-dx, dy,-dz), ( dx, dy,-dz),
+                             (-dx,-dy, dz), ( dx,-dy, dz), (-dx, dy, dz), ( dx, dy, dz)]
+        triangles = [Triangle{T}(vertices[i],vertices[j], vertices[k]) for (i,j,k) in box_faces]
+        new(dx, dy, dz, triangles)
+    end
+end
+
+function Base.show(io::IO, box::TBox{T}) where T<:AbstractFloat
+    print(io, "TBox{$T}",(box.dx, box.dy, box.dz))
+end
+
+#=
+function distanceToOut(box::TBox{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+    for triangle in box.triangles
+        dist, ok = intersect(point, direction, triangle)
+        ok && return dist
+    end
+    -1.0
+end
+=#
+
+function extent(b::TBox{T}) where T<:AbstractFloat
+    (Point3{T}(-b.dx, -b.dy, -b.dz), Point3{T}(b.x, b.y, b.z))
+end
+

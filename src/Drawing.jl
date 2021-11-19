@@ -1,12 +1,12 @@
 using GLMakie
 using Colors
 
-colors = colormap("Grays", 3)
+colors = colormap("Grays", 5)
 #---Draw a Volume---------------------------------------------------------------
 function draw(s::Scene, vol::Volume, t::Transformation3D, level::Int64)
     m = toMesh(vol.shape)
     if isone(t)
-        mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible= vol.label == "world" ? false : true)
+        mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible= vol.label == "World" ? false : true)
     else
         points = GeometryBasics.coordinates(m)
         faces  = GeometryBasics.faces(m)

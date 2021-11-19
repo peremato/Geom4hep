@@ -46,7 +46,7 @@ function surface(trd::Trd{T}) where T<:AbstractFloat
     s += 2. * 2. * trd.halfx1plusx2 * sqrt(trd.y2minusy1^2 + (2*trd.z)^2)
     s += 4. * trd.x1 * trd.y1 + 4. * trd.x2 * trd.y2
 end
-function extent(trd::Trd{T}) where T<:AbstractFloat
+function extent(trd::Trd{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
     p = Point3{T}( max(trd.x1, trd.x2), max(trd.y1, trd.y2), trd.z)
     ( -p, p )
 end
@@ -196,12 +196,11 @@ function faceIntersection(trd::Trd{T}, pos::Point3{T}, dir::Vector3{T},
     return ok, dist
 end
 
-
-function distanceToOut(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distanceToOut(trd::Trd{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
 
     x, y, z = point
     dx, dy, dz = dir
-    distance::T = 0
+    distance = 0.0
 
     # hit top Z face?
     trd.calfx 
@@ -314,12 +313,51 @@ function distanceToIn(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T
     return abs(distance) < kTolerance/2 ? 0. : distance
 end
 
+function Base.show(io::IO, trd::Trd{T}) where T
+    print(io, "Trd{$T}",(trd.x1, trd.x2, trd.y1, trd.y2, trd.z))
+end
+
 function toMesh(trd::Trd{T}) where T<:AbstractFloat
-    P = Point3{T}
-    Q = QuadFace{Int}
-    x1,x2, y1, y2, z = [getfield(trd,f) for f in fieldnames(Trd{T})]
-    positions = [P(-x1,-y1,-z), P( x1,-y1,-z), P(-x1, y1,-z), P( x1, y1,-z),
-                 P(-x2,-y2, z), P( x2,-y2, z), P(-x2, y2, z), P( x2, y2, z)]
-    faces = [Q(1,2,4,3),Q(1,3,7,5), Q(1,5,6,2), Q(8,6,5,7), Q(8,7,3,4), Q(8,4,2,6)] 
+    x1, x2, y1, y2, z = [getfield(trd,f) for f in fieldnames(Trd{T})]
+    positions = Point3{T}[(-x1,-y1,-z), ( x1,-y1,-z), (-x1, y1,-z), ( x1, y1,-z),
+                          (-x2,-y2, z), ( x2,-y2, z), (-x2, y2, z), ( x2, y2, z)]
+    faces = TriangleFace{Int64}[(1,2,4), (4,3,1), (1,3,7), (7,5,1), (1,5,6), (6,2,1), 
+                                (8,6,5), (5,7,8), (8,7,3), (3,4,8), (8,4,2), (2,6,8)] 
     return GeometryBasics.Mesh(positions, faces)
 end
+
+#-------------------------------------------------------------------------------
+
+struct TTrd{T<:AbstractFloat} <: AbstractShape{T}
+    x1::T   # Half-length along x at the surface positioned at -dz
+    x2::T   # Half-length along x at the surface positioned at +dz
+    y1::T   # Half-length along y at the surface positioned at -dz
+    y2::T   # Half-length along y at the surface positioned at +dz
+    z::T    # Half-length along z axis
+    # cached values
+    triangles::Vector{Triangle{T}}
+    function TTrd{T}(x1, x2, y1, y2, z) where T<:AbstractFloat
+        vertices = Point3{T}[(-x1,-y1,-z), ( x1,-y1,-z), (-x1, y1,-z), ( x1, y1,-z),
+                             (-x2,-y2, z), ( x2,-y2, z), (-x2, y2, z), ( x2, y2, z)]
+        triangles = [Triangle{T}(vertices[i],vertices[j], vertices[k]) for (i,j,k) in box_faces]
+        new(x1, x2, y1, y2, z, triangles)
+    end
+end
+
+function Base.show(io::IO, trd::TTrd{T}) where T
+    print(io, "TTrd{$T}",(trd.x1, trd.x2, trd.y1, trd.y2, trd.z))
+end
+
+function distanceToOut(trd::TTrd{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+    for triangle in trd.triangles
+        dist, ok = intersect(point, direction, triangle)
+        ok && return dist
+    end
+    -1.0
+end
+#=
+function extent(trd::TTrd{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
+    p = Point3{T}( max(trd.x1, trd.x2), max(trd.y1, trd.y2), trd.z)
+    ( -p, p )
+end
+=#

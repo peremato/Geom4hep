@@ -103,7 +103,7 @@
     @test safetyToIn(trd2, Point3{T}(0,0, 100)) ≈ 60
     @test safetyToIn(trd2, Point3{T}(0,0,-100)) ≈ 60
   
-    # DistanceToOut(P,V)
+    # distanceToOut(P,V)
 
     @test distanceToOut(trd1, Point3{T}(0,0,0), Vector3{T}( 1, 0, 0)) ≈ 20
     @test distanceToOut(trd1, Point3{T}(0,0,0), Vector3{T}(-1, 0, 0)) ≈ 20

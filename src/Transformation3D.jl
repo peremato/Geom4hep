@@ -21,19 +21,25 @@ Transformation3D{T}(dx, dy, dz, rot::Rotation{3,T}) where T<:AbstractFloat = Tra
 @inline Base.:*(p::Point3{T}, t::Transformation3D{T}) where T<:AbstractFloat =  invtransform(t,p)
 @inline Base.:*(d::Vector3{T}, t::Transformation3D{T}) where T<:AbstractFloat =  invtransform(t,d)
 
-@inline function transform(v::Vector{Transformation3D{T}}, p::Point3{T}) where T<:AbstractFloat
+function transform(v::Vector{Transformation3D{T}}, p::Point3{T}) where T<:AbstractFloat
     for t in v
         p = t.rotation * (p - t.translation)
     end
     return p
 end
-@inline function transform(v::Vector{Transformation3D{T}}, d::Vector3{T}) where T<:AbstractFloat
+function transform(v::Vector{Transformation3D{T}}, d::Vector3{T}) where T<:AbstractFloat
     for t in v
         d = t.rotation * d
     end
     return d
 end
-
+function transform(v::Vector{Transformation3D{T}}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat
+    for t in v
+        p = t.rotation * (p - t.translation)
+        d = t.rotation * d
+    end
+    return p, d
+end
 
 # Compose
 Base.:*(t1::Transformation3D{T}, t2::Transformation3D{T}) where T<:AbstractFloat = 
@@ -44,9 +50,4 @@ Base.one(::Type{Transformation3D{T}}) where T<:AbstractFloat = Transformation3D{
 Base.isone(t::Transformation3D{T}) where T<:AbstractFloat = isone(t.rotation) && iszero(t.translation)
 hasrotation(t::Transformation3D{T}) where T<:AbstractFloat = !isone(t.rotation)
 hastranslation(t::Transformation3D{T}) where T<:AbstractFloat = !iszero(t.translation)
-
-# Operations
-#Base.:==(t1::Transformation3D{T}, t2::Transformation3D{T}) where T<:AbstractFloat =
-#    (t1.rotation == t2.rotation) && (t1.translation == t2.translation)
-
 

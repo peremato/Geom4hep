@@ -101,7 +101,7 @@
     vxmy = Vector3(1/√2, -1/√2, 0.)
     vxmz = Vector3(1/√2, 0., -1/√2)
 
-    # DistanceToOut(P,V) with asserts for normal and convex
+    # distanceToOut(P,V) with asserts for normal and convex
     dist = distanceToOut(b1, pzero, vx)
     norm = normal(b1, pzero + dist * vx) 
     @test dist ≈ 20 && norm ≈ vx
