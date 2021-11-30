@@ -1,6 +1,6 @@
 #--- Length
-const cm = 10.
-const mm = 1.
+const cm = 1.
+const mm = 0.1
 
 #--- Angle
 const radian = 1.

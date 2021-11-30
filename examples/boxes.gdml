@@ -15,6 +15,11 @@
       <D unit="g/cm3" value="19.30"/>
       <atom unit="g/mole" value="196.966570"/>
     </material>
+    <material Z="0" name="Vacuum" state="gas">
+      <T unit="K" value="293.15"/>
+      <D unit="g/cm3" value="0.0"/>
+      <atom unit="g/mole" value="0.0"/>
+    </material>
     <material Z="13" name="Aluminium" state="solid">
       <T unit="K" value="293.15"/>
       <MEE unit="eV" value="166"/>
@@ -139,12 +144,12 @@
       <physvol>
         <volumeref ref="Box1"/>
         <position name="box1_pos" unit="cm" x="-50" y="50" z="-50"/>
-        <rotation name="box1_rot" unit="deg" x="0" y="0" z="45"/>
+        <rotation name="box1_rot" unit="deg" x="45" y="0" z="0"/>
       </physvol>
       <physvol>
         <volumeref ref="Box1"/>
         <position name="box1_pos" unit="cm" x="-50" y="-50" z="50"/>
-        <rotation name="box1_rot" unit="deg" x="45" y="0" z="0"/>
+        <rotation name="box1_rot" unit="deg" x="0" y="0" z="45"/>
       </physvol>
       <physvol>
         <volumeref ref="Box1"/>
@@ -153,7 +158,7 @@
       </physvol>
       <physvol>
         <volumeref ref="Trd1"/>
-        <position name="trd1_pos" unit="mm" x="0" y="0" z="200"/>
+        <position name="trd1_pos" unit="mm" x="0" y="0" z="0"/>
       </physvol>       
     </volume>
   </structure>

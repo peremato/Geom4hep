@@ -109,12 +109,12 @@ function fillVolumes!(volumes, element::XMLElement)
                         if  name(cc) == "solidref"
                             shape = solids[aa["ref"]]
                             if !isnothing(material)
-                                volume = Volume(volname, shape, material)
+                                volume = Volume{Float64}(volname, shape, material)
                             end
                         elseif name(cc) == "materialref"
                             material = materials[aa["ref"]]
                             if !isnothing(shape)
-                                volume = Volume(volname, shape, material)
+                                volume = Volume{Float64}(volname, shape, material)
                             end
                         elseif name(cc) == "physvol"
                             daughter = nothing
@@ -157,6 +157,9 @@ function processGDML(fname::String)
     if name(xroot) != "gdml"
         throw(ErrorException("File @fname is not a GDML file"))
     end
+    empty!(materials)
+    empty!(volumes)
+    empty!(solids)
     for c in child_nodes(xroot)  # c is an instance of XMLNode
         if is_elementnode(c)
             e = XMLElement(c)    # this makes an XMLElement instance

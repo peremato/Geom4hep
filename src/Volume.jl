@@ -1,8 +1,11 @@
 
+#---Shape--------------------------------------------------------------------------
+const Shape{T} = Union{Box{T},Trd{T},TBox{T},TTrd{T}} where T<:AbstractFloat
+
 #---Volume-------------------------------------------------------------------------
 struct Mother{T,PV}
     label::String
-    shape::AbstractShape{T}             # Reference to the actual shape
+    shape::Shape{T}                     # Reference to the actual shape
     material::Material                  # Reference to material
     daughters::Vector{PV} 
 end
@@ -19,8 +22,8 @@ contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pv
 contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
 distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 
-function Volume(label::String, shape::AbstractShape{T}, material::AbstractMaterial) where T<:AbstractFloat
-    Volume{T}(label, shape, material,Vector{PlacedVolume{T}}())
+function Volume{T}(label::String, shape::Shape{T}, material::Material) where T<:AbstractFloat
+    Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())
 end
 
 function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
