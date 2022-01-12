@@ -1,6 +1,10 @@
+#---Used for Agregates 
+struct NoShape{T} <: AbstractShape{T}
+    shapename::String
+end
 
 #---Shape--------------------------------------------------------------------------
-const Shape{T} = Union{Box{T},Trd{T},TBox{T},TTrd{T}} where T<:AbstractFloat
+const Shape{T} = Union{NoShape{T},Box{T},Trd{T},Tube{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
 struct Mother{T,PV}
@@ -27,7 +31,13 @@ function Volume{T}(label::String, shape::Shape{T}, material::Material) where T<:
 end
 
 function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
-    push!(volume.daughters, PlacedVolume(placement,subvol))
+    if subvol.shape isa NoShape
+        for d in subvol.daughters
+            push!(volume.daughters, PlacedVolume(placement * d.transformation, d.volume))
+        end
+    else
+        push!(volume.daughters, PlacedVolume(placement,subvol))
+    end
 end
 
 

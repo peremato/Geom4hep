@@ -52,12 +52,12 @@ function Base.intersect(p::Point3, d::Vector3, t::Triangle; out::Bool=true)
     wv2 = w1 * t.v2[1] + w2 * t.v2[2] + w3 * t.v2[3]
 
     s_intersection = (t.v1v2 * wv2 - t.v2v2 * wv1) / t.denom
-    s_intersection <= -kTolerance/2 && return no_intersection
-    s_intersection >= 1 + kTolerance/2 && return no_intersection
+    s_intersection <= -kTolerance(T)/2 && return no_intersection
+    s_intersection >= 1 + kTolerance(T)/2 && return no_intersection
     t_intersection = (t.v1v2 * wv1 - t.v1v1 * wv2) / t.denom
-    t_intersection <= -kTolerance/2 && return no_intersection
-    t_intersection >= 1 + kTolerance/2 && return no_intersection
-    s_intersection + t_intersection >= 1 + kTolerance/2 && return no_intersection
+    t_intersection <= -kTolerance(T)/2 && return no_intersection
+    t_intersection >= 1 + kTolerance(T)/2 && return no_intersection
+    s_intersection + t_intersection >= 1 + kTolerance(T)/2 && return no_intersection
     #Intersection(t.a + s_intersection*t.v1 + t_intersection*t.v2, ri, true)
     return (ri, true)
 end

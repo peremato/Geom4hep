@@ -86,6 +86,8 @@ function fillSolids!(solids, element::XMLElement)
                                                      parse(Float64, attrs["y1"]) * unit,
                                                      parse(Float64, attrs["y2"]) * unit,
                                                      parse(Float64, attrs["z"]) * unit)
+            else
+                solids[attrs["name"]] = NoShape{Float64}(elemname)
             end
         end
     end
@@ -137,7 +139,7 @@ function fillVolumes!(volumes, element::XMLElement)
                                                     parse(Float64, aa["z"]) * unit)
                                     end
                                 end
-                            end 
+                            end
                             placeDaughter!(volume, Transformation3D{Float64}(position..., rotation...), daughter)
                         end
                     end

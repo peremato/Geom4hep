@@ -20,8 +20,8 @@ end
 function normal(box::Box{T}, point::Point3{T}) where T
     safety = abs.(abs.(point) - box.fDimensions)
     safmin = minimum(safety)
-    if safmin < kTolerance/2
-        n = Vec3{T}(map( t -> t[1] - safmin < kTolerance/2 ? sign(t[2]) : 0.0, zip(safety, point)))
+    if safmin < kTolerance(T)/2
+        n = Vec3{T}(map( t -> t[1] - safmin < kTolerance(T)/2 ? sign(t[2]) : 0.0, zip(safety, point)))
         normalize(n)
     else
         nothing    
@@ -36,9 +36,9 @@ function inside(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
             dist = d 
         end
     end
-    abs(dist) <= kTolerance/2 ? kSurface : dist < 0.0 ? kInside : kOutside
+    abs(dist) <= kTolerance(T)/2 ? kSurface : dist < 0.0 ? kInside : kOutside
     #dist = maximum(abs.(point) - box.fDimensions)
-    #isapprox(dist, 0.0, atol = kTolerance/2) ? kSurface : dist < 0.0 ? kInside : kOutside
+    #isapprox(dist, 0.0, atol = kTolerance(T)/2) ? kSurface : dist < 0.0 ? kInside : kOutside
 end
 
 function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
@@ -49,7 +49,7 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) whe
             safety = d 
         end
     end
-    if safety > kTolerance/2
+    if safety > kTolerance(T)/2
         return -1.0
     end 
     dist = Inf
@@ -62,7 +62,7 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) whe
     return dist
     #safety = maximum(abs.(point) - box.fDimensions)
     #distance = minimum((copysign.(box.fDimensions, direction) - point) * (1.0 ./ direction))
-    #safety > kTolerance/2 ? -1.0 : distance
+    #safety > kTolerance(T)/2 ? -1.0 : distance
 end
 
 function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
@@ -84,14 +84,14 @@ function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T}) wher
             distsurf = dsur
         end 
     end
-    (distance >= distout || distout <= kTolerance/2 || abs(distsurf) <= kTolerance/2) ? Inf : distance
+    (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
     #invdir = 1.0 ./ direction
     #tempIn  = -copysign.(box.fDimensions, direction) - point
     #tempOut =  copysign.(box.fDimensions, direction) - point
     #distance = maximum(tempIn * invdir)
     #distout  = minimum(tempOut * invdir)
     #distsurf = abs(minimum(copysign.(tempOut, direction)))
-    #(distance >= distout || distout <= kTolerance/2 || distsurf <= kTolerance/2) ? Inf : distance
+    #(distance >= distout || distout <= kTolerance(T)/2 || distsurf <= kTolerance(T)/2) ? Inf : distance
 end
 
 function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
@@ -102,13 +102,21 @@ function safetyToIn(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     maximum(abs.(point) - box.fDimensions)
 end
 
-function toMesh(box::Box{T}) where T<:AbstractFloat
+function GeometryBasics.coordinates(box::Box{T}, facets=6) where {T<:AbstractFloat}
     x, y, z = box.fDimensions
-    positions = Point3{T}[(-x,-y,-z), ( x,-y,-z), (-x, y,-z), ( x, y,-z),
-                          (-x,-y, z), ( x,-y, z), (-x, y, z), ( x, y, z)]
-    faces = TriangleFace{Int64}[(1,2,4), (4,3,1), (1,3,7), (7,5,1), (1,5,6), (6,2,1), 
-                                (8,6,5), (5,7,8), (8,7,3), (3,4,8), (8,4,2), (2,6,8)] 
-    return GeometryBasics.Mesh(positions, faces)
+    return Point3{T}[(-x,-y,-z), ( x,-y,-z), (-x, y,-z), ( x, y,-z),
+                     (-x,-y, z), ( x,-y, z), (-x, y, z), ( x, y, z)]
+end
+
+function GeometryBasics.faces(box::Box{T}, facets=6) where {T<:AbstractFloat}
+    return TriangleFace{Int64}[(1,2,4), (4,3,1), (1,3,7), (7,5,1), (1,5,6), (6,2,1), 
+                               (8,6,5), (5,7,8), (8,7,3), (3,4,8), (8,4,2), (2,6,8)] 
+end
+
+function GeometryBasics.normals(box::Box{T}, facets=24) where {T<:AbstractFloat}
+    v = 1/√3
+    return Vector3{T}[(-v,-v,-v), ( v,-v,-v), (-v, v,-v), ( v, v,-v),
+                      (-v,-v, v), ( v,-v, v), (-v, v, v), ( v, v, v)]
 end
 
 #-------------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 module Geom4hep
 
-export Point3, Vector3, DPoint3, move!
+export Point3, Point2, Vector3, Vector2, nonzero
 export AbstractShape, AbstractMaterial
-export Box, Trd, TBox, TTrd
-export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn, inside, safetyToOut, safetyToIn, toMesh
+export NoShape, Box, Trd, TBox, TTrd, Tube, Wedge, isInside, isOutside
+export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn, inside, safetyToOut, safetyToIn
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
 export Mother, PlacedVolume, Volume, placeDaughter!, draw
@@ -11,6 +11,7 @@ export NavigatorState, computeStep!, locateGlobalPoint!, reset!, currentVolume, 
 export kTolerance
 export processGDML
 export Triangle, Intersection, intersect, distanceToPlane, PV
+export Tesselation, coordinates, faces, normals
 
 using StaticArrays, GeometryBasics, LinearAlgebra, Rotations
 
@@ -19,6 +20,7 @@ include("Transformation3D.jl")
 include("TriangleIntersect.jl")
 include("Trd.jl")
 include("Box.jl")
+include("Tube.jl")
 include("Materials.jl")
 include("Volume.jl")
 include("Navigators.jl")

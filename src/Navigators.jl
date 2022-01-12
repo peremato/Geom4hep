@@ -93,7 +93,7 @@ function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3
     end
     #---We hit a daughter, push it into the stack
     if idx != 0
-        step += kTolerance # to ensure that do not stay in the surface of the daughter
+        step += kTolerance(T) # to ensure that do not stay in the surface of the daughter
         pvol = volume.daughters[idx]
         push!(state.volstack, idx)
         push!(state.tolocal, pvol.transformation)

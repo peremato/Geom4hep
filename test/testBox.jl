@@ -246,7 +246,7 @@
     b4 = Box(5., 5., 5.)
     # a point very slightly inside should return 0
     tempDir = normalize(Vector3(0.76315134679548990437, 0.53698876104646497964, -0.35950395323836459305))
-    @test distanceToIn(b4, Point3(-3.0087437277453119577, -5.0+kTolerance/2, 4.8935648380409944025), tempDir) <= 0.0
+    @test distanceToIn(b4, Point3(-3.0087437277453119577, -5.0+kTolerance()/2, 4.8935648380409944025), tempDir) <= 0.0
 
 
     # a point on the surface pointing outside must return infinity length
