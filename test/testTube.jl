@@ -1,4 +1,4 @@
-@testset "Trd{$T}" for T in (Float64, Float32)
+@testset "Tube{$T}" for T in (Float64, Float32)
     pzero = Point3{T}(0,0,0)
     pbigx = Point3{T}(100,0,0)
     pbigy = Point3{T}(0,100,0)

@@ -2,6 +2,7 @@ using GLMakie
 using Colors
 
 colors = colormap("Grays", 5)
+
 #---Draw a Volume---------------------------------------------------------------
 function draw(s::LScene, vol::Volume, t::Transformation3D, level::Int64)
     m = GeometryBasics.mesh(Tesselation(vol.shape, 32))
@@ -23,3 +24,20 @@ function draw(s::LScene, vol::Volume)
     display(s)
 end
 
+#---Draw a Shape---------------------------------------------------------------
+function draw!(s::LScene, shape::AbstractShape; wireframe::Bool=false)
+    m = GeometryBasics.mesh(Tesselation(shape, 32))
+    if wireframe
+        wireframe!(s, m)
+    else
+        mesh!(s, m, color=:gray, transparency=true, ambient=0.7)
+    end
+    return s
+end
+
+function draw(shape::AbstractShape; wireframe::Bool=false)
+    fig = Figure()
+    s = LScene(fig[1,1])
+    draw!(s, shape; wireframe)
+    display(fig)
+end

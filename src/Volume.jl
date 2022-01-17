@@ -4,7 +4,7 @@ struct NoShape{T} <: AbstractShape{T}
 end
 
 #---Shape--------------------------------------------------------------------------
-const Shape{T} = Union{NoShape{T},Box{T},Trd{T},Tube{T}} where T<:AbstractFloat
+const Shape{T} = Union{NoShape{T},Box{T},Trd{T},Tube{T},Cone{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
 struct Mother{T,PV}

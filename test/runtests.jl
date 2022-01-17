@@ -6,5 +6,6 @@ using Geom4hep, LinearAlgebra
     include("testBox.jl")
     include("testTrd.jl")
     include("testTube.jl")
+    include("testCone.jl")
 end
 
