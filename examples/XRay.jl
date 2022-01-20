@@ -44,11 +44,11 @@ function generateXRay(world::Volume, npoints::Number, view::Symbol=:x)
 
     for i in 1:nx, j in 1:ny
         if shift == 0
-            point = Point3{Float64}(lower[1]+kTolerance, lower[2]+(i-0.5)*pixel, lower[3]+(j-0.5)*pixel)
+            point = Point3{Float64}(lower[1]+kTolerance(), lower[2]+(i-0.5)*pixel, lower[3]+(j-0.5)*pixel)
         elseif shift == 1
-            point = Point3{Float64}(lower[1]+(j-0.5)*pixel, lower[2]+kTolerance, lower[3]+(i-0.5)*pixel)
+            point = Point3{Float64}(lower[1]+(j-0.5)*pixel, lower[2]+kTolerance(), lower[3]+(i-0.5)*pixel)
         elseif shift == 2
-            point = Point3{Float64}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance)
+            point = Point3{Float64}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
         end
         locateGlobalPoint!(state, point)
         mass =  0.0

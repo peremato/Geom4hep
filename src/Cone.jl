@@ -370,7 +370,99 @@ function distanceToOut(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T wher
     return distance    
 end
 
+function isInsideR(cone::Cone{T}, hit::Point3{T}) where T<:AbstractFloat
+    (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, 
+    outerSlope, outerOffset, innerSlope, innerOffset) = cone
+    r2   = hit[1] * hit[1] + hit[2] * hit[2]
+    rmaxTol = rmax1 == rmax2 ? rmax1 - kTolerance(T) : outerOffset + outerSlope * hit[3] - kTolerance(T)
+    rminTol = rmin1 == rmin2 ? rmin1 + kTolerance(T) : innerOffset + innerSlope * hit[3] + kTolerance(T)
+    r2 >= rminTol * rminTol && r2 <= rmaxTol * rmaxTol
+end
 
+
+function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+    x, y, z = point
+    dx, dy, dz = dir
+    (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, 
+    outerSlope, outerOffset, innerSlope, innerOffset) = cone
+
+    distance = Inf
+    done = false
+
+    # outside of Z range and going away?
+    distz = abs(z) - cone.z
+    done |= (distz > kTolerance(T)/2 && z * dz >= 0) || 
+            (abs(distz) < kTolerance(T)/2 && z * dz > 0)
+    
+    # outside of outer tube and going away?
+    rsq  = x * x + y * y
+    rmax = rmax1 == rmax2 ? rmax1 : outerOffset + outerSlope * z
+    crmax = rsq - rmax * rmax
+    rdotn = dx * x + dy * y
+    done |= crmax > kTolerance(T) * rmax && rdotn >= 0.
+    done && return distance
+    
+    # Next, check all dimensions of the tube, whether points are inside --> return -1
+    distance = T(-1.)
+    
+    # For points inside z-range, return -1
+    inside = distz < -kTolerance(T)/2
+    inside &= crmax < -kTolerance(T) * rmax
+    if rmin1 > 0. || rmin2 > 0.
+        rmin = rmin1 == rmin2 ? rmin1 : innerOffset + innerSlope * z
+        crmin = rsq - rmin * rmin
+        inside &= crmin > kTolerance(T) * rmin
+    end
+    if Δϕ < 2π
+        inside &= isInside(ϕWedge, x, y)
+    end
+    done |= inside
+    done && return distance
+
+    # Next step: check if z-plane is the right entry point (both r,phi
+    # should be valid at z-plane crossing)
+    distance = Inf
+    distz /= nonzero(abs(dz))
+    hitx = x + distz * dx
+    hity = y + distz * dy
+    r2 = (hitx * hitx) + (hity * hity)
+    isHittingTopPlane    = z >=  cone.z - kTolerance(T)/2 && r2 <= rmax2 * rmax2 + kTolerance(T)/2
+    isHittingBottomPlane = z <= -cone.z + kTolerance(T)/2 && r2 <= rmax1 * rmax1 + kTolerance(T)/2
+    okz = isHittingTopPlane || isHittingBottomPlane
+    if rmin1 > 0. || rmin2 > 0.
+        isHittingTopPlane &= r2 >= rmin2 * rmin2 - kTolerance(T)/2
+        isHittingBottomPlane &= r2 >= rmin1 * rmin1 - kTolerance(T)/2
+        okz &= isHittingTopPlane || isHittingBottomPlane
+    end
+    if Δϕ < 2π
+        okz &= isInside(ϕWedge, hitx, hity)
+    end
+
+    !done && okz && (distance = distz)
+    done |= okz
+
+    # Next step: intersection of the trajectories with the two conical surfaces
+    distOuter = distanceToConicalSurface(cone, point, dir; distToIn=true, innerSurface=false)
+    distOuter < distance && (distance = distOuter)
+    if rmin1 > 0. || rmin2 > 0.
+        distInner = distanceToConicalSurface(cone, point, dir; distToIn=true, innerSurface=true)
+        distInner < distance && (distance = distInner)
+    end
+    # Find the intersection of trajectories with Phi planes
+    if Δϕ < 2π
+        p = Point2{T}(x,y)
+        d = Vector2{T}(dx,dy)
+        distPhi = phiPlaneIntersection(p, d, ϕWedge.along1, ϕWedge.normal1, toIn=true)
+        hit = point + distPhi * dir
+        !isnan(distPhi) && abs(z + distPhi * dz) <= cone.z && isInsideR(cone, hit) && distPhi < distance && (distance = distPhi)  
+        if Δϕ != π
+            distPhi = phiPlaneIntersection(p, d, ϕWedge.along2, ϕWedge.normal2, toIn=true)
+            hit = point + distPhi * dir
+            !isnan(distPhi) && abs(z + distPhi * dz) <= cone.z && isInsideR(cone, hit) && distPhi < distance && (distance = distPhi)
+        end
+    end
+    return distance
+end
 #---Drawing functions------------------------------------------------------------
 function GeometryBasics.coordinates(cone::Cone{T}, facets=36) where {T<:AbstractFloat}
     (; rmin1, rmax1, rmin2, rmax2, z, ϕ₀, Δϕ) = cone 

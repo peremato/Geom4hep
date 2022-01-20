@@ -266,11 +266,14 @@ end
 
 function phiPlaneIntersection(point::Point2{T}, dir::Vector2{T}, along::Vector2{T}, normal::Vector2{T}; ϕgtπ::Bool=false, toIn::Bool=false) where T<:AbstractFloat
     pDotN = point[1] * normal[1] + point[2] * normal[2]
+    dDotN = dir[1] * normal[1] + dir[2] * normal[2]
     # point in wrong side
-    (toIn && pDotN >= 0.) || (!toIn && pDotN <= 0.) && return NaN
+    if (toIn && (pDotN > 0. || pDotN == 0. && dDotN < 0.)) || (!toIn && pDotN <= 0.) 
+        return NaN
+    end
     dirDotXY = dir[2] * along[1] - dir[1] * along[2]
-    dist = (along[2] * point[1] - along[1] * point[2] ) / nonzero(dirDotXY)
-    dist < -kTolerance(T)/2 && return NaN
+    dist = (along[2] * point[1] - along[1] * point[2] ) / dirDotXY
+    dist < 0. && return NaN
     if ϕgtπ 
         hitx = point[1] + dist * dir[1]
         hity = point[2] + dist * dir[2]
