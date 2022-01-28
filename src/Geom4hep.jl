@@ -28,5 +28,6 @@ include("Volume.jl")
 include("Navigators.jl")
 include("Drawing.jl")
 include("GDML.jl")
+include("Benchmark.jl")
 
 end # module
