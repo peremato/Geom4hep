@@ -1,25 +1,6 @@
 using Geom4hep
 
-# Geometry construction
-function buildGeom(T::Type) 
-    world = Volume{T}("World", Box{T}(100,100,100), Material("vacuum"; density=0.0))
-    box1 = Volume{T}("box1", Box{T}(10,20,30), Material("iron"; density=7.0))
-    box2 = Volume{T}("box2", Box{T}(4,4,4), Material("gold"; density=19.0))
-    placeDaughter!(box1, Transformation3D{T}(0,0,0),box2)
-    placeDaughter!(world, Transformation3D{T}( 50, 50, 50, RotXYZ{Float64}(π/4, 0, 0)), box1)
-    placeDaughter!(world, Transformation3D{T}( 50, 50,-50, RotXYZ{Float64}(0, π/4, 0)), box1)
-    placeDaughter!(world, Transformation3D{T}( 50,-50, 50, RotXYZ{Float64}(0, 0, π/4)), box1)
-    placeDaughter!(world, Transformation3D{T}( 50,-50,-50, RotXYZ{Float64}(π/4, 0, 0)), box1)
-    placeDaughter!(world, Transformation3D{T}(-50, 50, 50, RotXYZ{Float64}(0, π/4, 0)), box1)
-    placeDaughter!(world, Transformation3D{T}(-50,-50, 50, RotXYZ{Float64}(0, 0, π/4)), box1)
-    placeDaughter!(world, Transformation3D{T}(-50, 50,-50, RotXYZ{Float64}(π/4, 0, 0)), box1)
-    placeDaughter!(world, Transformation3D{T}(-50,-50,-50, RotXYZ{Float64}(0, π/4, 0)), box1)
-    trd1 = Volume{T}("trd1", Trd{T}(30,10,30,10,20), Material("water", density=10.0))
-    placeDaughter!(world, Transformation3D{T}(0,0,0), trd1)
-    return world
-end
-
-# Generate a X-Ray of a geometry
+# Generate a X-Ray of a geometry----------------------------------------------
 function generateXRay(world::Volume, npoints::Number, view::Symbol=:x)
     # Setup plane of points and results
     lower, upper = extent(world.shape)
@@ -60,7 +41,6 @@ function generateXRay(world::Volume, npoints::Number, view::Symbol=:x)
                 @show point, dir, state
                 break
             end
-            #move!(point, dir, step)
             point = point + dir * step
             mass += step * density
         end
@@ -69,12 +49,18 @@ function generateXRay(world::Volume, npoints::Number, view::Symbol=:x)
     return result
 end
 
+using GLMakie
+
 if abspath(PROGRAM_FILE) == @__FILE__
-    #-----build and generate image
-    world = buildGeom(Float64)
-    image = generateXRay(world, 1e6)
-    #-----Plot results
-    using GLMakie
-    heatmap(image, colormap=:grayC)
+    #-----build and generate image-----------------------------
+    world = processGDML("examples/boxes.gdml")
+    #-----Generate and Plot results----------------------------
+    fig = Figure()
+    heatmap!(LScene(fig[1, 1]), generateXRay(world, 1e6, :x), colormap=:grayC)
+    heatmap!(LScene(fig[2, 1]), generateXRay(world, 1e6, :y), colormap=:grayC)
+    heatmap!(LScene(fig[1, 2]), generateXRay(world, 1e6, :z), colormap=:grayC)
+    draw(LScene(fig[2, 2]), world)
+    display(fig)
 end
+
 

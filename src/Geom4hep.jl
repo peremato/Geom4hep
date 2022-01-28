@@ -6,7 +6,7 @@ export NoShape, Box, Trd, TBox, TTrd, Tube, Wedge, isInside, isOutside, Cone
 export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn, inside, safetyToOut, safetyToIn
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
-export Mother, PlacedVolume, Volume, placeDaughter!, draw, drawDistanceToIn, drawDistanceToOut
+export Mother, PlacedVolume, Volume, placeDaughter!, draw, draw!, drawDistanceToIn, drawDistanceToOut
 export NavigatorState, computeStep!, locateGlobalPoint!, reset!, currentVolume, getClosestDaughter
 export kTolerance
 export processGDML
