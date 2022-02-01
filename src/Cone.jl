@@ -205,7 +205,7 @@ function distanceToConicalSurface(cone::Cone{T}, point::Point3{T}, dir::Vector3{
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, secRMax, secRMin, 
     innerConeApex, tanInnerApexAngle, outerConeApex, tanOuterApexAngle) = cone
 
-    distance = Inf
+    distance = T(Inf)
     onConicalSurface = isOnConicalSurface(cone, point, innerSurface=innerSurface)
     if onConicalSurface
         norm = normal(cone, point, innerSurface=innerSurface)
@@ -220,7 +220,7 @@ function distanceToConicalSurface(cone::Cone{T}, point::Point3{T}, dir::Vector3{
             end
         else
             isOnSurfaceAndMovingOutside = vdot > 0.
-            if Δϕ < 2π
+            if Δϕ < T(2π)
                 isOnSurfaceAndMovingOutside && isInside(ϕWedge, x, y) && return 0.
             else
                 isOnSurfaceAndMovingOutside && return 0.
@@ -286,13 +286,13 @@ function distanceToConicalSurface(cone::Cone{T}, point::Point3{T}, dir::Vector3{
         newZ = z + dz * distance
         ok = abs(newZ) < cone.z + kTolerance(T)/2
     end
-    distance < 0.0 && (distance = Inf)
-    if Δϕ < 2π
+    distance < 0.0 && (distance = T(Inf))
+    if Δϕ < T(2π)
         hitx = x + distance * dx
         hity = y + distance * dy
         ok &= isInside(ϕWedge, hitx, hity)
     end
-    ok ? distance : Inf
+    ok ? distance : T(Inf)
 end
 
 function distanceToOut(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat

@@ -1,6 +1,6 @@
 #---Benchmarking functions-------------------------------------------------------------------------------------------------
 using Printf
-export benchmarkShape
+export benchmarkShape, fillPoints!, fillDirections!
 
 function fillPoints!(points::Vector{Point3{T}}, shape::AbstractShape{T}, in_or_out::Integer=kInside) where T<:AbstractFloat
     low, hi = extent(shape)

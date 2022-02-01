@@ -56,9 +56,9 @@ if abspath(PROGRAM_FILE) == @__FILE__
     world = processGDML("examples/boxes.gdml")
     #-----Generate and Plot results----------------------------
     fig = Figure()
-    heatmap!(LScene(fig[1, 1]), generateXRay(world, 1e6, :x), colormap=:grayC)
-    heatmap!(LScene(fig[2, 1]), generateXRay(world, 1e6, :y), colormap=:grayC)
-    heatmap!(LScene(fig[1, 2]), generateXRay(world, 1e6, :z), colormap=:grayC)
+    heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(world, 1e6, :x), colormap=:grayC)
+    heatmap!(Axis(fig[2, 1], title = "Y direction"), generateXRay(world, 1e6, :y), colormap=:grayC)
+    heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(world, 1e6, :z), colormap=:grayC)
     draw(LScene(fig[2, 2]), world)
     display(fig)
 end
