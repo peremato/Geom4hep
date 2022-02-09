@@ -54,3 +54,93 @@ end
 #-----build and generate image-----------------------------
 world = processGDML("examples/boxes.gdml")
 
+
+@enum ShapeEnum::Int32 kBox kTube kTrd kCone
+function getShapeType(shape::AbstractShape{T})::ShapeEnum where T<:AbstractFloat
+    if typeof(shape) == Box{T}
+        return kBox
+    elseif typeof(shape) == Tube{T}
+        return kTube
+    elseif typeof(shape) == Trd{T}
+        return kTrd
+    elseif typeof(shape) == Cone{T}
+        return kCone
+    end
+end 
+
+struct CuVolume{T<:AbstractFloat}
+    shapeTyp::ShapeEnum
+    shapeIdx::UInt32
+    materialIdx::UInt32
+    daughterOff::UInt32
+    daughterLen::UInt32
+end
+
+struct CuMaterial{T<:AbstractFloat}
+    density::T
+    temperature::T
+    Amass::T
+end
+CuMaterial{T}(m::Material) where T<: AbstractFloat = CuMaterial{T}(m.density, m.temperature, m.Amass) 
+
+struct CuPlacedVolume{T<:AbstractFloat}
+    transformation::Transformation3D{T}
+    volume::UInt32
+end
+
+struct CuModel{T<:AbstractFloat}
+    indexes::Dict{UInt64, UInt32}
+    volumes::Vector{CuVolume{T}}
+    materials::Vector{CuMaterial{T}}
+    daughters::Vector{CuPlacedVolume{T}}
+    boxes::Vector{Box{T}}
+    tubes::Vector{Tube{T}}
+    trds::Vector{Trd{T}}
+    cones::Vector{Cone{T}}
+    function CuModel{T}() where T<:AbstractFloat
+        new(Dict{UInt64, UInt32}(), 
+            Vector{CuVolume{T}}(),
+            Vector{CuMaterial{T}}(),
+            Vector{CuPlacedVolume{T}}(),
+            Vector{Box{T}}(),
+            Vector{Tube{T}}(),
+            Vector{Trd{T}}(),
+            Vector{Cone{T}}())
+    end
+end
+
+model = CuModel{Float64}()
+
+function pushObject(indexes::Dict{UInt64, UInt32}, vector::Vector{CUOBJ}, obj::OBJ)::UInt32 where {CUOBJ,OBJ}
+    id = objectid(obj)
+    if !haskey(indexes, id)
+        push!(vector, CUOBJ == OBJ ? obj : CUOBJ(obj))
+        indexes[id] = lastindex(vector)
+    end
+    indexes[id]
+end
+
+function pushVolume(model::CuModel{T}, vol::Volume{T}) where T <: AbstractFloat
+    (; indexes, volumes, materials, daughters ) = model
+    @show vol.label
+    id = objectid(vol)
+    @show haskey(indexes, id)
+    if !haskey(indexes, id)
+        volIdx = lastindex(model.volumes) + 1
+        resize!(model.volumes, volIdx) 
+        shapeTyp = getShapeType(vol.shape)
+        shapeIdx = pushObject(indexes, getfield(model, 5 + Int(shapeTyp)), vol.shape)
+        materialIdx = pushObject(indexes, materials, vol.material)
+        daughterOff = lastindex(daughters)
+        daughterLen = length(vol.daughters)
+        @show daughterOff, daughterLen
+        resize!(model.daughters, daughterOff + daughterLen)
+        for d in 1:daughterLen
+            model.daughters[d] = CuPlacedVolume{T}(vol.daughters[d].transformation, pushVolume(model, vol.daughters[d].volume ))
+        end
+        model.volumes[volIdx] = CuVolume{T}(shapeTyp, shapeIdx, materialIdx, daughterOff, daughterLen)    
+        indexes[id] = volIdx
+    end
+    indexes[id]
+end
+
