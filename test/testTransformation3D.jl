@@ -31,4 +31,7 @@ using Rotations
     @test t4 * Point3{T}(1,0,0) ≈ Point3{T}(√2/2, √2/2, -1)
     
     @test (t4 * Point3{T}(1,2,3)) * t4 ≈ Point3{T}(1,2,3)
+
+    @test isapprox(t4 * inv(t4), one(Transformation3D{T}); atol=5*eps(T))
+    @test isapprox(inv(t4) * t4, one(Transformation3D{T}); atol=5*eps(T)) 
 end

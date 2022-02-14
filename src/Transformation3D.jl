@@ -44,6 +44,9 @@ end
 # Compose
 Base.:*(t1::Transformation3D{T}, t2::Transformation3D{T}) where T<:AbstractFloat = 
     Transformation3D{T}(t1.rotation * t2.rotation, t1.translation + t1.rotation * t2.translation)
+Base.inv(t::Transformation3D{T}) where T<:AbstractFloat = Transformation3D{T}(t.rotation', - t.rotation * t.translation)
+Base.isapprox(t1::Transformation3D{T}, t2::Transformation3D{T}; atol::Real=0, rtol::Real=atol>0 ? 0 : √eps, nans::Bool=false) where T<:AbstractFloat =
+    isapprox(t1.rotation, t2.rotation; atol=atol, rtol=rtol, nans=nans) && isapprox(t1.translation, t2.translation; atol=atol, rtol=rtol, nans=nans)
 
 # Utilities
 Base.one(::Type{Transformation3D{T}}) where T<:AbstractFloat = Transformation3D{T}(one(RotMatrix3{T}), Vector3{T}(0,0,0))
