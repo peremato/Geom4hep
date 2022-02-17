@@ -1,4 +1,5 @@
 using LightXML
+name = LightXML.name
 
 include("Units.jl")
 

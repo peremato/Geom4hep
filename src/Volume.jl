@@ -1,6 +1,5 @@
 #---Used for Agregates 
 struct NoShape{T} <: AbstractShape{T}
-    shapename::String
 end
 
 #---Shape--------------------------------------------------------------------------

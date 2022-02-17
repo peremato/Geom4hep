@@ -39,7 +39,7 @@ end
 
 #---Basic functions-------------------------------------------------------------
 function capacity(trd::Trd{T}) where T<:AbstractFloat
-    8 * trd.halfx1plusx2 * trd.halfy1plusy2 * trd.z + 2//3 * trd.x2minusx1 * trd.y2minusy1 * trd.z
+    T(8) * trd.halfx1plusx2 * trd.halfy1plusy2 * trd.z + (T(2)/3) * trd.x2minusx1 * trd.y2minusy1 * trd.z
 end
 function surface(trd::Trd{T}) where T<:AbstractFloat
     s =  2. * 2. * trd.halfy1plusy2 * sqrt(trd.x2minusx1^2 + (2*trd.z)^2)

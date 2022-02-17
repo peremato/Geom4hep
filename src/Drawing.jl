@@ -1,4 +1,4 @@
-using GLMakie
+using Makie
 using Colors
 
 colors = colormap("Grays", 5)

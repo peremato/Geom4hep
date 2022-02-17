@@ -2,7 +2,7 @@ module Geom4hep
 
 export Point3, Point2, Vector3, Vector2, nonzero
 export AbstractShape, AbstractMaterial
-export NoShape, Box, Trd, TBox, TTrd, Tube, Wedge, isInside, isOutside, Cone
+export Shape, NoShape, Box, Trd, TBox, TTrd, Tube, Wedge, isInside, isOutside, Cone
 export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn, inside, safetyToOut, safetyToIn
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
@@ -29,5 +29,6 @@ include("Navigators.jl")
 include("Drawing.jl")
 include("GDML.jl")
 include("Benchmark.jl")
+include("CuGeom.jl")
 
 end # module
