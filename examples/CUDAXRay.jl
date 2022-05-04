@@ -1,8 +1,9 @@
 using Geom4hep
 using StaticArrays
 using BenchmarkTools, Test, Printf
-using CairoMakie
+using GLMakie
 using CUDA
+using Profile
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -36,6 +37,7 @@ end
 
 function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
     nx, ny = size(result)
+    state = CuNavigatorState{T}(1)
     for i in 1:nx, j in 1:ny
         if view == 1
             point = Point3{T}(lower[1]+kTolerance(), lower[2]+(i-0.5)*pixel, lower[3]+(j-0.5)*pixel)
@@ -47,7 +49,6 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, p
             point = Point3{T}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
             dir = Vector3{T}(0,0,1)
         end
-        state = CuNavigatorState{T}(1)
         locateGlobalPoint!( model, state, point)
         mass::T =  0.0
         step::T = -1.
@@ -64,6 +65,7 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, p
 end
 function k_generateXRay(result, model, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
     nx, ny = size(result)
+    state = CuNavigatorState{T}(1)
     i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
     if i <= nx && j <= ny
@@ -77,7 +79,6 @@ function k_generateXRay(result, model, lower::Point3{T}, pixel::T, view::Int) wh
             point = Point3{T}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
             dir = Vector3{T}(0,0,1)
         end
-        state = CuNavigatorState{T}(1)
         locateGlobalPoint!(model, state, point)
         mass::T =  0.0
         step::T = -1.0
@@ -97,6 +98,9 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
     world = processGDML("examples/boxes.gdml")
     model = fillCuGeometry(world)
+    #@time generateXRay(model, 1e6, 1);
+    #Profile.clear_malloc_data() 
+    #generateXRay(model, 1e6, 1);
     fig = Figure()
     @printf "generating x-projection\n"
     heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(model, 1e4, 1), colormap=:grayC)
