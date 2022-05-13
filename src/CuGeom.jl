@@ -17,6 +17,7 @@ end
 CuMaterial{T}(m::Material) where T<: AbstractFloat = CuMaterial{T}(m.density, m.temperature, m.Amass) 
 
 struct CuPlacedVolume{T<:AbstractFloat}
+    idx::UInt32
     transformation::Transformation3D{T}
     volume::UInt32
 end
@@ -53,18 +54,45 @@ distanceToIn(model::CuGeoModel, pvol::CuPlacedVolume{T}, p::Point3{T}, d::Vector
 mutable struct CuNavigatorState{T<:AbstractFloat}
     topVolume::UInt32
     currentVol::UInt32
-    currentDepth::UInt32
-    volstack::MVector{16,UInt32}
+    currentDepth::Int64
+    volstack::SVector{16,UInt32}
     tolocal::Transformation3D{T}
     function CuNavigatorState{T}(top::Integer) where T<:AbstractFloat
-        new{T}(top, top, 0, zero(MVector{16,UInt32}), one(Transformation3D{T}))
+        state = new{T}(top)
+        reset!(state)
+        return state
     end
 end
 
 function reset!(state::CuNavigatorState{T}) where T<:AbstractFloat
     state.currentVol = state.topVolume
     state.currentDepth = 0
+    state.volstack = zero(SVector{16,UInt32})
     state.tolocal = one(Transformation3D{T})
+end
+
+function pushIn!(state::CuNavigatorState{T}, pvol::CuPlacedVolume{T}) where T<:AbstractFloat
+    state.currentVol = pvol.volume
+    state.currentDepth += 1
+    state.volstack = setindex(state.volstack, pvol.idx, state.currentDepth)
+    state.tolocal *= pvol.transformation
+    nothing
+end
+
+function popOut!(state::CuNavigatorState{T}, model::CuGeoModel) where T<:AbstractFloat
+    if state.currentDepth > 0
+        state.currentDepth -= 1
+        #---Start from the begining to get the current volume (mother) and transformation
+        state.currentVol = state.topVolume
+        state.tolocal = one(Transformation3D{T})
+        for depth in 1:state.currentDepth
+            vol  = model.volumes[state.currentVol]
+            pvol = model.placedvolumes[vol.daughterOff +  state.volstack[depth]]
+            state.currentVol = pvol.volume
+            state.tolocal *= pvol.transformation
+        end
+    end
+    nothing
 end
 
 function collectDaughters!(model::CuGeoModel, state::CuNavigatorState{T}, vol::CuVolume, point::Point3{T}) where T<:AbstractFloat
@@ -74,10 +102,7 @@ function collectDaughters!(model::CuGeoModel, state::CuNavigatorState{T}, vol::C
         for d in 1:vol.daughterLen
             pvol = model.placedvolumes[vol.daughterOff + d]
             if contains(model, pvol, point)
-                state.currentVol = pvol.volume
-                state.currentDepth += 1
-                state.volstack[state.currentDepth] = d
-                state.tolocal *= pvol.transformation
+                pushIn!(state, pvol)
                 # emulation of recursion
                 # collectDaughters!(model, state, model.volumes[pvol.volume], pvol.transformation * point)
                 isinside = true
@@ -132,28 +157,14 @@ function computeStep!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Poi
         step = distanceToOut(getShape(model, volume), lpoint, ldir)
         step = step < 0. ? 0. : step
         if step > 0.
-            if state.currentDepth > 0
-                state.currentDepth -= 1
-                #---Start from the begining to get the current volume (mother) and transformation
-                state.currentVol = state.topVolume
-                state.tolocal = one(Transformation3D{T})
-                for depth in 1:state.currentDepth
-                    vol  = model.volumes[state.currentVol]
-                    pvol = model.placedvolumes[vol.daughterOff +  state.volstack[depth]]
-                    state.currentVol = pvol.volume
-                    state.tolocal *= pvol.transformation
-                end
-            end
+            popOut!(state, model)
         end
     end
     #---We hit a daughter, push it into the stack
     if idx != 0
         step += kTolerance(T) # to ensure that do not stay in the surface of the daughter
         pvol = model.placedvolumes[volume.daughterOff + idx]
-        state.currentVol = pvol.volume
-        state.currentDepth += 1
-        state.volstack[state.currentDepth] = idx
-        state.tolocal *= pvol.transformation
+        pushIn!(state, pvol)
     end
     return step
 end
@@ -182,7 +193,7 @@ function pushVolume(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volum
         daughterLen = length(vol.daughters)
         resize!(model.placedvolumes, daughterOff + daughterLen)
         for d in 1:daughterLen
-            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(vol.daughters[d].transformation, pushVolume(indexes, model, vol.daughters[d].volume ))
+            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(d, vol.daughters[d].transformation, pushVolume(indexes, model, vol.daughters[d].volume ))
         end
         model.volumes[volIdx] = CuVolume{T}(shapeIdx, materialIdx, daughterOff, daughterLen)    
         indexes[id] = volIdx
