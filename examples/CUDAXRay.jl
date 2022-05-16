@@ -1,7 +1,11 @@
 using Geom4hep
 using StaticArrays
 using BenchmarkTools, Test, Printf
-using GLMakie
+if haskey(ENV, "DISPLAY")
+    using GLMakie
+else
+    using CairoMakie
+end
 using CUDA
 using Profile
 
@@ -106,4 +110,12 @@ if abspath(PROGRAM_FILE) == @__FILE__
     heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(model, 1e4, 3), colormap=:grayC)
     draw(LScene(fig[2, 2]), world)
     save("xray-boxes.png", fig)
+    if CUDA.functional()
+        t1 = @benchmark generateXRay(model, 1e6, 1, cuda=true) seconds=60
+        @show t1
+        t2 = @benchmark generateXRay(model, 1e6, 1, cuda=false) seconds=60
+        @show t2
+        @printf "speedup [CPU/GPU]= %f" mean(t2).time/mean(t1).time
+    end
+
 end
