@@ -64,14 +64,14 @@ mutable struct CuNavigatorState{T<:AbstractFloat}
     end
 end
 
-function reset!(state::CuNavigatorState{T}) where T<:AbstractFloat
+@inline function reset!(state::CuNavigatorState{T}) where T<:AbstractFloat
     state.currentVol = state.topVolume
     state.currentDepth = 0
     state.volstack = zero(SVector{16,UInt32})
     state.tolocal = one(Transformation3D{T})
 end
 
-function pushIn!(state::CuNavigatorState{T}, pvol::CuPlacedVolume{T}) where T<:AbstractFloat
+@inline function pushIn!(state::CuNavigatorState{T}, pvol::CuPlacedVolume{T}) where T<:AbstractFloat
     state.currentVol = pvol.volume
     state.currentDepth += 1
     state.volstack = setindex(state.volstack, pvol.idx, state.currentDepth)
@@ -79,7 +79,7 @@ function pushIn!(state::CuNavigatorState{T}, pvol::CuPlacedVolume{T}) where T<:A
     nothing
 end
 
-function popOut!(state::CuNavigatorState{T}, model::CuGeoModel) where T<:AbstractFloat
+@inline function popOut!(state::CuNavigatorState{T}, model::CuGeoModel) where T<:AbstractFloat
     if state.currentDepth > 0
         state.currentDepth -= 1
         #---Start from the begining to get the current volume (mother) and transformation
@@ -95,7 +95,7 @@ function popOut!(state::CuNavigatorState{T}, model::CuGeoModel) where T<:Abstrac
     nothing
 end
 
-function collectDaughters!(model::CuGeoModel, state::CuNavigatorState{T}, vol::CuVolume, point::Point3{T}) where T<:AbstractFloat
+@inline function collectDaughters!(model::CuGeoModel, state::CuNavigatorState{T}, vol::CuVolume, point::Point3{T}) where T<:AbstractFloat
     isinside = true
     while isinside
         isinside = false
@@ -114,7 +114,7 @@ function collectDaughters!(model::CuGeoModel, state::CuNavigatorState{T}, vol::C
     end
 end
 
-function locateGlobalPoint!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}) where T<:AbstractFloat
+@inline function locateGlobalPoint!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}) where T<:AbstractFloat
     state.currentVol = state.topVolume
     state.currentDepth = 0
     state.tolocal = one(Transformation3D{T})
@@ -146,7 +146,7 @@ function getClosestDaughter(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T
 end
 
 
-function computeStep!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where T<:AbstractFloat
+@inline function computeStep!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where T<:AbstractFloat
     lpoint, ldir = state.tolocal * gpoint, state.tolocal * gdir
     volume = model.volumes[state.currentVol]
 

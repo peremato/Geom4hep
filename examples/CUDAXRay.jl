@@ -21,22 +21,20 @@ function generateXRay(model::CuGeoModel, npoints::Number, view::Int=1; cuda::Boo
     pixel = round(sqrt(dim_a*dim_b/npoints), sigdigits=3)
     nx, ny = round(Int, dim_a/pixel), round(Int, dim_b/pixel)
     result = zeros(nx,ny)
-    states = fill(CuNavigatorState{Float64}(1), nx, ny)
     if cuda && CUDA.functional()
         threads = (8,8)
         blocks = cld.((nx,ny),threads)
         cu_result = CuArray(result)
-        cu_states = CuArray(states)
         cu_model = cu(model)
-        CUDA.@sync @cuda threads=threads blocks=blocks k_generateXRay(cu_result, cu_states, cu_model, lower, pixel, view)
+        CUDA.@sync @cuda threads=threads blocks=blocks k_generateXRay(cu_result, cu_model, lower, pixel, view)
         return Array(cu_result)
     else
-        generateXRay(result, states, model, lower, pixel, view)
+        generateXRay(result, model, lower, pixel, view)
         return result
     end
 end
 
-function  generateXRay(result::Matrix{T}, states::Matrix{CuNavigatorState{T}}, model::CuGeoModel, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
+function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
     nx, ny = size(result)
     state = CuNavigatorState{T}(1)
     for i in 1:nx, j in 1:ny
@@ -50,7 +48,6 @@ function  generateXRay(result::Matrix{T}, states::Matrix{CuNavigatorState{T}}, m
             point = Point3{T}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
             dir = Vector3{T}(0,0,1)
         end
-        state = states[i,j]
         locateGlobalPoint!( model, state, point)
         mass::T =  0.0
         step::T = -1.
@@ -65,7 +62,7 @@ function  generateXRay(result::Matrix{T}, states::Matrix{CuNavigatorState{T}}, m
     end
   
 end
-function k_generateXRay(result, states, model, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
+function k_generateXRay(result, model, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
     nx, ny = size(result)
     i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
@@ -80,7 +77,7 @@ function k_generateXRay(result, states, model, lower::Point3{T}, pixel::T, view:
             point = Point3{T}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
             dir = Vector3{T}(0,0,1)
         end
-        state = states[i,j]
+        state = CuNavigatorState{T}(1)
         locateGlobalPoint!(model, state, point)
         mass::T =  0.0
         step::T = -1.0
