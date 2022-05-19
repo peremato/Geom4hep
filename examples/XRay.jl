@@ -1,36 +1,32 @@
+using Revise
 using Geom4hep
+using Printf
+using StaticArrays
+
+const idx = [2 3 1; 1 3 2; 1 2 3]
+const rdx = [3 1 2; 1 3 2; 1 2 3]
 
 # Generate a X-Ray of a geometry----------------------------------------------
-function generateXRay(world::Volume, npoints::Number, view::Symbol=:x)
+function generateXRay(world::Volume{T}, npoints::Number, view::Int=1) where T<:AbstractFloat
     # Setup plane of points and results
     lower, upper = extent(world.shape)
-    dim = upper - lower
-    if view == :x
-        shift = 0
-    elseif view == :y
-        shift = 1
-    elseif view == :z
-        shift = 2
-    else
-        error("Invalid projection: $view")
-    end
-    dummy, dim_a, dim_b = circshift(dim, shift)
-    pixel = round(sqrt(dim_a*dim_b/npoints), sigdigits=3)
-    nx, ny = round(Int, dim_a/pixel), round(Int, dim_b/pixel)
+    ix, iy, iz = idx[view, :]
+    xi, yi, zi = rdx[view, :]
+
+    nx = ny = round(Int, sqrt(npoints))
+    xrange = range(lower[ix], upper[ix], length = nx)
+    yrange = range(lower[iy], upper[iy], length = ny)
+    z = lower[iz]+kTolerance(T)
+ 
     result = zeros(nx,ny)
 
-    state = NavigatorState{Float64}(world)
-    dir = Vector3{Float64}(circshift([1,0,0], shift))
-    point = Point3{Float64}(0,0,0)
+    state = NavigatorState{T}(world)
+    _dir = (0, 0, 1)
+    dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi]) 
 
-    for i in 1:nx, j in 1:ny
-        if shift == 0
-            point = Point3{Float64}(lower[1]+kTolerance(), lower[2]+(i-0.5)*pixel, lower[3]+(j-0.5)*pixel)
-        elseif shift == 1
-            point = Point3{Float64}(lower[1]+(j-0.5)*pixel, lower[2]+kTolerance(), lower[3]+(i-0.5)*pixel)
-        elseif shift == 2
-            point = Point3{Float64}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
-        end
+    for (i,x) in enumerate(xrange), (j,y) in enumerate(yrange)
+        _point = (x, y, z)
+        point = Point3{T}(_point[xi], _point[yi], _point[zi])
         locateGlobalPoint!(state, point)
         mass =  0.0
         step = -1.0
@@ -46,20 +42,24 @@ function generateXRay(world::Volume, npoints::Number, view::Symbol=:x)
         end
         result[i,j] = mass   
     end
-    return result
+    return xrange, yrange, result
 end
 
 using GLMakie
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    #-----build and generate image-----------------------------
-    world = processGDML("examples/boxes.gdml")
+    #-----build detector---------------------------------------
+    world = processGDML("examples/trackML.gdml")
+    volume = world.daughters[2].volume.daughters[1].volume
     #-----Generate and Plot results----------------------------
     fig = Figure()
-    heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(world, 1e6, :x), colormap=:grayC)
-    heatmap!(Axis(fig[2, 1], title = "Y direction"), generateXRay(world, 1e6, :y), colormap=:grayC)
-    heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(world, 1e6, :z), colormap=:grayC)
-    draw(LScene(fig[2, 2]), world)
+    @printf "generating x-projection\n"
+    heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(volume, 1e6, 1)..., colormap=:grayC)
+    @printf "generating y-projection\n"
+    heatmap!(Axis(fig[2, 1], title = "Y direction"), generateXRay(volume, 1e6, 2)..., colormap=:grayC)
+    @printf "generating z-projection\n"
+    heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(volume, 1e6, 3)..., colormap=:grayC)
+    draw(LScene(fig[2, 2]), volume, 3)
     display(fig)
 end
 

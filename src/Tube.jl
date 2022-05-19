@@ -343,14 +343,14 @@ function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where
         crmin *= invnsq
         delta = b * b - crmin
         dist_rmin = -b + (delta > 0. ? -sqrt(delta) : 0.)
-        dist_rmin >= kTolerance(T)/2 && dist_rmin < distance && (distance = dist_rmin)
+        dist_rmin >= -kTolerance(T)/2 && dist_rmin < distance && (distance = dist_rmin)
     end
 
     # rmax
     crmax *= invnsq
     delta = b * b - crmax
     dist_rmax = -b + (delta >= 0. ? sqrt(delta) : 0.)
-    dist_rmax >= kTolerance(T)/2 && dist_rmax < distance && (distance = dist_rmax)
+    dist_rmax >= -kTolerance(T)/2 && dist_rmax < distance && (distance = dist_rmax)
  
     # Phi planes
 

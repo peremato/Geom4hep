@@ -21,6 +21,11 @@ end
 
 const Volume{T} = Mother{T,PlacedVolume{T}} where T<:AbstractFloat
 
+function Base.show(io::IO, vol::Volume{T}) where T
+    name = vol.label
+    print(io, "Volume{$T} name = $name")
+end
+
 contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pvol.volume.shape, pvol.transformation * p) == kInside
 contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
 distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)

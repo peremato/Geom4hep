@@ -280,7 +280,7 @@ function distanceToIn(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T
         hitx = abs(x + distz * dx)
         hity = abs(y + distz * dy)
         okzt = z > (trd.z - kTolerance(T)/2) && hitx <= trd.x2 && hity <= trd.y2
-        okzb = z < (-trd.z + kTolerance(T)/2) && hitx <= trd.x2 && hity <= trd.y2
+        okzb = z < (-trd.z + kTolerance(T)/2) && hitx <= trd.x1 && hity <= trd.y1
         okz &= ( okzt || okzb )
         if okz
             distance = distz 

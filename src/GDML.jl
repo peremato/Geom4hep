@@ -1,14 +1,52 @@
-using LightXML
+using LightXML, Printf
 name = LightXML.name
 
 include("Units.jl")
 
-materials = Dict{String,AbstractMaterial}()
-solids = Dict{String,AbstractShape{Float64}}()
-volumes =  Dict{String,Volume{Float64}}()
+struct GDMLDicts{T<:AbstractFloat}
+    materials::Dict{String,AbstractMaterial}
+    solids::Dict{String,AbstractShape{T}}
+    volumes::Dict{String,Volume{T}}
+    positions::Dict{String, Vector3{T}}
+    rotations::Dict{String, RotXYZ{T}}
+    function GDMLDicts{T}() where T<:AbstractFloat
+        new(Dict{String,AbstractMaterial}(),
+            Dict{String,AbstractShape{T}}(),
+            Dict{String,Volume{T}}(),
+            Dict{String, Vector3{T}}(),
+            Dict{String, RotXYZ{T}}()
+        )
+    end
+end
+
+# process <define/>
+function fillDefine!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+    (; positions, rotations) = dicts
+    for c in child_nodes(element)
+        if is_elementnode(c)
+            e = XMLElement(c)
+            elemname = name(e)
+            attrs = attributes_dict(e)
+            if elemname == "position"
+                unit = eval(Meta.parse(attrs["unit"]))
+                positions[attrs["name"]] = Vector3{T}(parse(T, attrs["x"]) * unit, 
+                                                      parse(T, attrs["y"]) * unit, 
+                                                      parse(T, attrs["z"]) * unit)
+            elseif elemname == "rotation"
+                unit = eval(Meta.parse(attrs["unit"]))
+                rotations[attrs["name"]] = RotZYX{T}(parse(T, attrs["z"]) * unit, 
+                                                     parse(T, attrs["y"]) * unit, 
+                                                     parse(T, attrs["x"]) * unit)
+            else
+                @printf "define %s not yet suported\n" elemname
+            end
+        end
+    end
+end
 
 # process <materials/>
-function fillMaterials!(materials, element::XMLElement)
+function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+    (; materials) = dicts
     for c in child_nodes(element)
         if is_elementnode(c)
             e = XMLElement(c)
@@ -69,33 +107,54 @@ function fillMaterials!(materials, element::XMLElement)
 end
 
 # process <solids/>
-function fillSolids!(solids, element::XMLElement)
+function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+    (; solids) = dicts
     for c in child_nodes(element)
         if is_elementnode(c)
             e = XMLElement(c)
             elemname = name(e)
             attrs = attributes_dict(e)
             if elemname == "box"
-                unit = eval(Meta.parse(attrs["lunit"]))
-                solids[attrs["name"]] = Box{Float64}(parse(Float64, attrs["x"]) * unit, 
-                                                     parse(Float64, attrs["y"]) * unit, 
-                                                     parse(Float64, attrs["z"]) * unit)
+                lunit = eval(Meta.parse(attrs["lunit"]))
+                solids[attrs["name"]] = Box{T}(parse(T, attrs["x"]) * lunit, 
+                                                     parse(T, attrs["y"]) * lunit, 
+                                                     parse(T, attrs["z"]) * lunit)
             elseif elemname == "trd"
-                unit = eval(Meta.parse(attrs["lunit"]))
-                solids[attrs["name"]] = Trd{Float64}(parse(Float64, attrs["x1"]) * unit, 
-                                                     parse(Float64, attrs["x2"]) * unit, 
-                                                     parse(Float64, attrs["y1"]) * unit,
-                                                     parse(Float64, attrs["y2"]) * unit,
-                                                     parse(Float64, attrs["z"]) * unit)
+                lunit = eval(Meta.parse(attrs["lunit"]))
+                solids[attrs["name"]] = Trd{T}(parse(T, attrs["x1"]) * lunit, 
+                                               parse(T, attrs["x2"]) * lunit, 
+                                               parse(T, attrs["y1"]) * lunit,
+                                               parse(T, attrs["y2"]) * lunit,
+                                               parse(T, attrs["z"]) * lunit)
+            elseif elemname == "tube"
+                lunit = eval(Meta.parse(attrs["lunit"]))
+                aunit = eval(Meta.parse(attrs["aunit"]))
+                solids[attrs["name"]] = Tube{T}(parse(T, attrs["rmin"]) * lunit, 
+                                                     parse(T, attrs["rmax"]) * lunit, 
+                                                     parse(T, attrs["z"]) * lunit,
+                                                     parse(T, attrs["startphi"]) * aunit,
+                                                     parse(T, attrs["deltaphi"]) * aunit)
+            elseif elemname == "cone"
+                lunit = eval(Meta.parse(attrs["lunit"]))
+                aunit = eval(Meta.parse(attrs["aunit"]))
+                solids[attrs["name"]] = Tube{T}(parse(T, attrs["rmin1"]) * lunit, 
+                                                     parse(T, attrs["rmax1"]) * lunit,
+                                                     parse(T, attrs["rmin2"]) * lunit,
+                                                     parse(T, attrs["rmax2"]) * lunit, 
+                                                     parse(T, attrs["z"]) * lunit,
+                                                     parse(T, attrs["startphi"]) * aunit,
+                                                     parse(T, attrs["deltaphi"]) * aunit)
             else
-                solids[attrs["name"]] = NoShape{Float64}(elemname)
+                @printf "Shape %s not yet suported. Using NoShape\n" elemname
+                solids[attrs["name"]] = NoShape{T}()
             end
         end
     end
 end
 
 # process <structure/>
-function fillVolumes!(volumes, element::XMLElement)
+function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+    (; materials, solids, volumes, positions, rotations) = dicts
     for c in child_nodes(element) #--- loop over volumes
         if is_elementnode(c)
             e = XMLElement(c)
@@ -112,17 +171,17 @@ function fillVolumes!(volumes, element::XMLElement)
                         if  name(cc) == "solidref"
                             shape = solids[aa["ref"]]
                             if !isnothing(material)
-                                volume = Volume{Float64}(volname, shape, material)
+                                volume = Volume{T}(volname, shape, material)
                             end
                         elseif name(cc) == "materialref"
                             material = materials[aa["ref"]]
                             if !isnothing(shape)
-                                volume = Volume{Float64}(volname, shape, material)
+                                volume = Volume{T}(volname, shape, material)
                             end
                         elseif name(cc) == "physvol"
                             daughter = nothing
-                            position = (0.,0.,0.)
-                            rotation = (0.,0.,0.)
+                            position = Vector3{T}(0,0,0)
+                            rotation = RotXYZ{T}(0,0,0)
                             for ccc in child_nodes(XMLElement(cc))
                                 if is_elementnode(ccc)
                                     aa = attributes_dict(XMLElement(ccc))
@@ -130,20 +189,23 @@ function fillVolumes!(volumes, element::XMLElement)
                                         daughter = volumes[aa["ref"]]
                                     elseif name(ccc) == "position"
                                         unit = eval(Meta.parse(aa["unit"]))
-                                        position = (parse(Float64, aa["x"]) * unit, 
-                                                    parse(Float64, aa["y"]) * unit,
-                                                    parse(Float64, aa["z"]) * unit)
+                                        position = Vector3{T}(parse(T, aa["x"]) * unit, 
+                                                              parse(T, aa["y"]) * unit,
+                                                              parse(T, aa["z"]) * unit)
                                     elseif name(ccc) == "rotation"
                                         unit = eval(Meta.parse(aa["unit"]))
-                                        rotation = (parse(Float64, aa["x"]) * unit, 
-                                                    parse(Float64, aa["y"]) * unit,
-                                                    parse(Float64, aa["z"]) * unit)
+                                        rotation = RotXYZ{T}(parse(T, aa["x"]) * unit, 
+                                                             parse(T, aa["y"]) * unit,
+                                                             parse(T, aa["z"]) * unit)
+                                    elseif name(ccc) == "positionref"
+                                        position = positions[aa["ref"]]
+                                    elseif name(ccc) == "rotationref"
+                                        rotation = rotations[aa["ref"]]
                                     end
                                 end
                             end
-                            placeDaughter!(volume, Transformation3D{Float64}(position..., rotation...), daughter)
-                        end
-                    end
+                            placeDaughter!(volume, Transformation3D{T}(RotMatrix3{T}(rotation), position), daughter)
+                        end                    end
                 end
                 volumes[volname] = volume
             end
@@ -153,32 +215,32 @@ end
 
 
 # process the full file
-function processGDML(fname::String)
+function processGDML(fname::String, ::Type{T}=Float64) where T
+    dicts = GDMLDicts{T}()
     world = nothing
     xdoc = parse_file(fname)
     xroot = root(xdoc) 
     if name(xroot) != "gdml"
         throw(ErrorException("File @fname is not a GDML file"))
     end
-    empty!(materials)
-    empty!(volumes)
-    empty!(solids)
     for c in child_nodes(xroot)  # c is an instance of XMLNode
         if is_elementnode(c)
             e = XMLElement(c)    # this makes an XMLElement instance
             if name(e) == "materials"
-                fillMaterials!(materials, e)
+                fillMaterials!(dicts, e)
             elseif name(e) == "solids"
-                fillSolids!(solids, e)
+                fillSolids!(dicts, e)
             elseif name(e) == "structure"
-                fillVolumes!(volumes, e)
+                fillVolumes!(dicts, e)
+            elseif name(e) == "define"
+                fillDefine!(dicts, e)
             elseif name(e) == "setup"
                 for cc in child_nodes(e)
                     if is_elementnode(cc)
                         ee = XMLElement(cc)
                         attrs = attributes_dict(ee)
                         if name(ee) == "world"
-                           world = volumes[attrs["ref"]] 
+                           world = dicts.volumes[attrs["ref"]] 
                         end
                     end
                 end

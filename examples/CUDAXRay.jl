@@ -11,47 +11,42 @@ using Profile
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+const idx =  [2 3 1; 1 3 2; 1 2 3]
+const rdx =  [3 1 2; 1 3 2; 1 2 3]
+
 function generateXRay(model::CuGeoModel, npoints::Number, view::Int=1; cuda::Bool=true) where T<:AbstractFloat
     world = model.volumes[1]
     lower, upper = extent(model.shapes[world.shapeIdx])
-    dim = upper - lower
-    if view == 1
-        dim_a, dim_b = dim[2], dim[3]
-    elseif view == 2
-        dim_a, dim_b = dim[3], dim[1]
-    elseif view == 3
-        dim_a, dim_b = dim[1], dim[2]
-    end
-    pixel = round(sqrt(dim_a*dim_b/npoints), sigdigits=3)
-    nx, ny = round(Int, dim_a/pixel), round(Int, dim_b/pixel)
+    ix, iy = idx[view,1], idx[view,2]
+    nx = ny = round(Int, sqrt(npoints))
+    xrange = range(lower[ix], upper[ix], length = nx)
+    yrange = range(lower[iy], upper[iy], length = ny)
     result = zeros(nx,ny)
     if cuda && CUDA.functional()
         threads = (8,8)
         blocks = cld.((nx,ny),threads)
         cu_result = CuArray(result)
         cu_model = cu(model)
-        CUDA.@sync @cuda threads=threads blocks=blocks k_generateXRay(cu_result, cu_model, lower, pixel, view)
-        return Array(cu_result)
+        CUDA.@sync @cuda threads=threads blocks=blocks k_generateXRay(cu_result, cu_model, lower, upper, view)
+        return xrange, yrange, Array(cu_result)
     else
-        generateXRay(result, model, lower, pixel, view)
-        return result
+        generateXRay(result, model, lower, upper, view)
+        return xrange, yrange, result
     end
 end
 
-function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
+function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, upper::Point3{T}, view::Int) where T<:AbstractFloat
     nx, ny = size(result)
+    ix, iy, iz = idx[view,1], idx[view,2], idx[view,3]
+    xi, yi, zi = rdx[view,1], rdx[view,2], rdx[view,3]
+    px = (upper[ix]-lower[ix])/(nx-1)
+    py = (upper[iy]-lower[iy])/(ny-1)
+    _dir = (0, 0, 1)
+    dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi]) 
     state = CuNavigatorState{T}(1)
     for i in 1:nx, j in 1:ny
-        if view == 1
-            point = Point3{T}(lower[1]+kTolerance(), lower[2]+(i-0.5)*pixel, lower[3]+(j-0.5)*pixel)
-            dir = Vector3{T}(1,0,0)
-        elseif view == 2
-            point = Point3{T}(lower[1]+(j-0.5)*pixel, lower[2]+kTolerance(), lower[3]+(i-0.5)*pixel)
-            dir = Vector3{T}(0,1,0)
-        elseif view == 3
-            point = Point3{T}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
-            dir = Vector3{T}(0,0,1)
-        end
+        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ kTolerance(T))
+        point = Point3{T}(_point[xi], _point[yi], _point[zi])
         locateGlobalPoint!( model, state, point)
         mass::T =  0.0
         step::T = -1.
@@ -66,21 +61,25 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, p
     end
   
 end
-function k_generateXRay(result, model, lower::Point3{T}, pixel::T, view::Int) where T<:AbstractFloat
+function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, view::Int) where T<:AbstractFloat
     nx, ny = size(result)
+
+    ix, iy, iz = idx[view,1], idx[view,2], idx[view,3]
+    xi, yi, zi = rdx[view,1], rdx[view,2], rdx[view,3]
+
+    px = (upper[ix]-lower[ix])/(nx-1)
+    py = (upper[iy]-lower[iy])/(ny-1)
+
     i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
+
     if i <= nx && j <= ny
-        if view == 1
-            point = Point3{T}(lower[1]+kTolerance(), lower[2]+(i-0.5)*pixel, lower[3]+(j-0.5)*pixel)
-            dir = Vector3{T}(1,0,0)
-        elseif view == 2
-            point = Point3{T}(lower[1]+(j-0.5)*pixel, lower[2]+kTolerance(), lower[3]+(i-0.5)*pixel)
-            dir = Vector3{T}(0,1,0)
-        elseif view == 3
-            point = Point3{T}(lower[1]+(i-0.5)*pixel, lower[2]+(j-0.5)*pixel, lower[3]+kTolerance())
-            dir = Vector3{T}(0,0,1)
-        end
+        _dir = (0, 0, 1)
+        dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi])
+
+        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ kTolerance(T))
+        point = Point3{T}(_point[xi], _point[yi], _point[zi])
+
         state = CuNavigatorState{T}(1)
         locateGlobalPoint!(model, state, point)
         mass::T =  0.0
@@ -99,23 +98,26 @@ end
 
 #-----build and generate image-----------------------------
 if abspath(PROGRAM_FILE) == @__FILE__
-    world = processGDML("examples/boxes.gdml")
-    model = fillCuGeometry(world)
+    world = processGDML("examples/trackML.gdml")
+    topvol = world.daughters[2].volume.daughters[1].volume
+    model = fillCuGeometry(topvol)
     fig = Figure()
     @printf "generating x-projection\n"
-    heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(model, 1e4, 1), colormap=:grayC)
+    heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(model, 1e6, 1)..., colormap=:grayC)
     @printf "generating y-projection\n"
-    heatmap!(Axis(fig[2, 1], title = "Y direction"), generateXRay(model, 1e4, 2), colormap=:grayC)
+    heatmap!(Axis(fig[2, 1], title = "Y direction"), generateXRay(model, 1e6, 2)..., colormap=:grayC)
     @printf "generating z-projection\n"
-    heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(model, 1e4, 3), colormap=:grayC)
-    draw(LScene(fig[2, 2]), world)
+    heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(model, 1e6, 3)..., colormap=:grayC)
+    draw(LScene(fig[2, 2]), topvol, 3)
     save("xray-boxes.png", fig)
     if CUDA.functional()
-        t1 = @benchmark generateXRay(model, 1e6, 1, cuda=true) seconds=60
+        t1 = @benchmark generateXRay(model, 1e6, 3, cuda=true) seconds=60
         @show t1
-        t2 = @benchmark generateXRay(model, 1e6, 1, cuda=false) seconds=60
+        t2 = @benchmark generateXRay(model, 1e6, 3, cuda=false) seconds=60
         @show t2
-        @printf "speedup [CPU/GPU]= %f" mean(t2).time/mean(t1).time
+        @printf "speedup [CPU/GPU]= %f\n" mean(t2).time/mean(t1).time
+    else
+        t2 = @benchmark generateXRay(model, 1e6, 3, cuda=false) seconds=60
+        @show t2
     end
-
 end

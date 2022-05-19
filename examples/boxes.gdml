@@ -110,7 +110,7 @@
       </physvol>
     </volume>
     <volume name="Trd1">
-      <materialref ref="Aluminium"/>
+      <materialref ref="Steel"/>
       <solidref ref="trd1"/>
     </volume>
     <volume name="World">

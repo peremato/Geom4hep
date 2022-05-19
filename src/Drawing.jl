@@ -1,26 +1,29 @@
 using Makie
 using Colors
+using Printf
 
 colors = colormap("Grays", 5)
 
 #---Draw a Volume---------------------------------------------------------------
-function draw(s::LScene, vol::Volume, t::Transformation3D, level::Int64)
-    m = GeometryBasics.mesh(Tesselation(vol.shape, 32))
+function draw(s::LScene, vol::Volume, t::Transformation3D, level::Int64, maxlevel::Int64)
+    m = GeometryBasics.mesh(Tesselation(vol.shape, 64))
     if isone(t)
-        mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible= vol.label == "World" ? false : true)
+        mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible = level == 1 ? false : true)
     else
         points = GeometryBasics.coordinates(m)
         faces  = GeometryBasics.faces(m)
         map!(c -> c * t, points, points)
         mesh!(s, points, faces, color=colors[level], transparency=true, ambient=0.7)
     end
-    for daughter in vol.daughters
-        draw(s, daughter.volume, daughter.transformation * t, level+1)
+    if level < maxlevel
+        for daughter in vol.daughters
+            draw(s, daughter.volume, t * daughter.transformation, level+1, maxlevel)
+        end
     end
 end
 
-function draw(s::LScene, vol::Volume)
-    draw(s, vol, one(Transformation3D{Float64}), 1)
+function draw(s::LScene, vol::Volume, maxlevel::Int64=999)
+    draw(s, vol, one(Transformation3D{Float64}), 1, maxlevel)
     display(s)
 end
 
