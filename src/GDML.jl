@@ -116,22 +116,22 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
             attrs = attributes_dict(e)
             if elemname == "box"
                 lunit = eval(Meta.parse(attrs["lunit"]))
-                solids[attrs["name"]] = Box{T}(parse(T, attrs["x"]) * lunit, 
-                                                     parse(T, attrs["y"]) * lunit, 
-                                                     parse(T, attrs["z"]) * lunit)
+                solids[attrs["name"]] = Box{T}(parse(T, attrs["x"]) * lunit / 2, 
+                                               parse(T, attrs["y"]) * lunit / 2, 
+                                               parse(T, attrs["z"]) * lunit / 2)
             elseif elemname == "trd"
                 lunit = eval(Meta.parse(attrs["lunit"]))
-                solids[attrs["name"]] = Trd{T}(parse(T, attrs["x1"]) * lunit, 
-                                               parse(T, attrs["x2"]) * lunit, 
-                                               parse(T, attrs["y1"]) * lunit,
-                                               parse(T, attrs["y2"]) * lunit,
-                                               parse(T, attrs["z"]) * lunit)
+                solids[attrs["name"]] = Trd{T}(parse(T, attrs["x1"]) * lunit / 2, 
+                                               parse(T, attrs["x2"]) * lunit / 2, 
+                                               parse(T, attrs["y1"]) * lunit / 2,
+                                               parse(T, attrs["y2"]) * lunit / 2,
+                                               parse(T, attrs["z"])  * lunit / 2)
             elseif elemname == "tube"
                 lunit = eval(Meta.parse(attrs["lunit"]))
                 aunit = eval(Meta.parse(attrs["aunit"]))
                 solids[attrs["name"]] = Tube{T}(parse(T, attrs["rmin"]) * lunit, 
                                                      parse(T, attrs["rmax"]) * lunit, 
-                                                     parse(T, attrs["z"]) * lunit,
+                                                     parse(T, attrs["z"]) * lunit / 2,
                                                      parse(T, attrs["startphi"]) * aunit,
                                                      parse(T, attrs["deltaphi"]) * aunit)
             elseif elemname == "cone"
@@ -141,7 +141,7 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                      parse(T, attrs["rmax1"]) * lunit,
                                                      parse(T, attrs["rmin2"]) * lunit,
                                                      parse(T, attrs["rmax2"]) * lunit, 
-                                                     parse(T, attrs["z"]) * lunit,
+                                                     parse(T, attrs["z"]) * lunit / 2,
                                                      parse(T, attrs["startphi"]) * aunit,
                                                      parse(T, attrs["deltaphi"]) * aunit)
             else
