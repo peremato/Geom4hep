@@ -11,13 +11,15 @@ using Profile
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-const idx =  [2 3 1; 1 3 2; 1 2 3]
-const rdx =  [3 1 2; 1 3 2; 1 2 3]
+const idxs =  [2 3 1; 1 3 2; 1 2 3]
+const rdxs =  [3 1 2; 1 3 2; 1 2 3]
 
 function generateXRay(model::CuGeoModel, npoints::Number, view::Int=1; cuda::Bool=true) where T<:AbstractFloat
     world = model.volumes[1]
     lower, upper = extent(model.shapes[world.shapeIdx])
-    ix, iy = idx[view,1], idx[view,2]
+    idx = (idxs[view,1], idxs[view,2], idxs[view,3])
+    rdx = (rdxs[view,1], rdxs[view,2], rdxs[view,3])
+    ix, iy, iz = idx
     nx = ny = round(Int, sqrt(npoints))
     xrange = range(lower[ix], upper[ix], length = nx)
     yrange = range(lower[iy], upper[iy], length = ny)
@@ -27,18 +29,18 @@ function generateXRay(model::CuGeoModel, npoints::Number, view::Int=1; cuda::Boo
         blocks = cld.((nx,ny),threads)
         cu_result = CuArray(result)
         cu_model = cu(model)
-        CUDA.@sync @cuda threads=threads blocks=blocks k_generateXRay(cu_result, cu_model, lower, upper, view)
+        CUDA.@sync @cuda threads=threads blocks=blocks k_generateXRay(cu_result, cu_model, lower, upper, idx, rdx)
         return xrange, yrange, Array(cu_result)
     else
-        generateXRay(result, model, lower, upper, view)
+        generateXRay(result, model, lower, upper, idx, rdx)
         return xrange, yrange, result
     end
 end
 
-function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, upper::Point3{T}, view::Int) where T<:AbstractFloat
+function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, upper::Point3{T}, idx::Tuple, rdx::Tuple) where T<:AbstractFloat
     nx, ny = size(result)
-    ix, iy, iz = idx[view,1], idx[view,2], idx[view,3]
-    xi, yi, zi = rdx[view,1], rdx[view,2], rdx[view,3]
+    ix, iy, iz = idx
+    xi, yi, zi = rdx
     px = (upper[ix]-lower[ix])/(nx-1)
     py = (upper[iy]-lower[iy])/(ny-1)
     _dir = (0, 0, 1)
@@ -61,11 +63,11 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, u
     end
   
 end
-function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, view::Int) where T<:AbstractFloat
+function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, idx::Tuple, rdx::Tuple) where T<:AbstractFloat
     nx, ny = size(result)
 
-    ix, iy, iz = idx[view,1], idx[view,2], idx[view,3]
-    xi, yi, zi = rdx[view,1], rdx[view,2], rdx[view,3]
+    ix, iy, iz = idx
+    xi, yi, zi = rdx
 
     px = (upper[ix]-lower[ix])/(nx-1)
     py = (upper[iy]-lower[iy])/(ny-1)
