@@ -51,8 +51,8 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, u
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
         locateGlobalPoint!( model, state, point)
         mass::T =  0.0
-        step::T = -1.
-        while step != 0.0
+        step::T =  0.0
+        while step >= 0.0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
             step = computeStep!(model, state, point, dir, 1000.)
@@ -85,8 +85,8 @@ function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, idx::
         state = CuNavigatorState{T}(1)
         locateGlobalPoint!(model, state, point)
         mass::T =  0.0
-        step::T = -1.0
-        while step != 0.0
+        step::T =  0.0
+        while step >= 0.0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
             step = computeStep!(model, state, point, dir, 1000.)
@@ -100,18 +100,28 @@ end
 
 #-----build and generate image-----------------------------
 if abspath(PROGRAM_FILE) == @__FILE__
+    #-----build detector---------------------------------------
     world = processGDML("examples/trackML.gdml")
-    topvol = world.daughters[2].volume.daughters[1].volume
-    model = fillCuGeometry(topvol)
-    fig = Figure()
+    volume = world.daughters[2].volume.daughters[1].volume
+    model = fillCuGeometry(getWorld(volume))
+    #-----Generate maps----------------------------------------
     @printf "generating x-projection\n"
-    heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(model, 1e6, 1)..., colormap=:grayC)
+    rx = generateXRay(model, 1e6, 1)
     @printf "generating y-projection\n"
-    heatmap!(Axis(fig[2, 1], title = "Y direction"), generateXRay(model, 1e6, 2)..., colormap=:grayC)
+    ry = generateXRay(model, 1e6, 2)
     @printf "generating z-projection\n"
-    heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(model, 1e6, 3)..., colormap=:grayC)
-    draw(LScene(fig[2, 2]), topvol, 3)
-    save("xray-boxes.png", fig)
+    rz = generateXRay(model, 1e6, 3)
+    limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
+    #----Plot the results--------------------------------------
+    fig = Figure(resolution = (1000, 1000))
+    @printf "ploting the results\n"
+    heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
+    heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
+    heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
+    draw(LScene(fig[2, 2]), volume, 3)
+    #display(fig)
+    save("CuTrackML.png", fig)
+
     if CUDA.functional()
         t1 = @benchmark generateXRay(model, 1e6, 3, cuda=true) seconds=60
         @show t1

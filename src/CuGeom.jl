@@ -155,9 +155,14 @@ end
     #---If didn't hit any daughter return distance to out
     if idx == 0
         step = distanceToOut(getShape(model, volume), lpoint, ldir)
-        step = step < 0. ? 0. : step
         if step > 0.
             popOut!(state, model)
+        elseif step == 0.
+            if state.currentDepth > 0
+                popOut!(state, model)
+            else
+                step = -1.
+            end
         end
     end
     #---We hit a daughter, push it into the stack
