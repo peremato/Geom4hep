@@ -44,4 +44,15 @@ function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvo
     end
 end
 
-
+function getWorld(vol::Volume{T}) where T<:AbstractFloat
+    if vol.label == "world"
+        return vol
+    else
+        low, high = extent(vol.shape)
+        box = Box{T}((high-low)/2.)
+        mat = Material("vacuum"; density=0.0)
+        world = Volume{T}("world", box, mat)
+        placeDaughter!(world, Transformation3D{T}(0,0,0), vol)
+        return world
+    end
+end

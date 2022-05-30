@@ -343,7 +343,7 @@ function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where
         crmin *= invnsq
         delta = b * b - crmin
         dist_rmin = -b + (delta > 0. ? -sqrt(delta) : 0.)
-        dist_rmin >= -kTolerance(T)/2 && dist_rmin < distance && (distance = dist_rmin)
+        delta > 0. && dist_rmin >= -kTolerance(T)/2 && dist_rmin < distance && (distance = dist_rmin)
     end
 
     # rmax
@@ -427,9 +427,9 @@ function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where 
     done |= okz
 
     # Next step: is in surface and going inside
-    onsurface = rsq  >= tub.tolIrmax2 && rsq <= tub.tolOrmax2 && abs(z) < tub.z + kTolerance(T) && x*dx + y*dx <= 0.
+    onsurface = rsq  >= tub.tolIrmax2 && rsq <= tub.tolOrmax2 && abs(z) < tub.z + kTolerance(T) && x*dx + y*dy <= 0.
     if tub.rmin > 0.
-        onsurface |= rsq  >= tub.tolOrmin2 && rsq <= tub.tolIrmin2 && abs(z) < tub.z + kTolerance(T) && x*dx + y*dx >= 0.
+        onsurface |= rsq  >= tub.tolOrmin2 && rsq <= tub.tolIrmin2 && abs(z) < tub.z + kTolerance(T) && x*dx + y*dy >= 0.
     end
     if tub.Δϕ < 2π
         insector = isInside(w, x, y)

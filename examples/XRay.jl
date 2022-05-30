@@ -7,7 +7,8 @@ const idx = [2 3 1; 1 3 2; 1 2 3]
 const rdx = [3 1 2; 1 3 2; 1 2 3]
 
 # Generate a X-Ray of a geometry----------------------------------------------
-function generateXRay(world::Volume{T}, npoints::Number, view::Int=1) where T<:AbstractFloat
+function generateXRay(vol::Volume{T}, npoints::Number, view::Int=1) where T<:AbstractFloat
+    world = getWorld(vol)
     # Setup plane of points and results
     lower, upper = extent(world.shape)
     ix, iy, iz = idx[view, :]
@@ -16,7 +17,7 @@ function generateXRay(world::Volume{T}, npoints::Number, view::Int=1) where T<:A
     nx = ny = round(Int, sqrt(npoints))
     xrange = range(lower[ix], upper[ix], length = nx)
     yrange = range(lower[iy], upper[iy], length = ny)
-    z = lower[iz]+kTolerance(T)
+    z = lower[iz] + kTolerance(T)
  
     result = zeros(nx,ny)
 
@@ -28,19 +29,17 @@ function generateXRay(world::Volume{T}, npoints::Number, view::Int=1) where T<:A
         _point = (x, y, z)
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
         locateGlobalPoint!(state, point)
-        mass =  0.0
-        step = -1.0
-        while step != 0.0
+        mass = 0.0
+        step = 0.0
+        while step >= 0 
             density = currentVolume(state).material.density
             step = computeStep!(state, point, dir, 1000.)
-            if isnan(step)
-                @show point, dir, state
-                break
+            if step > 0.0
+                point = point + dir * step
+                mass += step * density
             end
-            point = point + dir * step
-            mass += step * density
         end
-        result[i,j] = mass   
+        result[i,j] = mass
     end
     return xrange, yrange, result
 end
@@ -52,15 +51,21 @@ if abspath(PROGRAM_FILE) == @__FILE__
     world = processGDML("examples/trackML.gdml")
     volume = world.daughters[2].volume.daughters[1].volume
     #-----Generate and Plot results----------------------------
-    fig = Figure()
     @printf "generating x-projection\n"
-    heatmap!(Axis(fig[1, 1], title = "X direction"), generateXRay(volume, 1e6, 1)..., colormap=:grayC)
+    rx = generateXRay(volume, 1e6, 1)
     @printf "generating y-projection\n"
-    heatmap!(Axis(fig[2, 1], title = "Y direction"), generateXRay(volume, 1e6, 2)..., colormap=:grayC)
+    ry = generateXRay(volume, 1e6, 2)
     @printf "generating z-projection\n"
-    heatmap!(Axis(fig[1, 2], title = "Z direction"), generateXRay(volume, 1e6, 3)..., colormap=:grayC)
+    rz = generateXRay(volume, 1e6, 3)
+    limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
+    #----Plot the results--------------------------------------
+    fig = Figure(resolution = (1000, 1000))
+    @printf "ploting the results\n"
+    heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
+    heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
+    heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
     draw(LScene(fig[2, 2]), volume, 3)
-    display(fig)
+    #display(fig)
+    save("tracML.png", fig)
 end
-
 

@@ -14,7 +14,7 @@ mutable struct NavigatorState{T<:AbstractFloat} <: AbstractNavigatorState
         x = new{T}(top, Vector{Int64}(), Vector{Transformation3D{T}}()) 
         sizehint!(x.volstack,16)
         sizehint!(x.tolocal,16)
-        x
+        return x
     end
 end
 
@@ -83,11 +83,17 @@ function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3
     #---If didn't hit any daughter return distance to out
     if idx == 0
         step = distanceToOut(volume.shape, lpoint, ldir)
-        step = step < 0. ? 0. : step
         if step > 0.
-            if !isempty(state.volstack) 
+            if !isempty(state.volstack)
                 pop!(state.volstack)
                 pop!(state.tolocal)
+            end
+        elseif step == 0.
+            if isempty(state.volstack)
+                step = -1.
+            else
+                pop!(state.volstack)
+                pop!(state.tolocal)          
             end
         end
     end
