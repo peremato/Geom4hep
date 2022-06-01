@@ -41,13 +41,13 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, u
     nx, ny = size(result)
     ix, iy, iz = idx
     xi, yi, zi = rdx
-    px = (upper[ix]-lower[ix])/(nx-1)
-    py = (upper[iy]-lower[iy])/(ny-1)
+    px = (upper[ix]-lower[ix])/nx
+    py = (upper[iy]-lower[iy])/ny
     _dir = (0, 0, 1)
     dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi]) 
     state = CuNavigatorState{T}(1)
     for i in 1:nx, j in 1:ny
-        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ kTolerance(T))
+        _point = (lower[ix]+ (i - 0.5)*px, lower[iy]+ (j - 0.5)*py, lower[iz]+ kTolerance(T))
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
         locateGlobalPoint!( model, state, point)
         mass::T =  0.0
@@ -69,8 +69,8 @@ function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, idx::
     ix, iy, iz = idx
     xi, yi, zi = rdx
 
-    px = (upper[ix]-lower[ix])/(nx-1)
-    py = (upper[iy]-lower[iy])/(ny-1)
+    px = (upper[ix]-lower[ix])/(nx)
+    py = (upper[iy]-lower[iy])/(ny)
 
     i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
@@ -78,8 +78,7 @@ function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, idx::
     if i <= nx && j <= ny
         _dir = (0, 0, 1)
         dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi])
-
-        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ kTolerance(T))
+        _point = (lower[ix]+ (i - 0.5)*px, lower[iy]+ (j - 0.5)*py, lower[iz]+ kTolerance(T))
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
 
         state = CuNavigatorState{T}(1)
