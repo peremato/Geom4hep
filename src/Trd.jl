@@ -265,14 +265,15 @@ function distanceToIn(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T
     inz = abs(z) < (trd.z - kTolerance(T)/2)
     distx = trd.halfx1plusx2 - trd.fx * z
     inx = (distx - abs(x)) * trd.calfx > kTolerance(T)/2
-    disty = trd.halfy1plusy2 - trd.fx * z
+    disty = trd.halfy1plusy2 - trd.fy * z
     iny = (disty - abs(y)) * trd.calfy > kTolerance(T)/2
-
     inside = inx && iny && inz
     if inside
         distance = -1.
     end
     done = inside
+    done && return distance
+    
     okz = z * dz < 0
     okz &= !inz
     if okz

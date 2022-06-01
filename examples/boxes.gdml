@@ -91,10 +91,10 @@
   </materials>
 
   <solids>
-    <box lunit="cm" name="world" x="100" y="100" z="100" />
-    <box lunit="cm" name="box1" x="10" y="20" z="30" />
-    <box lunit="cm" name="box2" x="4" y="4" z="4" />
-    <trd lunit="mm" name="trd1" x1="300" x2="100" y1="300" y2="100" z="200"/>
+    <box lunit="cm" name="world" x="200" y="200" z="200" />
+    <box lunit="cm" name="box1" x="20" y="40" z="60" />
+    <box lunit="cm" name="box2" x="8" y="8" z="8" />
+    <trd lunit="mm" name="trd1" x1="600" x2="200" y1="600" y2="200" z="400"/>
   </solids>
 
   <structure>

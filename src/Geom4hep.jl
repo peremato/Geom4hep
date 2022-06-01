@@ -7,7 +7,7 @@ export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
 export Mother, PlacedVolume, Volume, placeDaughter!, draw, draw!, drawDistanceToIn, drawDistanceToOut, getWorld
-export NavigatorState, computeStep!, locateGlobalPoint!, reset!, currentVolume, getClosestDaughter
+export NavigatorState, computeStep!, locateGlobalPoint!, reset!, isInVolume, currentVolume, getClosestDaughter
 export kTolerance
 export processGDML
 export Triangle, Intersection, intersect, distanceToPlane, PV

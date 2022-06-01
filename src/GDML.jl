@@ -130,20 +130,20 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                 lunit = eval(Meta.parse(attrs["lunit"]))
                 aunit = eval(Meta.parse(attrs["aunit"]))
                 solids[attrs["name"]] = Tube{T}(parse(T, attrs["rmin"]) * lunit, 
-                                                     parse(T, attrs["rmax"]) * lunit, 
-                                                     parse(T, attrs["z"]) * lunit / 2,
-                                                     parse(T, attrs["startphi"]) * aunit,
-                                                     parse(T, attrs["deltaphi"]) * aunit)
+                                                parse(T, attrs["rmax"]) * lunit, 
+                                                parse(T, attrs["z"]) * lunit / 2,
+                                                parse(T, attrs["startphi"]) * aunit,
+                                                parse(T, attrs["deltaphi"]) * aunit)
             elseif elemname == "cone"
                 lunit = eval(Meta.parse(attrs["lunit"]))
                 aunit = eval(Meta.parse(attrs["aunit"]))
-                solids[attrs["name"]] = Tube{T}(parse(T, attrs["rmin1"]) * lunit, 
-                                                     parse(T, attrs["rmax1"]) * lunit,
-                                                     parse(T, attrs["rmin2"]) * lunit,
-                                                     parse(T, attrs["rmax2"]) * lunit, 
-                                                     parse(T, attrs["z"]) * lunit / 2,
-                                                     parse(T, attrs["startphi"]) * aunit,
-                                                     parse(T, attrs["deltaphi"]) * aunit)
+                solids[attrs["name"]] = Cone{T}(parse(T, attrs["rmin1"]) * lunit, 
+                                                parse(T, attrs["rmax1"]) * lunit,
+                                                parse(T, attrs["rmin2"]) * lunit,
+                                                parse(T, attrs["rmax2"]) * lunit, 
+                                                parse(T, attrs["z"]) * lunit / 2,
+                                                parse(T, attrs["startphi"]) * aunit,
+                                                parse(T, attrs["deltaphi"]) * aunit)
             else
                 @printf "Shape %s not yet suported. Using NoShape\n" elemname
                 solids[attrs["name"]] = NoShape{T}()

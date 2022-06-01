@@ -31,7 +31,7 @@ function generateXRay(vol::Volume{T}, npoints::Number, view::Int=1) where T<:Abs
         locateGlobalPoint!(state, point)
         mass = 0.0
         step = 0.0
-        while step >= 0 
+        while isInVolume(state)
             density = currentVolume(state).material.density
             step = computeStep!(state, point, dir, 1000.)
             if step > 0.0
@@ -66,6 +66,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
     heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
     draw(LScene(fig[2, 2]), volume, 3)
     #display(fig)
-    save("tracML.png", fig)
+    save("trackML.png", fig)
 end
 

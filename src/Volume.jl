@@ -15,6 +15,7 @@ end
 
 #---PlacedVolume-------------------------------------------------------------------
 struct PlacedVolume{T<:AbstractFloat}
+    idx::Int64
     transformation::Transformation3D{T}
     volume::Mother{T,PlacedVolume{T}}
 end
@@ -37,10 +38,10 @@ end
 function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
     if subvol.shape isa NoShape
         for d in subvol.daughters
-            push!(volume.daughters, PlacedVolume(placement * d.transformation, d.volume))
+            push!(volume.daughters, PlacedVolume(length(volume.daughters)+1, placement * d.transformation, d.volume))
         end
     else
-        push!(volume.daughters, PlacedVolume(placement,subvol))
+        push!(volume.daughters, PlacedVolume(length(volume.daughters)+1, placement,subvol))
     end
 end
 

@@ -2,7 +2,7 @@ using Makie
 using Colors
 using Printf
 
-colors = colormap("Grays", 5)
+colors = colormap("Grays", 3)
 
 #---Draw a Volume---------------------------------------------------------------
 function draw(s::LScene, vol::Volume, t::Transformation3D, level::Int64, maxlevel::Int64)
