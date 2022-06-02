@@ -132,14 +132,11 @@ function getClosestDaughter(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T
     #---Linear loop over all daughters
     for d in 1:vol.daughterLen
         pvol = model.placedvolumes[vol.daughterOff + d]
-        if !contains(model, pvol, point)
-            dist = distanceToIn(model, pvol, point, dir)
-            if dist < step && dist != Inf && dist > 0.
-                step = dist
-                candidate = d
-            end
-        else
-            step = -1.
+        #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
+        dist = distanceToIn(model, pvol, point, dir)
+        if dist > 0. &&dist != Inf && dist < step 
+            step = dist
+            candidate = d
         end
     end
     return step, candidate
