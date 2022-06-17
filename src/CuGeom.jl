@@ -183,7 +183,7 @@ function pushObject(indexes::Dict{UInt64, UInt32}, vector::Vector{CUOBJ}, obj::O
     indexes[id]
 end
 
-function pushVolume(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volume{T}) where T <: AbstractFloat
+function pushVolume!(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volume{T}) where T <: AbstractFloat
     (; volumes, materials, placedvolumes, shapes ) = model
     id = objectid(vol)
     if !haskey(indexes, id)
@@ -195,7 +195,7 @@ function pushVolume(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volum
         daughterLen = length(vol.daughters)
         resize!(model.placedvolumes, daughterOff + daughterLen)
         for d in 1:daughterLen
-            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(d, vol.daughters[d].transformation, pushVolume(indexes, model, vol.daughters[d].volume ))
+            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(d, vol.daughters[d].transformation, pushVolume!(indexes, model, vol.daughters[d].volume ))
         end
         model.volumes[volIdx] = CuVolume{T}(shapeIdx, materialIdx, daughterOff, daughterLen)    
         indexes[id] = volIdx
@@ -211,7 +211,7 @@ end
 
 function fillCuGeometry(vol::Volume{T}) where T<:AbstractFloat
     indexes = Dict{UInt64, UInt32}()
-    model = CuGeoModel{Float64}()
-    pushVolume(indexes, model, vol)
+    model = CuGeoModel{T}()
+    pushVolume!(indexes, model, vol)
     return model
 end

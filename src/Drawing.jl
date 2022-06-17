@@ -2,7 +2,7 @@ using Makie
 using Colors
 using Printf
 
-colors = colormap("Grays", 3)
+colors = colormap("Grays", 8)
 
 #---Draw a Volume---------------------------------------------------------------
 function draw(s::LScene, vol::Volume, t::Transformation3D, level::Int64, maxlevel::Int64)
@@ -25,6 +25,13 @@ end
 function draw(s::LScene, vol::Volume, maxlevel::Int64=999)
     draw(s, vol, one(Transformation3D{Float64}), 1, maxlevel)
     display(s)
+end
+
+function draw(vol::Volume, maxlevel::Int64=999)
+    fig = Figure()
+    s = LScene(fig[1,1])
+    draw(s, vol, one(Transformation3D{Float64}), 1, maxlevel)
+    display(fig)
 end
 
 #---Draw a Shape---------------------------------------------------------------

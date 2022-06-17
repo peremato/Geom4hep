@@ -144,6 +144,22 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                 parse(T, attrs["z"]) * lunit / 2,
                                                 parse(T, attrs["startphi"]) * aunit,
                                                 parse(T, attrs["deltaphi"]) * aunit)
+            elseif elemname == "polycone"
+                lunit = eval(Meta.parse(attrs["lunit"]))
+                aunit = eval(Meta.parse(attrs["aunit"]))
+                rmax, rmin, z = Vector{T}(), Vector{T}(), Vector{T}()
+                for cc in child_nodes(e)
+                    if name(cc) == "zplane"
+                        aa = attributes_dict(XMLElement(cc))
+                        push!(rmax, parse(Float64, aa["rmax"]) * lunit)
+                        push!(rmin, parse(Float64, aa["rmin"]) * lunit)
+                        push!(z, parse(Float64, aa["z"]) * lunit)
+                    end
+                end
+                N = length(rmax)
+                solids[attrs["name"]] = Polycone{T}(rmin, rmax, z,
+                                                    parse(T, attrs["startphi"]) * aunit,
+                                                    parse(T, attrs["deltaphi"]) * aunit)
             else
                 @printf "Shape %s not yet suported. Using NoShape\n" elemname
                 solids[attrs["name"]] = NoShape{T}()
