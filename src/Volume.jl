@@ -3,13 +3,13 @@ struct NoShape{T} <: AbstractShape{T}
 end
 
 #---Shape--------------------------------------------------------------------------
-const Shape{T} = Union{NoShape{T},Box{T},Trd{T},Tube{T},Cone{T}} where T<:AbstractFloat
+const Shape{T} = Union{NoShape{T},Box{T},Trd{T},Tube{T},Cone{T},Polycone{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
 struct Mother{T,PV}
     label::String
     shape::Shape{T}                     # Reference to the actual shape
-    material::Material                  # Reference to material
+    material::Material{T}               # Reference to material
     daughters::Vector{PV} 
 end
 
@@ -31,7 +31,7 @@ contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pv
 contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
 distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 
-function Volume{T}(label::String, shape::Shape{T}, material::Material) where T<:AbstractFloat
+function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
     Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())
 end
 
@@ -50,10 +50,11 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         return vol
     else
         low, high = extent(vol.shape)
-        box = Box{T}((high-low)/2.)
-        mat = Material("vacuum"; density=0.0)
+        box = Box{T}((high - low)/2.)
+        tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
+        mat = Material{T}("vacuum"; density=0)
         world = Volume{T}("world", box, mat)
-        placeDaughter!(world, Transformation3D{T}(0,0,0), vol)
+        placeDaughter!(world, tra, vol)
         return world
     end
 end

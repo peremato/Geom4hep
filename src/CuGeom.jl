@@ -132,14 +132,11 @@ function getClosestDaughter(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T
     #---Linear loop over all daughters
     for d in 1:vol.daughterLen
         pvol = model.placedvolumes[vol.daughterOff + d]
-        if !contains(model, pvol, point)
-            dist = distanceToIn(model, pvol, point, dir)
-            if dist < step && dist != Inf && dist > 0.
-                step = dist
-                candidate = d
-            end
-        else
-            step = -1.
+        #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
+        dist = distanceToIn(model, pvol, point, dir)
+        if dist > 0. &&dist != Inf && dist < step 
+            step = dist
+            candidate = d
         end
     end
     return step, candidate
@@ -186,7 +183,7 @@ function pushObject(indexes::Dict{UInt64, UInt32}, vector::Vector{CUOBJ}, obj::O
     indexes[id]
 end
 
-function pushVolume(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volume{T}) where T <: AbstractFloat
+function pushVolume!(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volume{T}) where T <: AbstractFloat
     (; volumes, materials, placedvolumes, shapes ) = model
     id = objectid(vol)
     if !haskey(indexes, id)
@@ -198,7 +195,7 @@ function pushVolume(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volum
         daughterLen = length(vol.daughters)
         resize!(model.placedvolumes, daughterOff + daughterLen)
         for d in 1:daughterLen
-            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(d, vol.daughters[d].transformation, pushVolume(indexes, model, vol.daughters[d].volume ))
+            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(d, vol.daughters[d].transformation, pushVolume!(indexes, model, vol.daughters[d].volume ))
         end
         model.volumes[volIdx] = CuVolume{T}(shapeIdx, materialIdx, daughterOff, daughterLen)    
         indexes[id] = volIdx
@@ -214,7 +211,7 @@ end
 
 function fillCuGeometry(vol::Volume{T}) where T<:AbstractFloat
     indexes = Dict{UInt64, UInt32}()
-    model = CuGeoModel{Float64}()
-    pushVolume(indexes, model, vol)
+    model = CuGeoModel{T}()
+    pushVolume!(indexes, model, vol)
     return model
 end

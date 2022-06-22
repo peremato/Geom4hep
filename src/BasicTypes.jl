@@ -1,6 +1,6 @@
 #--- basic stuff
 abstract type AbstractShape{T<:AbstractFloat} end
-abstract type AbstractMaterial end
+abstract type AbstractMaterial{T<:AbstractFloat} end
 
 function GeometryBasics.Tesselation(shape::AbstractShape{T}, nvertices::NTuple{N,<:Integer}) where {T,N}
     return Tesselation{3,T,typeof(shape),N}(shape, Int.(nvertices))
