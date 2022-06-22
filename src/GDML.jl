@@ -4,13 +4,13 @@ name = LightXML.name
 include("Units.jl")
 
 struct GDMLDicts{T<:AbstractFloat}
-    materials::Dict{String,AbstractMaterial}
+    materials::Dict{String,AbstractMaterial{T}}
     solids::Dict{String,AbstractShape{T}}
     volumes::Dict{String,Volume{T}}
     positions::Dict{String, Vector3{T}}
     rotations::Dict{String, RotXYZ{T}}
     function GDMLDicts{T}() where T<:AbstractFloat
-        new(Dict{String,AbstractMaterial}(),
+        new(Dict{String,AbstractMaterial{T}}(),
             Dict{String,AbstractShape{T}}(),
             Dict{String,Volume{T}}(),
             Dict{String, Vector3{T}}(),
@@ -54,18 +54,18 @@ function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstr
             if elemname == "isotope"
                 attrs = attributes_dict(e)
                 matname = attrs["name"]
-                mass = 0.
+                mass = zero(T)
                 for cc in child_nodes(e)
                     if name(cc) == "atom"
                         aa = attributes_dict(XMLElement(cc))
-                        mass = parse(Float64, aa["value"])
+                        mass = parse(T, aa["value"])
                         break
                     end
                 end
-                materials[matname] = Isotope(matname, 
-                                            parse(Int32, attrs["N"]), 
-                                            parse(Int32, attrs["Z"]), 
-                                            mass)
+                materials[matname] = Isotope{T}(matname, 
+                                                parse(Int32, attrs["N"]), 
+                                                parse(Int32, attrs["Z"]), 
+                                                mass)
             elseif elemname == "element"
                 attrs = attributes_dict(e)
                 matname = attrs["name"]
@@ -76,7 +76,7 @@ function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstr
                         push!(composition,(fraction=parse(T, aa["n"]), isotope=materials[aa["ref"]]))
                     end
                 end
-                materials[matname] = Element(matname, composition)
+                materials[matname] = Element{T}(matname, composition)
             elseif elemname == "material"
                 attrs = attributes_dict(e)
                 matname = attrs["name"]
@@ -100,7 +100,7 @@ function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstr
                         end
                     end
                 end
-                materials[matname] = Material(matname; args...)
+                materials[matname] = Material{T}(matname; args...)
             end
         end
     end

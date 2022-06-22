@@ -1,25 +1,25 @@
 #---Material-----------------------------------------------------------------------
-struct Isotope <: AbstractMaterial
+struct Isotope{T<:AbstractFloat} <: AbstractMaterial{T}
     name::String
     N::Int32
     Z::Int32
-    Amass::Float64
+    Amass::T
 end
 
-struct Element <: AbstractMaterial
+struct Element{T<:AbstractFloat} <: AbstractMaterial{T}
     name::String
-    composition::Vector{@NamedTuple{fraction::Float64, isotope::Isotope}}
+    composition::Vector{@NamedTuple{fraction::T, isotope::Isotope{T}}}
 end
 
-struct Material <: AbstractMaterial
+struct Material{T<:AbstractFloat} <: AbstractMaterial{T}
     name::String
     state::String
-    density::Float64
-    temperature::Float64
-    Amass::Float64
-    composition::Vector{@NamedTuple{fraction::Float64, element::Element}}
-    function Material(name::String; state::String="solid", density::Float64=0.0,
-                      temperature::Float64=293.15, mass::Float64=0.0, composition=[])
+    density::T
+    temperature::T
+    Amass::T
+    composition::Vector{@NamedTuple{fraction::T, element::Element{T}}}
+    function Material{T}(name::String; state::String="solid", density=0,
+                         temperature=293.15, mass=0, composition=[]) where T
         new(name, state, density, temperature, mass, composition)
     end
 end
