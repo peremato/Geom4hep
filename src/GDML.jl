@@ -73,7 +73,7 @@ function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstr
                 for cc in child_nodes(e)
                     if name(cc) == "fraction"
                         aa = attributes_dict(XMLElement(cc))
-                        push!(composition,(fraction=parse(Float64, aa["n"]), isotope=materials[aa["ref"]]))
+                        push!(composition,(fraction=parse(T, aa["n"]), isotope=materials[aa["ref"]]))
                     end
                 end
                 materials[matname] = Element(matname, composition)
@@ -89,13 +89,13 @@ function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstr
                     if is_elementnode(cc)
                         aa = attributes_dict(XMLElement(cc))
                         if name(cc) == "T"
-                            args[:temperature] = parse(Float64, aa["value"])
+                            args[:temperature] = parse(T, aa["value"])
                         elseif name(cc) == "D"
-                            args[:density] = parse(Float64, aa["value"])
+                            args[:density] = parse(T, aa["value"])
                         elseif name(cc) == "atom"
-                            args[:mass] = parse(Float64, aa["value"])
+                            args[:mass] = parse(T, aa["value"])
                         elseif name(cc) == "fraction"
-                            push!(composition,(fraction=parse(Float64, aa["n"]), element=materials[aa["ref"]]))
+                            push!(composition,(fraction=parse(T, aa["n"]), element=materials[aa["ref"]]))
                             args[:composition] = composition
                         end
                     end
@@ -151,9 +151,12 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                 for cc in child_nodes(e)
                     if name(cc) == "zplane"
                         aa = attributes_dict(XMLElement(cc))
-                        push!(rmax, parse(Float64, aa["rmax"]) * lunit)
-                        push!(rmin, parse(Float64, aa["rmin"]) * lunit)
-                        push!(z, parse(Float64, aa["z"]) * lunit)
+                        zᵢ = parse(T, aa["z"]) * lunit
+                        if length(z) == 0 || zᵢ > (last(z) + kTolerance(T)/2)  # skip sections with z < kTolerance
+                            push!(rmax, parse(T, aa["rmax"]) * lunit)
+                            push!(rmin, parse(T, aa["rmin"]) * lunit)
+                            push!(z, zᵢ)
+                        end
                     end
                 end
                 N = length(rmax)

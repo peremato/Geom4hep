@@ -88,6 +88,7 @@ function getClosestDaughter(volume::Volume{T}, point::Point3{T}, dir::Vector3{T}
     for (idx, daughter) in enumerate(volume.daughters)
         #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
         dist = distanceToIn(daughter, point, dir)
+        dist < 0. && return (zero(T), idx) 
         if dist > 0. && dist != Inf && dist < step
             step = dist
             candidate = idx
@@ -115,3 +116,12 @@ function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3
     end
     return step
 end
+
+#=
+("====>", step, lpoint, volume.shape) = ("====>", -8.526512829121202e-14, 
+[98.61111111111111, 138.05555555555554, 389.55000000000007], 
+Polycone{Float64, 11}(rmin = [22.700000000000003, 22.700000000000003, 22.700000000000003, 22.700000000000003, 22.700000000000003, 123.80000000000001, 123.80000000000001, 22.700000000000003, 22.700000000000003, 22.700000000000003, 22.700000000000003, 22.700000000000003], 
+                     rmax = [169.0, 169.0, 177.5, 177.5, 177.5, 177.5, 177.5, 177.5, 177.5, 177.5, 169.0, 169.0], 
+                     z = [-398.0, -389.55, -389.55, -317.70000000000005, -296.1, -296.1, 296.1, 296.1, 317.70000000000005, 389.55, 389.55, 398.0], 
+                     ϕ₀ = 0.0, Δϕ = 6.283185307179586))
+=#

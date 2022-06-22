@@ -2,12 +2,13 @@ using Revise
 using Geom4hep
 using StaticArrays
 using GeometryBasics
-using GLMakie
+using ComputedFieldTypes
 
 #---Cone--------------------------------------------------------------------------------------------
-struct Polycone{T<:AbstractFloat, N} <: AbstractShape{T}
+@computed struct Polycone{T<:AbstractFloat, N} <: AbstractShape{T}
     sections::SVector{N, Cone{T}}  # array of sections
-    zᵢ::SVector{N,T}               # sections shifts  
+    zᵢ::SVector{N,T}               # sections shifts
+    zₚ::SVector{N+1,T}             # z-planes
     ϕ₀::T                          # starting ϕ value (in radians)
     Δϕ::T                          # delta ϕ value of tube segment (in radians)
 end
@@ -16,15 +17,14 @@ end
 function Polycone{T}(rmin::Vector, rmax::Vector, z::Vector, ϕ₀, Δϕ) where T<:AbstractFloat
     @assert length(rmin) == length(rmax) == length(z) "Vectors for rmin, rmax and z are different size"
     N = length(rmin) - 1
-    Polycone{T,N}([Cone{T}(rmin[i],rmax[i], rmin[i+1], rmax[i+1], (z[i+1]-z[i])/2, ϕ₀, Δϕ) for i in 1:N], [(z[i]+z[i+1])/2 for i in 1:N], ϕ₀, Δϕ)
+    Polycone{T,N}([Cone{T}(rmin[i],rmax[i], rmin[i+1], rmax[i+1], (z[i+1]-z[i])/2, ϕ₀, Δϕ) for i in 1:N], [(z[i]+z[i+1])/2 for i in 1:N], z, ϕ₀, Δϕ)
 end
 
 #---Printing and Plotting---------------------------------------------------------------------------
 function Base.show(io::IO, pcone::Polycone{T,N}) where {T,N}
     rmin = [[pcone.sections[i].rmin1 for i in 1:N];[pcone.sections[N].rmin2]]
     rmax = [[pcone.sections[i].rmax1 for i in 1:N];[pcone.sections[N].rmax2]]
-    z = [[pcone.zᵢ[i] - pcone.sections[i].z for i in 1:N];[pcone.zᵢ[N] + pcone.sections[N].z]]
-    print(io, "Polycone{$T, $N}",(rmin=rmin, rmax=rmax, z=z, ϕ₀=pcone.ϕ₀, Δϕ=pcone.Δϕ))
+    print(io, "Polycone{$T, $N}",(rmin=rmin, rmax=rmax, z=pcone.zₚ, ϕ₀=pcone.ϕ₀, Δϕ=pcone.Δϕ))
 end
 
 function GeometryBasics.coordinates(pcone::Polycone{T,N}, facets=36) where {T,N}
@@ -55,7 +55,7 @@ end
 getNz(::Polycone{T,N}) where {T,N} = N + 1
 getNSections(::Polycone{T,N}) where {T,N} = N
 function getSectionIndex(pcone::Polycone{T,N}, zpos) where {T,N}
-    z = [[pcone.zᵢ[i] - pcone.sections[i].z for i in 1:N];[pcone.zᵢ[N] + pcone.sections[N].z]]
+    z = pcone.zₚ
     zpos < z[1] && return -1
     for i  in 1:N
         zpos >= z[i] && zpos <= z[i+1] && return i
@@ -149,7 +149,7 @@ function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     safety < kTolerance(T) && return safety
 
     minSafety = safety
-    zₚ = [[pcone.zᵢ[i] - pcone.sections[i].z for i in 1:N];[pcone.zᵢ[N] + pcone.sections[N].z]]
+    zₚ = pcone.zₚ
     zbase = zₚ[index+1]
     # going right
     for i in index+1:N
@@ -179,7 +179,7 @@ function safetyToOut(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     safety = safetyToOut(pcone.sections[index], point - Vector3{T}(0,0,pcone.zᵢ[index]))
     minSafety = safety
     (minSafety == Inf || minSafety < kTolerance(T)) && return 0
-    zₚ = [[pcone.zᵢ[i] - pcone.sections[i].z for i in 1:N];[pcone.zᵢ[N] + pcone.sections[N].z]]
+    zₚ = pcone.zₚ
     zbase = zₚ[index+1]
     # going right
     for i in index+1:N

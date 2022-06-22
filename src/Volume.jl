@@ -50,10 +50,11 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         return vol
     else
         low, high = extent(vol.shape)
-        box = Box{T}((high-low)/2.)
+        box = Box{T}((high - low)/2.)
+        tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
         mat = Material("vacuum"; density=0.0)
         world = Volume{T}("world", box, mat)
-        placeDaughter!(world, Transformation3D{T}(0,0,0), vol)
+        placeDaughter!(world, tra, vol)
         return world
     end
 end
