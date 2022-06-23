@@ -269,15 +269,15 @@ function phiPlaneIntersection(point::Point2{T}, dir::Vector2{T}, along::Vector2{
     dDotN = dir[1] * normal[1] + dir[2] * normal[2]
     # point in wrong side
     if (toIn && (pDotN > 0. || pDotN == 0. && dDotN < 0.)) || (!toIn && pDotN <= 0.) 
-        return NaN
+        return T(NaN)
     end
     dirDotXY = dir[2] * along[1] - dir[1] * along[2]
     dist = (along[2] * point[1] - along[1] * point[2] ) / dirDotXY
-    dist < 0. && return NaN
+    dist < 0. && return T(NaN)
     if ϕgtπ 
         hitx = point[1] + dist * dir[1]
         hity = point[2] + dist * dir[2]
-        (hitx * along[1] + hity * along[2]) < 0. && return NaN
+        (hitx * along[1] + hity * along[2]) < 0. && return T(NaN)
     end
     return dist 
 end
@@ -289,9 +289,9 @@ function circleIntersection(point::Point2{T}, dir::Vector2{T}, R²::T; largest::
     b = (dir[1] * point[1] + dir[2] * point[2])/dr2
     c = (r2 - R²)/dr2
     Δ = b * b - c
-    Δ < 0. && return NaN
+    Δ < 0. && return T(NaN)
     dist = largest ? -b + sqrt(Δ) : -b - sqrt(Δ)
-    dist < 0. && return NaN
+    dist < 0. && return T(NaN)
     return dist
 end
 

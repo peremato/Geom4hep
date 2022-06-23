@@ -386,7 +386,7 @@ function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, 
     outerSlope, outerOffset, innerSlope, innerOffset) = cone
 
-    distance = Inf
+    distance = T(Inf)
     done = false
 
     # outside of Z range and going away?
@@ -403,7 +403,7 @@ function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where
     done && return distance
     
     # Next, check all dimensions of the tube, whether points are inside --> return -1
-    distance = T(-1.)
+    distance = T(-1)
     
     # For points inside z-range, return -1
     inside = distz < -kTolerance(T)/2
@@ -421,7 +421,7 @@ function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where
 
     # Next step: check if z-plane is the right entry point (both r,phi
     # should be valid at z-plane crossing)
-    distance = Inf
+    distance = T(Inf)
     distz /= nonzero(abs(dz))
     hitx = x + distz * dx
     hity = y + distz * dy
@@ -429,7 +429,7 @@ function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where
     isHittingTopPlane    = z >=  cone.z - kTolerance(T)/2 && r2 <= rmax2 * rmax2 + kTolerance(T)/2
     isHittingBottomPlane = z <= -cone.z + kTolerance(T)/2 && r2 <= rmax1 * rmax1 + kTolerance(T)/2
     okz = isHittingTopPlane || isHittingBottomPlane
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         isHittingTopPlane &= r2 >= rmin2 * rmin2 - kTolerance(T)/2
         isHittingBottomPlane &= r2 >= rmin1 * rmin1 - kTolerance(T)/2
         okz &= isHittingTopPlane || isHittingBottomPlane
@@ -444,7 +444,7 @@ function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where
     # Next step: intersection of the trajectories with the two conical surfaces
     distOuter = distanceToConicalSurface(cone, point, dir; distToIn=true, innerSurface=false)
     distOuter < distance && (distance = distOuter)
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         distInner = distanceToConicalSurface(cone, point, dir; distToIn=true, innerSurface=true)
         distInner < distance && (distance = distInner)
     end

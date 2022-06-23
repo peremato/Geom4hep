@@ -14,16 +14,16 @@ using Profile
 const idxs =  [2 3 1; 1 3 2; 1 2 3]
 const rdxs =  [3 1 2; 1 3 2; 1 2 3]
 
-function generateXRay(model::CuGeoModel, npoints::Number, view::Int=1; cuda::Bool=true) where T<:AbstractFloat
+function generateXRay(model::CuGeoModel{Vector{Geom4hep.CuVolume{T}}}, npoints::Number, xview::Int=1; cuda::Bool=true) where T<:AbstractFloat
     world = model.volumes[1]
     lower, upper = extent(model.shapes[world.shapeIdx])
-    idx = (idxs[view,1], idxs[view,2], idxs[view,3])
-    rdx = (rdxs[view,1], rdxs[view,2], rdxs[view,3])
+    idx = (idxs[xview,1], idxs[xview,2], idxs[xview,3])
+    rdx = (rdxs[xview,1], rdxs[xview,2], rdxs[xview,3])
     ix, iy, iz = idx
     nx = ny = round(Int, sqrt(npoints))
     xrange = range(lower[ix], upper[ix], length = nx)
     yrange = range(lower[iy], upper[iy], length = ny)
-    result = zeros(nx,ny)
+    result = zeros(T,nx,ny)
     if cuda && CUDA.functional()
         threads = (8,8)
         blocks = cld.((nx,ny),threads)
@@ -55,7 +55,7 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, u
         while step >= 0.0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
-            step = computeStep!(model, state, point, dir, 1000.)
+            step = computeStep!(model, state, point, dir, T(1000))
             point = point + dir * step
             mass += step * density
         end
@@ -78,17 +78,17 @@ function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, idx::
     if i <= nx && j <= ny
         _dir = (0, 0, 1)
         dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi])
-        _point = (lower[ix]+ (i - 0.5)*px, lower[iy]+ (j - 0.5)*py, lower[iz]+ kTolerance(T))
+        _point = (lower[ix]+ (i - T(0.5))*px, lower[iy]+ (j - T(0.5))*py, lower[iz]+ kTolerance(T))
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
 
         state = CuNavigatorState{T}(1)
         locateGlobalPoint!(model, state, point)
-        mass::T =  0.0
-        step::T =  0.0
-        while step >= 0.0
+        mass::T =  T(0)
+        step::T =  T(0)
+        while step >= 0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
-            step = computeStep!(model, state, point, dir, 1000.)
+            step = computeStep!(model, state, point, dir, T(1000))
             point = point + dir * step
             mass += step * density
         end
@@ -100,7 +100,7 @@ end
 #-----build and generate image-----------------------------
 if abspath(PROGRAM_FILE) == @__FILE__
     #-----build detector---------------------------------------
-    world = processGDML("examples/trackML.gdml")
+    world = processGDML("examples/trackML.gdml", Float32)
     volume = world.daughters[2].volume.daughters[1].volume
     model = fillCuGeometry(getWorld(volume))
     #-----Generate maps----------------------------------------

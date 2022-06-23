@@ -143,7 +143,7 @@ function getClosestDaughter(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T
 end
 
 
-@inline function computeStep!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where T<:AbstractFloat
+@inline function computeStep!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T)::T where T<:AbstractFloat
     lpoint, ldir = state.tolocal * gpoint, state.tolocal * gdir
     volume = model.volumes[state.currentVol]
 
@@ -152,13 +152,13 @@ end
     #---If didn't hit any daughter return distance to out
     if idx == 0
         step = distanceToOut(getShape(model, volume), lpoint, ldir)
-        if step > 0.
+        if step > 0
             popOut!(state, model)
-        elseif step == 0.
+        elseif step == 0
             if state.currentDepth > 0
                 popOut!(state, model)
             else
-                step = -1.
+                step = T(-1)
             end
         end
     end

@@ -5,7 +5,7 @@ using Printf
 colors = colormap("Grays", 8)
 
 #---Draw a Volume---------------------------------------------------------------
-function draw(s::LScene, vol::Volume, t::Transformation3D, level::Int64, maxlevel::Int64)
+function draw(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, maxlevel::Int64) where T
     m = GeometryBasics.mesh(Tesselation(vol.shape, 64))
     if isone(t)
         mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible = level == 1 ? false : true)
@@ -22,8 +22,8 @@ function draw(s::LScene, vol::Volume, t::Transformation3D, level::Int64, maxleve
     end
 end
 
-function draw(s::LScene, vol::Volume, maxlevel::Int64=999)
-    draw(s, vol, one(Transformation3D{Float64}), 1, maxlevel)
+function draw(s::LScene, vol::Volume{T}, maxlevel::Int64=999) where T
+    draw(s, vol, one(Transformation3D{T}), 1, maxlevel)
     display(s)
 end
 
