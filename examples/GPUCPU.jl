@@ -246,7 +246,7 @@ end
 const idxs =  [2 3 1; 1 3 2; 1 2 3]
 const rdxs =  [3 1 2; 1 3 2; 1 2 3]
 
-function generateXRay(model::CuGeoModel, ::Type{T}, npoints::Number, view::Int=1; cuda::Bool=true) where T<:AbstractFloat
+function generateXRay(model::CuGeoModel{Vector{Geom4hep.CuVolume{T}}}, npoints::Number, view::Int=1; cuda::Bool=true) where T<:AbstractFloat
     world = model.volumes[1]
     lower, upper = extent(model.shapes[world.shapeIdx])
     idx = (idxs[view,1], idxs[view,2], idxs[view,3])
@@ -257,7 +257,7 @@ function generateXRay(model::CuGeoModel, ::Type{T}, npoints::Number, view::Int=1
     yrange = range(lower[iy], upper[iy], length = ny)
     result = zeros(T, nx,ny)
     if cuda && CUDA.functional()
-        threads = 256 # (8,8)
+        threads = (8,8)
         blocks = cld.((nx,ny),threads)
         cu_result = CuArray(result)
         cu_model = cu(model)
@@ -284,9 +284,9 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, u
         _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ kTolerance(T))
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
         locateGlobalPoint!( model, state, point)
-        mass::T =  0.0
-        step::T =  0.0
-        while step >= 0.0
+        mass::T =  T(0)
+        step::T =  T(0)
+        while step >= 0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
             step = computeStep!(model, state, point, dir, T(1000.))
@@ -319,12 +319,12 @@ function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, idx::
 
         state = CuNavigatorState{T}(1)
         locateGlobalPoint!(model, state, point)
-        mass::T =  0.0
-        step::T =  0.0
-        while step >= 0.0
+        mass::T =  T(0)
+        step::T =  T(0)
+        while step >= 0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
-            step = computeStep!(model, state, point, dir, 1000.)
+            step = computeStep!(model, state, point, dir, T(1000))
             point = point + dir * step
             mass += step * density
         end
@@ -340,11 +340,11 @@ function XRay(isCuda)
     model = fillCuGeometry(getWorld(volume))
     #-----Generate maps----------------------------------------    
     @printf "generating x-projection\n"
-    rx = generateXRay(model, T, 1e6, 1, cuda=isCuda)
+    rx = generateXRay(model, 1e6, 1, cuda=isCuda)
     @printf "generating y-projection\n"
-    ry = generateXRay(model, T, 1e6, 2, cuda=isCuda)
+    ry = generateXRay(model, 1e6, 2, cuda=isCuda)
     @printf "generating z-projection\n"
-    rz = generateXRay(model, T, 1e6, 3, cuda=isCuda)
+    rz = generateXRay(model, 1e6, 3, cuda=isCuda)
 end
 
 function XRay()
