@@ -206,7 +206,7 @@ function distanceToOut(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T}):
     dz = dir[3]
     distance = Inf
     if N == 1
-        return distanceToOut(pcone.sections[1], point - Vector3{T}(0,0,pcone.zᵢ[1]))
+        return distanceToOut(pcone.sections[1], point - Vector3{T}(0,0,pcone.zᵢ[1]), dir)
     end
     indexLow  = getSectionIndex(pcone, z - kTolerance(T))
     indexHigh = getSectionIndex(pcone, z + kTolerance(T))

@@ -19,7 +19,7 @@ function generateXRay(vol::Volume{T}, npoints::Number, view::Int=1) where T<:Abs
     yrange = range(lower[iy], upper[iy], length = ny)
     z = lower[iz] + kTolerance(T)
  
-    result = zeros(nx,ny)
+    result = zeros(T, nx,ny)
 
     state = NavigatorState{T}(world)
     _dir = (0, 0, 1)
@@ -29,15 +29,17 @@ function generateXRay(vol::Volume{T}, npoints::Number, view::Int=1) where T<:Abs
         _point = (x, y, z)
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
         locateGlobalPoint!(state, point)
-        mass = 0.0
-        step = 0.0
-        while isInVolume(state)
+        mass = T(0)
+        step = T(0)
+        nsteps = 0
+        while isInVolume(state) && nsteps < 100
             density = currentVolume(state).material.density
-            step = computeStep!(state, point, dir, 1000.)
-            if step > 0.0
+            step = computeStep!(state, point, dir, T(1000))
+            if step > 0
                 point = point + dir * step
                 mass += step * density
             end
+            nsteps += 1
         end
         result[i,j] = mass
     end
@@ -48,7 +50,7 @@ using GLMakie
 
 if abspath(PROGRAM_FILE) == @__FILE__
     #-----build detector---------------------------------------
-    world = processGDML("examples/trackML.gdml")
+    world = processGDML("examples/trackML.gdml", Float64)
     volume = world.daughters[2].volume.daughters[1].volume
     #-----Generate and Plot results----------------------------
     @printf "generating x-projection\n"
