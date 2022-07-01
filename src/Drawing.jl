@@ -59,7 +59,7 @@ function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:Abstrac
     result = Vector{Point3{Float64}}()
     for point in points
         if inside(shape, point) == kInside
-            dir = rand(Vector3) + Vector3(-.5,-.5,-.5)
+            dir = normalize(rand(Vector3) + Vector3(-.5,-.5,-.5))
             push!(result, point + dir * distanceToOut(shape, point, dir))
         end
     end

@@ -6,21 +6,19 @@ end
 const Shape{T} = Union{NoShape{T},Box{T},Trd{T},Tube{T},Cone{T},Polycone{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
-struct Mother{T,PV}
+struct Volume{T,PV}
     label::String
     shape::Shape{T}                     # Reference to the actual shape
     material::Material{T}               # Reference to material
-    daughters::Vector{PV} 
+    daughters::Vector{PV}
 end
 
 #---PlacedVolume-------------------------------------------------------------------
 struct PlacedVolume{T<:AbstractFloat}
     idx::Int64
     transformation::Transformation3D{T}
-    volume::Mother{T,PlacedVolume{T}}
+    volume::Volume{T,PlacedVolume{T}}
 end
-
-const Volume{T} = Mother{T,PlacedVolume{T}} where T<:AbstractFloat
 
 function Base.show(io::IO, vol::Volume{T}) where T
     name = vol.label
@@ -32,7 +30,7 @@ contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape
 distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 
 function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
-    Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())
+    Volume{T,PlacedVolume{T}}(label, shape, material, Vector{PlacedVolume{T}}())
 end
 
 function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat

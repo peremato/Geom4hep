@@ -151,12 +151,9 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                 for cc in child_nodes(e)
                     if name(cc) == "zplane"
                         aa = attributes_dict(XMLElement(cc))
-                        zᵢ = parse(T, aa["z"]) * lunit
-                        if length(z) == 0 || zᵢ > (last(z) + kTolerance(T)/2)  # skip sections with z < kTolerance
-                            push!(rmax, parse(T, aa["rmax"]) * lunit)
-                            push!(rmin, parse(T, aa["rmin"]) * lunit)
-                            push!(z, zᵢ)
-                        end
+                        push!(rmax, parse(T, aa["rmax"]) * lunit)
+                        push!(rmin, parse(T, aa["rmin"]) * lunit)
+                        push!(z, parse(T, aa["z"]) * lunit)
                     end
                 end
                 N = length(rmax)

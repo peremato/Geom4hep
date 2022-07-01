@@ -2,7 +2,6 @@
 using Revise
 using GeometryBasics
 using Geom4hep
-using GLMakie
 
 # Geometry construction
 function buildGeom(T::Type) 
@@ -27,6 +26,7 @@ world = buildGeom(Float64)
 # or 
 world = processGDML("examples/boxes.gdml")
 
+using GLMakie
 fig = Figure()
 scene = LScene(fig[1, 1])
 draw(scene, world)

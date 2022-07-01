@@ -2,13 +2,14 @@ using Revise
 using Geom4hep
 using StaticArrays
 using GeometryBasics
-using ComputedFieldTypes
 
 #---Cone--------------------------------------------------------------------------------------------
-@computed struct Polycone{T<:AbstractFloat, N} <: AbstractShape{T}
+struct Polycone{T<:AbstractFloat, N, L} <: AbstractShape{T}
     sections::SVector{N, Cone{T}}  # array of sections
     zᵢ::SVector{N,T}               # sections shifts
-    zₚ::SVector{N+1,T}             # z-planes
+    rmin::SVector{L,T}             # rmin Vector
+    rmax::SVector{L,T}             # rmax Vector
+    z::SVector{L,T}                # z-planes
     ϕ₀::T                          # starting ϕ value (in radians)
     Δϕ::T                          # delta ϕ value of tube segment (in radians)
 end
@@ -16,15 +17,16 @@ end
 #---Constructor------------------------------------------------------------------------------------
 function Polycone{T}(rmin::Vector, rmax::Vector, z::Vector, ϕ₀, Δϕ) where T<:AbstractFloat
     @assert length(rmin) == length(rmax) == length(z) "Vectors for rmin, rmax and z are different size"
-    N = length(rmin) - 1
-    Polycone{T,N}([Cone{T}(rmin[i],rmax[i], rmin[i+1], rmax[i+1], (z[i+1]-z[i])/2, ϕ₀, Δϕ) for i in 1:N], [(z[i]+z[i+1])/2 for i in 1:N], z, ϕ₀, Δϕ)
+    L = length(rmin)
+    sections = [Cone{T}(rmin[i],rmax[i], rmin[i+1], rmax[i+1], (z[i+1]-z[i])/2, ϕ₀, Δϕ) for i in 1:L-1 if (z[i+1] - z[i]) > kTolerance(T)]
+    zoffs = [(z[i]+z[i+1])/2 for i in 1:L-1 if (z[i+1] - z[i]) > kTolerance(T)]
+    N = length(sections)
+    Polycone{T,N,L}(sections, zoffs, rmin, rmax, z, ϕ₀, Δϕ)
 end
 
 #---Printing and Plotting---------------------------------------------------------------------------
 function Base.show(io::IO, pcone::Polycone{T,N}) where {T,N}
-    rmin = [[pcone.sections[i].rmin1 for i in 1:N];[pcone.sections[N].rmin2]]
-    rmax = [[pcone.sections[i].rmax1 for i in 1:N];[pcone.sections[N].rmax2]]
-    print(io, "Polycone{$T, $N}",(rmin=rmin, rmax=rmax, z=pcone.zₚ, ϕ₀=pcone.ϕ₀, Δϕ=pcone.Δϕ))
+    print(io, "Polycone{$T, $N}",(rmin=pcone.rmin, rmax=pcone.rmax, z=pcone.z, ϕ₀=pcone.ϕ₀, Δϕ=pcone.Δϕ))
 end
 
 function GeometryBasics.coordinates(pcone::Polycone{T,N}, facets=36) where {T,N}
@@ -32,7 +34,8 @@ function GeometryBasics.coordinates(pcone::Polycone{T,N}, facets=36) where {T,N}
 end
 
 function GeometryBasics.faces(pcone::Polycone{T,N}, facets=36) where {T,N}
-    (; sections, Δϕ) = pcone 
+    (; sections, Δϕ) = pcone
+    infacets = facets
     issector = Δϕ < 2π
     issector ?  facets =  round(Int64, (facets/2π) * Δϕ) : nothing
     isodd(facets) ? facets = 2 * div(facets, 2) : nothing
@@ -44,9 +47,11 @@ function GeometryBasics.faces(pcone::Polycone{T,N}, facets=36) where {T,N}
         nbc = ishollow ? nbv : 1         # Number of centers
         offset[i+1] = offset[i] + 2 * nbv + 2 * nbc
     end
+    @show offset, N
     indexes = Vector{TriangleFace{Int}}()
     for i in 1:N
-        append!(indexes, [t .+ offset[i] for t in faces(pcone.sections[i], facets)])
+        append!(indexes, [t .+ offset[i] for t in faces(pcone.sections[i], infacets)])
+        @show length(faces(pcone.sections[i]))
     end
     return indexes
 end
@@ -55,10 +60,12 @@ end
 getNz(::Polycone{T,N}) where {T,N} = N + 1
 getNSections(::Polycone{T,N}) where {T,N} = N
 function getSectionIndex(pcone::Polycone{T,N}, zpos) where {T,N}
-    z = pcone.zₚ
-    zpos < z[1] && return -1
+    (; sections, zᵢ) = pcone
+    zpos < zᵢ[1] - sections[1].z && return -1
     for i  in 1:N
-        zpos >= z[i] && zpos <= z[i+1] && return i
+        Δz = sections[i].z
+        z  = zᵢ[i]
+        zpos >= z - Δz && zpos <= z + Δz && return i
     end
     return -2
 end
@@ -138,6 +145,7 @@ function distanceToIn(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::
 end
 
 function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
+    (; sections, zᵢ) = pcone
     z = point[3]
     index = getSectionIndex(pcone, z)
 
@@ -145,26 +153,25 @@ function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     index == -2 && (index = N)
 
     minSafety = 0
-    safety = safetyToIn(pcone.sections[index], point - Vector3{T}(0,0,pcone.zᵢ[index]))
+    safety = safetyToIn(sections[index], point - Vector3{T}(0,0,zᵢ[index]))
     safety < kTolerance(T) && return safety
 
     minSafety = safety
-    zₚ = pcone.zₚ
-    zbase = zₚ[index+1]
+    zbase = zᵢ[index] + sections[index].z
     # going right
     for i in index+1:N
-        dz = zₚ[i] - zbase
+        dz = zᵢ[i] - sections[i].z - zbase
         dz >= minSafety && break
-        safety = safetyToIn(pcone.sections[i], point - Vector3{T}(0,0,pcone.zᵢ[i]))
+        safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
         safety < minSafety && (minSafety = safety)
     end
     # going left
     if index > 1
-        zbase = zₚ[index-1]
+        zbase = zᵢ[index-1] - sections[index-1].z
         for i in index-1:-1:1
-            dz = zbase - zₚ[i]
+            dz = zbase - zᵢ[i] + sections[i].z
             dz >= minSafety && break
-            safety = safetyToIn(pcone.sections[i], point - Vector3{T}(0,0,pcone.zᵢ[i]))
+            safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
             safety < minSafety && (minSafety = safety)
         end
     end
@@ -173,28 +180,28 @@ end
 
 function safetyToOut(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     inside(pcone, point) == kOutside && return -1
+    (; sections, zᵢ) = pcone
     z = point[3]
     index = getSectionIndex(pcone, z)
     index < 0 && return -1
-    safety = safetyToOut(pcone.sections[index], point - Vector3{T}(0,0,pcone.zᵢ[index]))
+    safety = safetyToOut(sections[index], point - Vector3{T}(0,0,zᵢ[index]))
     minSafety = safety
     (minSafety == Inf || minSafety < kTolerance(T)) && return 0
-    zₚ = pcone.zₚ
-    zbase = zₚ[index+1]
+    zbase = zᵢ[index] + sections[index].z
     # going right
     for i in index+1:N
-        dz = zₚ[i] - zbase
+        dz = zᵢ[i] - sections[i].z  - zbase
         dz >= minSafety && break
-        safety = safetyToIn(pcone.sections[i], point - Vector3{T}(0,0,pcone.zᵢ[i]))
+        safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
         safety < minSafety && (minSafety = safety)
     end
     # going left
     if index > 1
-        zbase = zₚ[index-1]
+        zbase = zbase = zᵢ[index-1] - sections[index-1].z
         for i in index-1:-1:1
-            dz = zbase - zₚ[i]
+            dz = zbase - zᵢ[i] + sections[i].z
             dz >= minSafety && break
-            safety = safetyToIn(pcone.sections[i], point - Vector3{T}(0,0,pcone.zᵢ[i]))
+            safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
             safety < minSafety && (minSafety = safety)
         end
     end
