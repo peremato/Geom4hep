@@ -128,7 +128,7 @@
       <zplane rmax="1775" rmin="1721.5" z="3106.06"/>
       <zplane rmax="1775" rmin="1721.5" z="3288.5"/>
     </polycone>
-    <box lunit="cm" name="world" x="200" y="200" z="400" />
+    <box lunit="cm" name="world" x="400" y="400" z="800" />
   </solids>
 
   <structure>
@@ -172,7 +172,7 @@
       <auxiliary auxtype="protonECut" auxunit="MeV" auxvalue="0.1"/>
     </volume>
     <volume name="world">
-      <materialref ref="Air"/>
+      <materialref ref="Vacuum"/>
       <solidref ref="world"/>
       <physvol>
         <volumeref ref="ECAL0x7f4a8f626200"/>

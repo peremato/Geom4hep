@@ -501,7 +501,6 @@ function GeometryBasics.coordinates(tub::Tube{T}, facets=36) where {T<:AbstractF
     nbf = Int(facets / 2)            # Number of faces
     nbv = issector ? nbf + 1 : nbf   # Number of vertices
     nbc = ishollow ? nbv : 1         # Number of centers
-  
     indexes = Vector{TriangleFace{Int}}()
     for j in 1:nbf
         a,b = 2j-1, 2j

@@ -160,6 +160,16 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                 solids[attrs["name"]] = Polycone{T}(rmin, rmax, z,
                                                     parse(T, attrs["startphi"]) * aunit,
                                                     parse(T, attrs["deltaphi"]) * aunit)
+            elseif elemname == "cutTube"
+                lunit = eval(Meta.parse(attrs["lunit"]))
+                aunit = eval(Meta.parse(attrs["aunit"]))
+                solids[attrs["name"]] = CutTube{T}(parse(T, attrs["rmin"]) * lunit,
+                                                   parse(T, attrs["rmax"]) * lunit,
+                                                   parse(T, attrs["z"]) * lunit,
+                                                   parse(T, attrs["startphi"]) * aunit,
+                                                   parse(T, attrs["deltaphi"]) * aunit,
+                                                   Vector3{T}(parse(T, attrs["lowX"]), parse(T, attrs["lowY"]), parse(T, attrs["lowZ"])),
+                                                   Vector3{T}(parse(T, attrs["highX"]), parse(T, attrs["highY"]), parse(T, attrs["highZ"])))                   
             else
                 @printf "Shape %s not yet suported. Using NoShape\n" elemname
                 solids[attrs["name"]] = NoShape{T}()

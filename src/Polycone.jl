@@ -1,8 +1,3 @@
-using Revise
-using Geom4hep
-using StaticArrays
-using GeometryBasics
-
 #---Cone--------------------------------------------------------------------------------------------
 struct Polycone{T<:AbstractFloat, N, L} <: AbstractShape{T}
     sections::SVector{N, Cone{T}}  # array of sections
