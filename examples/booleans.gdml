@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<!-- \file solidUnion.gdml -->
+<!-- \brief geometry of one union of solids without material -->
+<!-- \authors Author: Dmitry Savin -->
+<!-- \license Distributed under the Apache license 2.0 -->
+<!-- parsed with TGDMLParse -->
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+  <define>
+    <position name="shift" unit="cm" x="40" y="35" z="30" />
+    <rotation name="rotate" unit="deg" x="45" y="45" z="45" />
+  </define>
+
+  <materials>
+    <material Z="13" name="Aluminium" state="solid">
+      <T unit="K" value="293.15"/>
+      <MEE unit="eV" value="166"/>
+      <D unit="g/cm3" value="2.69999857937074"/>
+      <atom unit="g/mole" value="26.9799858042305"/>
+    </material>
+  </materials>
+
+  <solids>
+    <box name="brick" lunit="cm" x="5" y="5" z="10" />
+    <tube name="hole" aunit="deg" deltaphi="360" startphi="0" lunit="cm" rmin="0" rmax="1" z="6"/>
+    <trd name="roof" lunit="cm" x1="5" x2="5" y1="0" y2="0" z="5"/>
+    <tube name="tube" aunit="deg" deltaphi="180" startphi="180" lunit="cm" rmin="0" rmax="2.5" z="12"/>
+    <union name="holes" >
+      <first ref="hole" />
+      <second ref="hole"/>
+      <position name="hole_pos" unit="cm" x="0" y="5" z="0"/>
+    </union>
+    <substraction name="hollowbrick" >
+      <first ref="brick" />
+      <second ref="holes"/>
+      <position name="holes_pos" unit="cm" x="0" y="0" z="2.5"/>
+      <rotation name="holes_rot" unit="deg" x="90" y="0" z="0"/>
+    </substraction>
+    <intersection name="hollowsector" >
+      <first ref="hollowbrick"/>
+      <second ref="tube" />
+      <position name="tube_pos" unit="cm" x="0" y="1" z="0"/>
+    </intersection>
+  </solids>
+
+  <structure>
+    <volume name="World">
+      <materialref ref="Aluminium"/>
+      <solidref ref="hollowsector"/>
+    </volume>
+  </structure>
+
+  <setup name="default" version="1.0">
+    <world ref="World"/>
+  </setup>
+</gdml>

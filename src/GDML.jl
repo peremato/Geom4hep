@@ -169,7 +169,28 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                    parse(T, attrs["startphi"]) * aunit,
                                                    parse(T, attrs["deltaphi"]) * aunit,
                                                    Vector3{T}(parse(T, attrs["lowX"]), parse(T, attrs["lowY"]), parse(T, attrs["lowZ"])),
-                                                   Vector3{T}(parse(T, attrs["highX"]), parse(T, attrs["highY"]), parse(T, attrs["highZ"])))                   
+                                                   Vector3{T}(parse(T, attrs["highX"]), parse(T, attrs["highY"]), parse(T, attrs["highZ"])))
+            elseif elemname in ("union", "substraction", "intersection") 
+                first = nothing
+                second = nothing
+                transformation = getTransformation(dicts, e)
+                for cc in child_nodes(e)
+                    if is_elementnode(cc)
+                        aa = attributes_dict(XMLElement(cc))
+                        if name(cc) == "first"
+                            first = solids[aa["ref"]]
+                        elseif name(cc) == "second"
+                            second = solids[aa["ref"]]
+                        end
+                    end
+                end
+                if elemname == "union"
+                    solids[attrs["name"]] = Boolean(:Union, first, second, transformation)
+                elseif elemname == "substraction"
+                    solids[attrs["name"]] = Boolean(:Substraction, first, second, transformation)
+                elseif elemname == "intersection"
+                    solids[attrs["name"]] = Boolean(:Intersection, first, second, transformation)
+                end
             else
                 @printf "Shape %s not yet suported. Using NoShape\n" elemname
                 solids[attrs["name"]] = NoShape{T}()
@@ -206,37 +227,51 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                             end
                         elseif name(cc) == "physvol"
                             daughter = nothing
-                            position = Vector3{T}(0,0,0)
-                            rotation = RotXYZ{T}(0,0,0)
+                            transformation = getTransformation(dicts, XMLElement(cc))
                             for ccc in child_nodes(XMLElement(cc))
                                 if is_elementnode(ccc)
                                     aa = attributes_dict(XMLElement(ccc))
                                     if name(ccc) == "volumeref"
                                         daughter = volumes[aa["ref"]]
-                                    elseif name(ccc) == "position"
-                                        unit = eval(Meta.parse(aa["unit"]))
-                                        position = Vector3{T}(parse(T, aa["x"]) * unit, 
-                                                              parse(T, aa["y"]) * unit,
-                                                              parse(T, aa["z"]) * unit)
-                                    elseif name(ccc) == "rotation"
-                                        unit = eval(Meta.parse(aa["unit"]))
-                                        rotation = RotXYZ{T}(parse(T, aa["x"]) * unit, 
-                                                             parse(T, aa["y"]) * unit,
-                                                             parse(T, aa["z"]) * unit)
-                                    elseif name(ccc) == "positionref"
-                                        position = positions[aa["ref"]]
-                                    elseif name(ccc) == "rotationref"
-                                        rotation = rotations[aa["ref"]]
                                     end
                                 end
                             end
-                            placeDaughter!(volume, Transformation3D{T}(RotMatrix3{T}(rotation), position), daughter)
-                        end                    end
+                            placeDaughter!(volume, transformation, daughter)
+                        end
+                    end
                 end
                 volumes[volname] = volume
             end
         end
     end
+end
+
+# fill Transformation3D
+function getTransformation(dicts::GDMLDicts{T}, element::XMLElement) where T
+    (; positions, rotations) = dicts
+    position = Vector3{T}(0,0,0)
+    rotation = RotXYZ{T}(0,0,0)
+    for c in child_nodes(element)
+        if is_elementnode(c)
+            aa = attributes_dict(XMLElement(c))
+            if name(c) == "position"
+                unit = eval(Meta.parse(aa["unit"]))
+                position = Vector3{T}(parse(T, aa["x"]) * unit, 
+                                      parse(T, aa["y"]) * unit,
+                                      parse(T, aa["z"]) * unit)
+            elseif name(c) == "rotation"
+                unit = eval(Meta.parse(aa["unit"]))
+                rotation = RotXYZ{T}(parse(T, aa["x"]) * unit, 
+                                     parse(T, aa["y"]) * unit,
+                                     parse(T, aa["z"]) * unit)
+            elseif name(c) == "positionref"
+                position = positions[aa["ref"]]
+            elseif name(c) == "rotationref"
+                rotation = rotations[aa["ref"]]
+            end
+        end
+    end
+    Transformation3D{T}(RotMatrix3{T}(rotation), position)
 end
 
 

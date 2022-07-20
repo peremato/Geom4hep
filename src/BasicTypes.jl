@@ -29,4 +29,9 @@ export kInside, kSurface, kOutside
 kTolerance(::Type{Float32}) = 1f-3
 kTolerance(::Type{Float64}) = 1e-9
 kTolerance() = kTolerance(Float64)
+
+kPushTolerance(::Type{Float32}) = 1f-3
+kPushTolerance(::Type{Float64}) = 1e-6
+kPushTolerance() = kTolerance(Float64)
+
 nonzero(x::T) where T<:AbstractFloat = x == zero(T) ? eps(T) : x

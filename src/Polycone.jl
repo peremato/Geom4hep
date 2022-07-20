@@ -42,11 +42,9 @@ function GeometryBasics.faces(pcone::Polycone{T,N}, facets=36) where {T,N}
         nbc = ishollow ? nbv : 1         # Number of centers
         offset[i+1] = offset[i] + 2 * nbv + 2 * nbc
     end
-    @show offset, N
     indexes = Vector{TriangleFace{Int}}()
     for i in 1:N
         append!(indexes, [t .+ offset[i] for t in faces(pcone.sections[i], infacets)])
-        @show length(faces(pcone.sections[i]))
     end
     return indexes
 end

@@ -3,7 +3,14 @@ struct NoShape{T} <: AbstractShape{T}
 end
 
 #---Shape--------------------------------------------------------------------------
-const Shape{T} = Union{NoShape{T},Box{T},Trd{T},Tube{T},Cone{T},Polycone{T},CutTube{T}} where T<:AbstractFloat
+const Shape{T} = Union{NoShape{T},
+                       Box{T},
+                       Trd{T},
+                       Tube{T},
+                       Cone{T},
+                       Polycone{T},
+                       CutTube{T},
+                       Boolean{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
 struct Volume{T,PV}
@@ -48,7 +55,7 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         return vol
     else
         low, high = extent(vol.shape)
-        box = Box{T}((high - low)/2.)
+        box = Box{T}((high - low)/2. .+ kTolerance(T)*2)
         tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
         mat = Material{T}("vacuum"; density=0)
         world = Volume{T}("world", box, mat)

@@ -99,7 +99,7 @@ end
 
 #---Update the NavigatorState and get the step (distance)
 function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where T<:AbstractFloat
-    lpoint, ldir = transform(state.tolocal, gpoint, gdir)
+    lpoint, ldir = transform(state.tolocal, gpoint, gdir) 
     volume = currentVolume(state)
     step, idx = getClosestDaughter(volume, lpoint, ldir, step_limit)
     #---If didn't hit any daughter return distance to out
@@ -107,6 +107,7 @@ function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3
         step = distanceToOut(volume.shape, lpoint, ldir)
         if step >= 0.
             popOut!(state)
+            step += kTolerance(T)
         end
     else
     #---We hit a daughter, push it into the stack
