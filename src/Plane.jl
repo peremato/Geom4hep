@@ -4,8 +4,8 @@ struct Plane{T<:AbstractFloat} <: AbstractShape{T}
     distance::T
 end
 
-#---Constructor------------------------------------------------------------------------------------
-function Plane{T}(normal::Vector3{T}, origin::Point3{T}) where T<:AbstractFloat
+#---Constructors-----------------------------------------------------------------------------------
+function Plane{T}(normal::Vector3{T}, origin::Union{Point3{T},Vector3{T}}) where T<:AbstractFloat
     mag = norm(normal)
     Plane{T}(normal/mag, -dot(normal,origin)/mag)
 end
@@ -13,6 +13,12 @@ end
 function Plane{T}(θ, ϕ, origin::Point3{T}) where T<:AbstractFloat
     normal = Vector3{T}(sin(θ)*cos(ϕ), sin(θ)*sin(ϕ), cos(θ))
     Plane{T}(normal, -dot(normal,origin))
+end
+
+function Plane{T}(p1::Point3{T}, p2::Point3{T}, p3::Point3{T}, p4::Point3{T}) where T<:AbstractFloat
+    normal = (p4 - p1) × (p3 - p1)
+    center = (p1 + p2 + p3 + p4)/4
+    Plane{T}(normal, center)
 end
 
 #---Basic functionality----------------------------------------------------------------------------

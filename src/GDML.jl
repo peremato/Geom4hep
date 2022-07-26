@@ -126,6 +126,20 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                parse(T, attrs["y1"]) * lunit / 2,
                                                parse(T, attrs["y2"]) * lunit / 2,
                                                parse(T, attrs["z"])  * lunit / 2)
+            elseif elemname == "trap"
+                lunit = eval(Meta.parse(attrs["lunit"]))
+                aunit = eval(Meta.parse(attrs["aunit"]))
+                solids[attrs["name"]] = Trap{T}(parse(T, attrs["z"]) * lunit / 2, 
+                                                parse(T, attrs["theta"]) * aunit, 
+                                                parse(T, attrs["phi"]) * aunit,
+                                                parse(T, attrs["y1"]) * lunit / 2,
+                                                parse(T, attrs["x1"])  * lunit / 2,
+                                                parse(T, attrs["x2"])  * lunit / 2,
+                                                parse(T, attrs["alpha1"])  * aunit,
+                                                parse(T, attrs["y2"])  * lunit / 2,
+                                                parse(T, attrs["x3"])  * lunit / 2,
+                                                parse(T, attrs["x4"])  * lunit / 2,
+                                                parse(T, attrs["alpha2"])  * aunit)
             elseif elemname == "tube"
                 lunit = eval(Meta.parse(attrs["lunit"]))
                 aunit = eval(Meta.parse(attrs["aunit"]))
@@ -170,7 +184,7 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                    parse(T, attrs["deltaphi"]) * aunit,
                                                    Vector3{T}(parse(T, attrs["lowX"]), parse(T, attrs["lowY"]), parse(T, attrs["lowZ"])),
                                                    Vector3{T}(parse(T, attrs["highX"]), parse(T, attrs["highY"]), parse(T, attrs["highZ"])))
-            elseif elemname in ("union", "substraction", "intersection") 
+            elseif elemname in ("union", "subtraction", "intersection") 
                 first = nothing
                 second = nothing
                 transformation = getTransformation(dicts, e)
@@ -186,8 +200,8 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                 end
                 if elemname == "union"
                     solids[attrs["name"]] = Boolean(:Union, first, second, transformation)
-                elseif elemname == "substraction"
-                    solids[attrs["name"]] = Boolean(:Substraction, first, second, transformation)
+                elseif elemname == "subtraction"
+                    solids[attrs["name"]] = Boolean(:Subtraction, first, second, transformation)
                 elseif elemname == "intersection"
                     solids[attrs["name"]] = Boolean(:Intersection, first, second, transformation)
                 end

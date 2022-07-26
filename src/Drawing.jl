@@ -6,7 +6,7 @@ colors = colormap("Grays", 8)
 
 #---Draw a Volume---------------------------------------------------------------
 function draw(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, maxlevel::Int64) where T
-    m = GeometryBasics.mesh(Tesselation(vol.shape, 64))
+    m = GeometryBasics.mesh(Tesselation(vol.shape, 64), facetype=typeof(first(GeometryBasics.faces(vol.shape))))
     if isone(t)
         mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible = level == 1 ? false : true)
     else
@@ -36,7 +36,7 @@ end
 
 #---Draw a Shape---------------------------------------------------------------
 function draw!(s::LScene, shape::AbstractShape; wireframe::Bool=false)
-    m = GeometryBasics.mesh(Tesselation(shape, 32))
+    m = GeometryBasics.mesh(Tesselation(shape, 32), facetype=typeof(first(faces(shape))))
     if wireframe
         wireframe!(s, m)
     else

@@ -8,5 +8,6 @@ using Geom4hep, LinearAlgebra
     include("testTube.jl")
     include("testCone.jl")
     include("testPolycone.jl")
+    include("testTrap.jl")
 end
 
