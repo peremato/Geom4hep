@@ -14,7 +14,7 @@ const Shape{T} = Union{NoShape{T},
                        Boolean{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
-struct Volume{T,PV}
+struct VolumeP{T,PV}
     label::String
     shape::Shape{T}                     # Reference to the actual shape
     material::Material{T}               # Reference to material
@@ -25,9 +25,18 @@ end
 struct PlacedVolume{T<:AbstractFloat}
     idx::Int64
     transformation::Transformation3D{T}
-    volume::Volume{T,PlacedVolume{T}}
+    volume::VolumeP{T,PlacedVolume{T}}
 end
 
+#---Convenient Alias to simplify signatures---------------------------------------
+const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
+
+#---Constructor--------------------------------------------------------------------
+function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
+    Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())   # call the default constructor
+end
+
+#---Utilities----------------------------------------------------------------------
 function Base.show(io::IO, vol::Volume{T}) where T
     name = vol.label
     print(io, "Volume{$T} name = $name")
@@ -37,9 +46,6 @@ contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pv
 contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
 distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 
-function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
-    Volume{T,PlacedVolume{T}}(label, shape, material, Vector{PlacedVolume{T}}())
-end
 
 function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
     if subvol.shape isa NoShape

@@ -59,13 +59,13 @@ if abspath(PROGRAM_FILE) == @__FILE__
     ry = generateXRay(volume, 1e6, 2)
     @printf "generating z-projection\n"
     rz = generateXRay(volume, 1e6, 3)
-    limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
+    #limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
     #----Plot the results--------------------------------------
     fig = Figure(resolution = (1000, 1000))
     @printf "ploting the results\n"
-    heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
-    heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
-    heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
+    heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=(0,2.))
+    heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=(0,2.))
+    heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=(0,maximum(rz[3])))
     draw(LScene(fig[2, 2]), volume, 3)
     #display(fig)
     save("trackML.png", fig)
