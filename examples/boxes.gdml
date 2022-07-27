@@ -95,6 +95,8 @@
     <box lunit="cm" name="box1" x="20" y="40" z="60" />
     <box lunit="cm" name="box2" x="8" y="8" z="8" />
     <trd lunit="mm" name="trd1" x1="600" x2="200" y1="600" y2="200" z="400"/>
+    <trap alpha1="0" alpha2="0" aunit="deg" lunit="cm" name="trap1" phi="0" theta="0" x1="25.6919264572172" x2="39.3044393887839" x3="25.6919264572172" 
+x4="39.3044393887839" y1="70.685676026418" y2="70.685676026418" z="20"/>
   </solids>
 
   <structure>
@@ -112,6 +114,10 @@
     <volume name="Trd1">
       <materialref ref="Steel"/>
       <solidref ref="trd1"/>
+    </volume>
+    <volume name="Trap1">
+      <materialref ref="Steel"/>
+      <solidref ref="trap1"/>
     </volume>
     <volume name="World">
       <materialref ref="Air"/>
@@ -157,7 +163,7 @@
         <rotation name="box1_rot" unit="deg" x="0" y="45" z="0"/>
       </physvol>
       <physvol>
-        <volumeref ref="Trd1"/>
+        <volumeref ref="Trap1"/>
         <position name="trd1_pos" unit="mm" x="0" y="0" z="0"/>
       </physvol>       
     </volume>

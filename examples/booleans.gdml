@@ -21,8 +21,8 @@
   </materials>
 
   <solids>
-    <box name="brick" lunit="cm" x="5" y="5" z="10" />
-    <tube name="hole" aunit="deg" deltaphi="360" startphi="0" lunit="cm" rmin="0" rmax="1" z="6"/>
+    <box name="brick" lunit="cm" x="6" y="6" z="10" />
+    <tube name="hole" aunit="deg" deltaphi="360" startphi="0" lunit="cm" rmin="0" rmax="1" z="7"/>
     <trd name="roof" lunit="cm" x1="5" x2="5" y1="0" y2="0" z="5"/>
     <tube name="tube" aunit="deg" deltaphi="180" startphi="180" lunit="cm" rmin="0" rmax="2.5" z="12"/>
     <union name="holes" >
@@ -30,16 +30,16 @@
       <second ref="hole"/>
       <position name="hole_pos" unit="cm" x="0" y="5" z="0"/>
     </union>
-    <substraction name="hollowbrick" >
+    <subtraction name="hollowbrick" >
       <first ref="brick" />
       <second ref="holes"/>
       <position name="holes_pos" unit="cm" x="0" y="0" z="2.5"/>
       <rotation name="holes_rot" unit="deg" x="90" y="0" z="0"/>
-    </substraction>
+    </subtraction>
     <intersection name="hollowsector" >
       <first ref="hollowbrick"/>
       <second ref="tube" />
-      <position name="tube_pos" unit="cm" x="0" y="1" z="0"/>
+      <position name="tube_pos" unit="cm" x="0" y="0" z="0"/>
     </intersection>
   </solids>
 
@@ -47,6 +47,7 @@
     <volume name="World">
       <materialref ref="Aluminium"/>
       <solidref ref="hollowsector"/>
+      <!--solidref ref="tube"/-->
     </volume>
   </structure>
 
