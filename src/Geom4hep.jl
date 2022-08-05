@@ -7,14 +7,15 @@ export CutTube, Plane, Boolean, Trap
 export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn, inside, safetyToOut, safetyToIn
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
-export Mother, PlacedVolume, Volume, placeDaughter!, draw, draw!, drawDistanceToIn, drawDistanceToOut, getWorld
-export NavigatorState, computeStep!, locateGlobalPoint!, reset!, isInVolume, currentVolume, getClosestDaughter
+export PlacedVolume, Volume, Assembly, placeDaughter!, draw, draw!, drawDistanceToIn, drawDistanceToOut, getWorld, children
+export AABB, area, volume, BVHParam, buildBVH, BVH, pvolindices, pushPvolIndices!
+export TrivialNavigator, BVHNavigator, NavigatorState, computeStep!, locateGlobalPoint!, reset!, isInVolume, currentVolume, getClosestDaughter, containedDaughters, gNavigator
 export kTolerance
 export processGDML
 export Triangle, Intersection, intersect, distanceToPlane
 export Tesselation, coordinates, faces, normals
 
-using StaticArrays, GeometryBasics, LinearAlgebra, Rotations
+using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees
 include("BasicTypes.jl")
 include("Transformation3D.jl")
 include("TriangleIntersect.jl")
@@ -29,6 +30,7 @@ include("Boolean.jl")
 include("Trap.jl")
 include("Materials.jl")
 include("Volume.jl")
+include("BVH.jl")
 include("Navigators.jl")
 include("Drawing.jl")
 include("GDML.jl")

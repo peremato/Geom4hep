@@ -324,8 +324,8 @@ function GeometryBasics.coordinates(trd::Trd{T}, facets=6) where {T<:AbstractFlo
 end
 
 function GeometryBasics.faces(trd::Trd{T}, facets=6) where {T<:AbstractFloat}
-    TriangleFace{Int64}[(1,2,4), (4,3,1), (1,3,7), (7,5,1), (1,5,6), (6,2,1), 
-    (8,6,5), (5,7,8), (8,7,3), (3,4,8), (8,4,2), (2,6,8)] 
+    iface = ((1,5,6,2),(3,4,8,7),(1,3,7,5),(2,6,8,4),(1,2,4,3),(5,6,8,7))
+    (QuadFace{Int64}(f...) for f in iface)
 end
 
 

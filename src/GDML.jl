@@ -221,24 +221,18 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
             e = XMLElement(c)
             elemname = name(e)
             attrs = attributes_dict(e)
-            if elemname == "volume"
+            if elemname in ("volume", "assembly")
                 volname = attrs["name"]
                 shape = nothing
                 material = nothing
-                volume = nothing
+                pvols = PlacedVolume{T}[]
                 for cc in child_nodes(e)  #--- loop over ref to solid, material and daughters
                     if is_elementnode(cc)
                         aa = attributes_dict(XMLElement(cc))
                         if  name(cc) == "solidref"
                             shape = solids[aa["ref"]]
-                            if !isnothing(material)
-                                volume = Volume{T}(volname, shape, material)
-                            end
                         elseif name(cc) == "materialref"
                             material = materials[aa["ref"]]
-                            if !isnothing(shape)
-                                volume = Volume{T}(volname, shape, material)
-                            end
                         elseif name(cc) == "physvol"
                             daughter = nothing
                             transformation = getTransformation(dicts, XMLElement(cc))
@@ -250,9 +244,13 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                                     end
                                 end
                             end
-                            placeDaughter!(volume, transformation, daughter)
+                            push!(pvols, PlacedVolume{T}(-1, transformation, daughter))
                         end
                     end
+                end
+                volume = elemname == "volume" ? Volume{T}(volname, shape, material) : Assembly{T}(volname)
+                for pvol in pvols
+                    placeDaughter!(volume, pvol.transformation, pvol.volume)
                 end
                 volumes[volname] = volume
             end

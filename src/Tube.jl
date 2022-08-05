@@ -501,40 +501,34 @@ function GeometryBasics.coordinates(tub::Tube{T}, facets=36) where {T<:AbstractF
     nbf = Int(facets / 2)            # Number of faces
     nbv = issector ? nbf + 1 : nbf   # Number of vertices
     nbc = ishollow ? nbv : 1         # Number of centers
-    indexes = Vector{TriangleFace{Int}}()
+    indexes = Vector{QuadFace{Int64}}()
     for j in 1:nbf
         a,b = 2j-1, 2j
         c,d = !issector && j == nbf ? (1, 2) : (2j+1, 2j+2) 
-        push!(indexes, (a,b,d))
-        push!(indexes, (d,c,a))
+        push!(indexes, (a,b,d,c))
         if ishollow
             a′,b′ = 2j-1+2nbv, 2j+2nbv
             c′,d′ = !issector && j == nbf ? (2nbv+1, 2nbv+2) : (2j+1+2nbv, 2j+2+2nbv)
             # inner wall
-            push!(indexes, (a′,d′,b′))
-            push!(indexes, (d′,a′,c′))
+            push!(indexes, (a′,b′,d′,c′))
             # top
-            push!(indexes, (a, c ,a′))
-            push!(indexes, (c, c′,a′))
+            push!(indexes, (c, c′, a′, a))
             # bottom
-            push!(indexes, (b, b′, d))
-            push!(indexes, (b′,d′, d))
+            push!(indexes, (b, b′, d′, d))
         else
             a′,b′ = 2nbv+1, 2nbv+2
             # top
-            push!(indexes, (a′,a, c))
+            push!(indexes, (a′,a, c, c))
             # bottom
-            push!(indexes, (b′,d, b))
+            push!(indexes, (b′,d, b, b))
         end
     end
     if issector
         # wedge walls
         a, b, c, d  = ( 1, 2, 2nbv-1, 2nbv)
         a′,b′,c′,d′ = ishollow ? (2nbv+1, 2nbv+2, 4nbv-1, 4nbv ) : (2nbv+1, 2nbv+2, 2nbv+1, 2nbv+2)
-        push!(indexes, (a,  b, a′))
-        push!(indexes, (b,  b′,a′))
-        push!(indexes, (c′, d′,c ))
-        push!(indexes, (d′, d, c ))
+        push!(indexes, (a,  b, b′, a′))
+        push!(indexes, (c′, d′, d, c ))
     end
     return indexes
 end
