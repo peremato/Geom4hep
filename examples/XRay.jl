@@ -30,18 +30,21 @@ function generateXRay(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, v
         locateGlobalPoint!(state, point)
         mass = T(0)
         step = T(0)
-        while isInVolume(state)
+        nsteps = 0
+        maxsteps = 1000
+        while isInVolume(state) && nsteps < maxsteps
             density = currentVolume(state).material.density
             step = computeStep!(state, point, dir, T(1000))
             if step == -1
-                error("step == -1 may indicate a navigation error. \n" *
-                      "state = $state \n" *
-                      "point = $point \n" *
-                      "dir =   $dir" )
+                error("step == -1 may indicate a navigation error. \nstate = $state \npoint = $point \ndir =   $dir" )
             end
             if step > 0
                 point = point + dir * step
                 mass += step * density
+            end
+            nsteps += 1
+            if nsteps == maxsteps
+                error("Reached max number of steps. \nstep = $step \nstate = $state \npoint = $point \ndir =   $dir" )
             end
         end
         result[i,j] = mass

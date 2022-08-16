@@ -177,7 +177,7 @@ function computeStep!(state::NavigatorState{T,NAV}, gpoint::Point3{T}, gdir::Vec
     #---If didn't hit any daughter return distance to out
     if idx == 0
         step = distanceToOut(volume.shape, lpoint, ldir)
-        if step >= 0.
+        if step >= -kTolerance(T)
             popOut!(state)
         end
     else
