@@ -69,7 +69,7 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         return vol
     else
         low, high = extent(vol.shape)
-        box = Box{T}((high - low)/2. .+ kTolerance(T)*10)
+        box = Box{T}((high - low)/2. .+ 0.1)  # increase the bounding box
         tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
         mat = Material{T}("vacuum"; density=0)
         world = Volume{T}("world", box, mat)
@@ -100,7 +100,30 @@ end
 GeometryBasics.faces(::AABB{T}) where T = QuadFace{Int64}[(1,3,7,2), (1,2,6,4), (1,4,5,3), (8,6,2,7), (8,7,3,5), (8,5,4,6)]
 GeometryBasics.normals(::AABB{T}) where T = Point3{T}[(0,0,-1), (0,-1,0), (-1,0,0), (1,0,0), (0,1,0), (0,0,1)]
 
-inside(point::Point3{T}, aabb::AABB{T}) where T =  all(aabb.min .< point .< aabb.max)
+inside(bb::AABB{T}, point::Point3{T}) where T =  all(bb.min .< point .< bb.max)
+function intersect(bb::AABB{T}, point::Point3{T},dir::Vector3{T}) where T
+    point = point - (bb.max + bb.min)/2
+    dimens = (bb.max - bb.min)/2
+    distsurf = Inf
+    distance = -Inf
+    distout = Inf
+    for i in 1:3
+        din  = (-copysign(dimens[i],dir[i]) - point[i])/dir[i]
+        tout =   copysign(dimens[i],dir[i]) - point[i]
+        dout = tout/dir[i]
+        dsur = copysign(tout, dir[i])
+        if din > distance 
+            distance = din 
+        end
+        if dout < distout
+            distout = dout
+        end
+        if dsur < distsurf
+            distsurf = dsur
+        end 
+    end
+    (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? false : true
+end
 
 function AABB(pvol::PlacedVolume{T}) where T
     a, b = extent(pvol.volume.shape)

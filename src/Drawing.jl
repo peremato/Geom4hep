@@ -39,7 +39,7 @@ function draw!(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, 
 end
 
 function draw!(s::LScene, vol::Volume{T}; wireframe::Bool=false,  maxlevel::Int64=999) where T
-    draw!(s, vol, one(Transformation3D{T}), 1, wireframe, maxlevel)
+    draw!(s, vol, one(Transformation3D{T}), 1, wireframe, false, maxlevel)
     display(s)
 end
 
@@ -74,13 +74,20 @@ function draw!(s::LScene, aabb::AABB; color::Symbol=:blue)
 end
 
 function draw!(s::LScene, bvh::BVH; color::Symbol=:green)
-    if isa(bvh.children[1], PVolIndices)
+    if isempty(bvh.children)
         draw!(s, bvh.aabb, color=color)
     else
-        for c in children(bvh)
+        for c in bvh.children
             draw!(s, c, color=color)
         end
     end
+end
+
+function draw(bvh::BVH; color::Symbol=:green)
+    fig = Figure()
+    s = LScene(fig[1,1])
+    draw!(s, bvh; color=color)
+    display(fig)
 end
 
 #---Testing functions------------------------------------------------------------

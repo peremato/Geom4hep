@@ -85,23 +85,16 @@ struct BVHParam{T<:AbstractFloat}
     BVHParam{T}(SAHfrac=T(8)) where T = new(SAHfrac)
 end
 
-struct BVH{T<:AbstractFloat,N,C}
+struct BVH{T<:AbstractFloat}
     aabb::AABB{T}
-    children::NTuple{N, C} # either N=2 and C=BVH, or N=1 and C=PVolIndices
-    BVH(bv::AABB{T}, children...) where T = new{T, length(children), eltype(children)}(bv, children)
+    children::Union{Tuple{}, Tuple{BVH{T}, BVH{T}}}
+    indices::Vector{Int64}
 end
-children(n::BVH) = n.children
-
-struct PVolIndices
-    inds::Vector{Int64}
+BVH(b::AABB{T}, l::BVH{T}, r::BVH{T}) where T = BVH{T}(b, (l,r), Int64[])
+BVH(b::AABB{T}, inds::Vector{Int64}) where T = BVH{T}(b, (), inds)
+function Base.show(io::IO, bvh::BVH{T}) where T
+    print(io, "BVH{$T}",(aabb=bvh.aabb, leaves=_leaves(bvh)))
 end
-children(n::PVolIndices) = ()
-
-function Base.show(io::IO, bvh::BVH{T, N, C}) where {T,N,C}
-    print(io, "BVH{$T}",(aabb=bvh.aabb, leaves=length(collect(pvolindices(bvh)))))
-end
-
-
 #--- _Branch and _Leaf are only used to construct the BVH recursively
 struct _Branch{T} data::T; end
 struct _Leaf{T} data::T; end
@@ -120,9 +113,9 @@ function _children(n::_Branch, bp::BVHParam)
     end
     return (_Leaf(bc),)
 end
-_buildBVH(n::_Leaf, ::BVHParam) = PVolIndices(n.data.indices)
-_buildBVH(n::_Branch, bp::BVHParam) = BVH(AABB(n.data), [_buildBVH(c, bp) for c in _children(n, bp)]...)
 
+_buildBVH(n::_Leaf, ::BVHParam) = n.data.indices
+_buildBVH(n::_Branch, bp::BVHParam) = BVH(AABB(n.data), [_buildBVH(c, bp) for c in _children(n, bp)]...)
 buildBVH(pvols::Vector{PlacedVolume{T}}, bp::BVHParam{T}) where T = _buildBVH(_Branch(BoxedVolumes(pvols)), bp)
 buildBVH(pvols::Vector{PlacedVolume{T}}) where T = buildBVH(pvols, BVHParam{T}())
 
@@ -130,49 +123,18 @@ resetBVH(bvh::BVH, vertices, faces) = nothing
 
 #---Returns an iterator over all subsets of PlacedVolume indices such that `f(x::AABB) == true` for all parent axis aligned bounding boxes `x`.
 
-pvolindices(f, n::BVH{T, N, C}) where {T<:AbstractFloat, N, C<:PVolIndices} = (c.inds for c in n.children)
-pvolindices(f, n::BVH{T, N, C}) where {T<:AbstractFloat, N, C<:BVH} = Iterators.flatten(pvolindices(f, c) for c in children(n) if isa(c, PVolIndices) || f(c.aabb))
-#pvolindices(f, n::BVH{T, N, C}) where {T<:AbstractFloat, N, C<:BVH} = Iterators.flatten(i for c in children(n) if isa(c, PVolIndices) || f(c.aabb) for i in c)
-pvolindices(head::BVH{T, N, C}) where {T<:AbstractFloat, N, C<:BVH} = pvolindices(x->true, head)
-pvolindices(head::BVH{T, N, C}) where {T<:AbstractFloat, N, C<:PVolIndices} = (c.inds for c in head.children)
-
-function _pushPvolIndices!(ind::Vector{Int64}, f::Function, b::BVH{T, N, C}) where {T<:AbstractFloat, N, C<:BVH}
-    for c in children(b)
-        if f(c.aabb)
-            _pushPvolIndices!(ind, f, c)
-        end
+function _pvolindices!(ind::Vector{Int64}, f::Function, b::BVH{T}) where T
+    isempty(b.children) && return append!(ind, b.indices)
+    for c in b.children
+        f(c.aabb) && _pvolindices!(ind, f, c)
     end
-end
-function _pushPvolIndices!(ind::Vector{Int64}, ::Function, b::BVH{T, N, C}) where {T<:AbstractFloat, N, C<:PVolIndices}
-    append!(ind, b.children[1].inds)
-end
-function pushPvolIndices!(ind::Vector{Int64}, f::Function, b::BVH{T, N, C}) where {T<:AbstractFloat, N, C}
-    empty!(ind)
-    _pushPvolIndices!(ind, f, b)
+    return ind
 end
 
+pvolindices(b::BVH{T}) where T = _pvolindices!(Int64[], x -> true, b)
+pvolindices(f::Function, b::BVH{T}) where T = _pvolindices!(Int64[], f, b)
+pvolindices!(ind::Vector{Int64}, f::Function, b::BVH{T}) where T = return _pvolindices!(empty!(ind), f, b)
 
-
-
-#=
-
-function insideBVH(point::Point3{T}, vol::Volume{T}, bvh::BVH{T})
-    pvols = vol.daughters
-    for inds in pvolindices( x-> inside(point,x), bvh)
-        for i in inds
-            @show i
-            Geom4hep.contains(pvols[i], point) && return true
-        end
-    end
-    return false
+function _leaves(b::BVH)
+    isempty(b.children) ? 1 : _leaves(b.children[1]) +  _leaves(b.children[2])
 end
-
-function insideNaive(point::Point3{T}, vol::Volume{T})
-    pvols = vol.daughters
-    for pvol in pvols
-        Geom4hep.contains(pvol, point) && return true
-    end
-    return false
-end
-
-=#

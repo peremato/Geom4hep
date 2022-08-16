@@ -314,7 +314,7 @@ function distanceToIn(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T
 end
 
 function Base.show(io::IO, trd::Trd{T}) where T
-    print(io, "Trd{$T}",(trd.x1, trd.x2, trd.y1, trd.y2, trd.z))
+    print(io, "Trd{$T}",(x1=trd.x1, x2=trd.x2, y1=trd.y1, y2=trd.y2, z=trd.z))
 end
 
 function GeometryBasics.coordinates(trd::Trd{T}, facets=6) where {T<:AbstractFloat}
@@ -348,7 +348,7 @@ struct TTrd{T<:AbstractFloat} <: AbstractShape{T}
 end
 
 function Base.show(io::IO, trd::TTrd{T}) where T
-    print(io, "TTrd{$T}",(trd.x1, trd.x2, trd.y1, trd.y2, trd.z))
+    print(io, "TTrd{$T}",(x1=trd.x1, x2=trd.x2, y1=trd.y1, y2=trd.y2, z=trd.z))
 end
 
 function distanceToOut(trd::TTrd{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat

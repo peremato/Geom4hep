@@ -2,33 +2,31 @@
 abstract type AbstractNavigator end
 abstract type AbstractNavigatorState end
 
-#---Global navigator--------------------------------------------------------------------------------
-#gNavigator = nothing
-
 #---Define the various navigators-------------------------------------------------------------------
 struct TrivialNavigator{T<:AbstractFloat} <: AbstractNavigator
-    world::Volume{T}
-    function TrivialNavigator{T}(world::Volume{T}) where T
-        #global gNavigator
-        nav = new(world)
-        #gNavigator = nav
-    end    
+    world::Volume{T}   
 end
+function TrivialNavigator(world::Volume{T}) where T
+    TrivialNavigator{T}(world)
+end 
 
 #---BVHNavigator-------------------------------------------------------------------------------------
 struct BVHNavigator{T<:AbstractFloat} <: AbstractNavigator
     world::Volume{T}
     param::BVHParam{T}
     bvhdict::Dict{UInt64,BVH{T}}
+    # Used to cache the lists of indices to placed volumes (avoid useless allocations)
+    pvolind::Vector{Int64}
 end
-function BVHNavigator{T}(world::Volume{T}) where T
-    global gNavigator
-    nav = BVHNavigator{T}(world, BVHParam{T}(8), Dict{UInt64,BVH{T}}())
+
+function BVHNavigator(world::Volume{T}; SAHfrac::T=T(8)) where T
+    nav = BVHNavigator{T}(world, BVHParam{T}(SAHfrac), Dict{UInt64,BVH{T}}(),Int64[])
     #--- Create accelerationstructures---------------------------------
     buildBVH(nav, world, Set{UInt64}())
-    #gNavigator =  nav
+    sizehint!(nav.pvolind,1024)
     nav
 end
+
 function buildBVH(nav::BVHNavigator{T}, vol::Volume{T}, set::Set{UInt64}) where T
     id = objectid(vol)
     #---return immediatelly if BVH is already there----
@@ -101,17 +99,29 @@ end
 end
 
 #---Basic loops implemented using acceleration structures-------------------------------------------
-@inline containedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}) where T = (i for i in 1:length(vol.daughters))
-@inline function containedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}) where T
+containedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}) where T = vol.daughters
+function containedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}) where T
     id = objectid(vol)
     if haskey(nav.bvhdict, id)
         bvh = nav.bvhdict[id]
-        return (i for i in Iterators.flatten(inds for inds in pvolindices(x -> inside(point,x), bvh)))
+        pvolindices!(nav.pvolind, x -> inside(x, point), bvh)
     else
-        return (i for i in 1:length(vol.daughters))
+        append!(empty!(nav.pvolind), 1:length(vol.daughters))
     end
+    return (vol.daughters[i] for i in  nav.pvolind)
 end
 
+intersectedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}, ::Vector3{T}) where T = vol.daughters
+function intersectedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}, dir::Vector3{T}) where T
+    id = objectid(vol)
+    if haskey(nav.bvhdict, id)
+        bvh = nav.bvhdict[id]
+        pvolindices!(nav.pvolind, x -> intersect(x, point, dir), bvh)
+    else
+        append!(empty!(nav.pvolind), 1:length(vol.daughters))
+    end
+    return (vol.daughters[i] for i in  nav.pvolind)
+end
 
 #---Locate global point and initialize state-------------------------------------------------------- 
 function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) where {T, NAV}
@@ -126,10 +136,7 @@ function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) wher
     isinside = true
     while isinside
         isinside = false
-        #for pvol in vol.daughters
-        inds = containedDaughters(nav, vol, point)
-        for i in inds
-            pvol = vol.daughters[i]
+        for pvol in containedDaughters(nav, vol, point)
             if contains(pvol, point)
                 pushIn!(state, pvol)
                 isinside = true
@@ -146,33 +153,32 @@ end
     state.isinworld
 end
 
-function getClosestDaughter(volume::Volume{T}, point::Point3{T}, dir::Vector3{T}, step_limit::T ) where T<:AbstractFloat
+function getClosestDaughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::Vector3{T}, step_limit::T ) where {T,NAV}
     step = step_limit
     candidate = 0
-    #---Linear loop over the daughters
-    for (idx, daughter) in enumerate(volume.daughters)
+    #---Linear loop over the daughters-------------------------------------------------
+    for pvol in intersectedDaughters(nav, volume, point, dir)
         #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
-        dist = distanceToIn(daughter, point, dir)
-        dist < 0. && return (zero(T), idx) 
+        dist = distanceToIn(pvol, point, dir)
+        dist < 0. && return (zero(T), pvol.idx ) 
         if dist > 0. && dist != Inf && dist < step
             step = dist
-            candidate = idx
+            candidate = pvol.idx
         end
     end
     return step, candidate
 end
 
 #---Update the NavigatorState and get the step (distance)
-function computeStep!(state::NavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where T<:AbstractFloat
+function computeStep!(state::NavigatorState{T,NAV}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where {T,NAV}
     lpoint, ldir = transform(state.tolocal, gpoint, gdir) 
     volume = currentVolume(state)
-    step, idx = getClosestDaughter(volume, lpoint, ldir, step_limit)
+    step, idx = getClosestDaughter(state.navigator, volume, lpoint, ldir, step_limit)
     #---If didn't hit any daughter return distance to out
     if idx == 0
         step = distanceToOut(volume.shape, lpoint, ldir)
         if step >= 0.
             popOut!(state)
-            step += kTolerance(T)
         end
     else
     #---We hit a daughter, push it into the stack
