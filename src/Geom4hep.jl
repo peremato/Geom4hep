@@ -3,7 +3,7 @@ module Geom4hep
 export Point3, Point2, Vector3, Vector2, nonzero
 export AbstractShape, AbstractMaterial
 export Shape, NoShape, Box, Trd, TBox, TTrd, Tube, Wedge, isInside, isOutside, Cone, Polycone, getNz, getNSections, getSectionIndex
-export CutTube, Plane, Boolean, Trap
+export CutTube, Plane, Boolean, Trap, BooleanUnion
 export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn, inside, safetyToOut, safetyToIn
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
@@ -13,7 +13,7 @@ export AbstractNavigator, TrivialNavigator, BVHNavigator, NavigatorState, comput
 export kTolerance
 export processGDML
 export Triangle, Intersection, intersect, distanceToPlane
-export Tesselation, coordinates, faces, normals
+export Tesselation, coordinates, faces, normals, mesh
 
 using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees
 include("BasicTypes.jl")
@@ -35,6 +35,6 @@ include("Navigators.jl")
 include("Drawing.jl")
 include("GDML.jl")
 include("Benchmark.jl")
-include("CuGeom.jl")
+#include("CuGeom.jl")  # PackageCompiler fails?
 
 end # module

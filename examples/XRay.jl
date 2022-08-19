@@ -54,13 +54,18 @@ end
 
 using GLMakie
 
-if abspath(PROGRAM_FILE) == @__FILE__
+#if abspath(PROGRAM_FILE) == @__FILE__
     #-----build detector---------------------------------------
-    full = processGDML("examples/trackML.gdml", Float64)
-    volume = full.daughters[2].volume.daughters[1].volume
+    #full = processGDML("examples/trackML.gdml", Float64)
+    #volume = full[2,1]
+ 
+    full = processGDML("examples/cms2018.gdml", Float64)
+    volume = full[1,7,1]
+ 
     world = getWorld(volume)
     nav = BVHNavigator(world)
     #nav = TrivialNavigator(world)
+
     #-----Generate and Plot results----------------------------
     @printf "generating x-projection\n"
     rx = generateXRay(nav, world, 1e6, 1)
@@ -68,14 +73,15 @@ if abspath(PROGRAM_FILE) == @__FILE__
     ry = generateXRay(nav, world, 1e6, 2)
     @printf "generating z-projection\n"
     rz = generateXRay(nav, world, 1e6, 3)
-    limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
+    limits = (min(minimum(rx[3]), minimum(ry[3]), minimum(rz[3])), max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
+ 
     #----Plot the results--------------------------------------
-    fig = Figure(resolution = (1000, 1000))
+    fig = Figure(resolution = (2000, 2000))
     @printf "ploting the results\n"
     heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
     heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
-    heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=(0,maximum(rz[3])))
-    draw!(LScene(fig[2, 2]), volume; wireframe=true, maxlevel=3)
+    heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
+    draw!(LScene(fig[2, 2]), volume; wireframe=true, maxlevel=2)
     #display(fig)
-    save("trackML.png", fig)
-end
+    save("cms2018.png", fig)
+#end

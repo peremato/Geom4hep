@@ -262,7 +262,7 @@ end
 function getTransformation(dicts::GDMLDicts{T}, element::XMLElement) where T
     (; positions, rotations) = dicts
     position = Vector3{T}(0,0,0)
-    rotation = RotXYZ{T}(0,0,0)
+    rotation = RotZYX{T}(0,0,0)
     for c in child_nodes(element)
         if is_elementnode(c)
             aa = attributes_dict(XMLElement(c))
@@ -273,9 +273,9 @@ function getTransformation(dicts::GDMLDicts{T}, element::XMLElement) where T
                                       parse(T, aa["z"]) * unit)
             elseif name(c) == "rotation"
                 unit = eval(Meta.parse(aa["unit"]))
-                rotation = RotXYZ{T}(parse(T, aa["x"]) * unit, 
-                                     parse(T, aa["y"]) * unit,
-                                     parse(T, aa["z"]) * unit)
+                rotation = RotZYX{T}(parse(T, aa["z"]) * unit, 
+                                     parse(T, aa["y"]) * unit, 
+                                     parse(T, aa["x"]) * unit)
             elseif name(c) == "positionref"
                 position = positions[aa["ref"]]
             elseif name(c) == "rotationref"

@@ -48,6 +48,14 @@ function AbstractTrees.children(vol::Volume{T}) where T
     collect((d.volume for d in vol.daughters))
 end
 
+function Base.getindex(vol::Volume{T}, indx...) where T
+    v = vol
+    for i in indx
+        v = v.daughters[i].volume
+    end
+    return v
+end
+
 @inline contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pvol.volume.shape, pvol.transformation * p) == kInside
 @inline contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
 @inline distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)

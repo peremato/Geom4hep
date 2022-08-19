@@ -10,9 +10,9 @@ function Boolean(op::Symbol, left::AbstractShape{T}, right::AbstractShape{T}, pl
     @assert op in (:Union, :Subtraction, :Intersection) "Boolean suppoted operations are: :Union, :Subtraction, :Intersection"
     Boolean{T,typeof(left),typeof(right),op}(left, right, place)
 end
-#function BooleanUnion(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
-#    Boolean{T,typeof(left),typeof(right),:Union}(left, right, place)
-#end
+function BooleanUnion(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
+    Boolean{T,typeof(left),typeof(right),:Union}(left, right, place)
+end
 function Subtraction(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
     Boolean{T,typeof(left),typeof(right),:Subtraction}(left, right, place)
 end
@@ -29,17 +29,10 @@ function Base.show(io::IO, shape::Boolean{T, SL, SR, OP}) where {T,SL,SR,OP}
     print(io, "Boolean{$OP}",(left=left, right=right, placement=placement))
 end
 
-function GeometryBasics.coordinates(shape::Boolean{T, SL, SR, OP}, facets=36) where {T,SL,SR,OP}
+function GeometryBasics.mesh(shape::Boolean{T, SL, SR, OP}) where {T,SL,SR,OP}
     (; left, right, transformation) = shape
-    coors = (coordinates(left, facets), coordinates(right, facets))
-    transform = (one(Transformation3D{T}), transformation)
-    return (c * transform[i] for i in 1:2 for c in coors[i])
-end
-
-function GeometryBasics.faces(shape::Boolean{T, SL, SR, OP}, facets=36) where {T,SL,SR,OP}
-    (; left, right) = shape
-    offset = length(coordinates(left, facets))
-    append!(faces(left, facets), [t .+ offset for t in faces(right, facets)])
+    rmesh = mesh(right)
+    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
 end
 
 #---Basic functions---------------------------------------------------------------------------------
@@ -133,13 +126,15 @@ function distanceToOut(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir:
     if positionA != kOutside  # point inside A
         while(true)
             distA = distanceToOut(left, point, dir)
-            dist += (distA > 0 && distA < Inf) ? distA : 0 + kPushTolerance(T)
+            dist += (distA > 0 && distA < Inf) ? distA : 0
+            dist += kPushTolerance(T)
             npoint = point + dist * dir
             lpoint = transformation * npoint
             if inside(right, lpoint) != kOutside # B could be overlapping with A -- and/or connecting A to another part of A
                 ldir = transformation * dir
                 distB = distanceToOut(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0 + kPushTolerance(T)
+                dist += (distB > 0 && distB < Inf) ? distB : 0
+                dist += kPushTolerance(T)
                 npoint = point + dist * dir
                 if inside(left, npoint) == kOutside
                     break
@@ -156,12 +151,14 @@ function distanceToOut(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir:
             ldir = transformation * dir
             while(true)
                 distB = distanceToOut(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0 + kPushTolerance(T)
+                dist += (distB > 0 && distB < Inf) ? distB : 0
+                dist += kPushTolerance(T) # Give a push
                 npoint = point + dist * dir
                 if inside(left, npoint) != kOutside # A could be overlapping with B -- and/or connecting B to another part of B
                     ldir = transformation * dir
                     distA = distanceToOut(left, npoint, dir)
-                    dist += (distA > 0 && distA < Inf) ? distA : 0 + kPushTolerance(T)
+                    dist += (distA > 0 && distA < Inf) ? distA : 0
+                    dist += kPushTolerance(T)
                     npoint = point + dist * dir
                     lpoint = transformation * npoint
                     if inside(right, lpoint) == kOutside
@@ -267,7 +264,7 @@ function distanceToIn(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T},
             # propagate to outside of '- / RightShape'
             d1 = distanceToOut(right, lpoint, ldir)
             dist += (d1 >= 0 && d1 < Inf) ? d1 + kPushTolerance(T) : 0
-            npoint = point + dist * dir
+            npoint = point + (dist + kPushTolerance(T)) * dir
             lpoint = transformation * npoint
             # now master outside 'B'; check if inside 'A'
             inside(left, npoint) == kInside && distanceToOut(left, npoint, dir) > kPushTolerance(T) && return dist
@@ -285,8 +282,8 @@ function distanceToIn(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T},
         end
 
         #   propagate to '-'
-        dist += (d1 >= 0 && d1 < Inf) ? d1 + kPushTolerance(T) : 0
-        point + dist * dir
+        dist += (d1 >= 0 && d1 < Inf) ? d1 : 0
+        npoint = point + (dist + kPushTolerance(T)) * dir
         lpoint = transformation * npoint
         inRight = true
     end

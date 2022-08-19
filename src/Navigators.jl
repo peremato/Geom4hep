@@ -177,12 +177,16 @@ function computeStep!(state::NavigatorState{T,NAV}, gpoint::Point3{T}, gdir::Vec
     #---If didn't hit any daughter return distance to out
     if idx == 0
         step = distanceToOut(volume.shape, lpoint, ldir)
-        if step >= -kTolerance(T)
+        if step > -kTolerance(T)
             popOut!(state)
+        elseif step < 0
+            shape = volume.shape
+            volstack = state.volstack
+            error("Negative distanceToOut. \nstep = $step \nshape = $shape \nvolstack = $volstack \npoint = $lpoint \ndir =   $ldir" )
         end
     else
     #---We hit a daughter, push it into the stack
-        step += kTolerance(T) # to ensure that do not stay in the surface of the daughter
+        step += kPushTolerance(T)  # to ensure that do not stay in the surface of the daughter
         pvol = volume.daughters[idx]
         pushIn!(state, pvol)
     end

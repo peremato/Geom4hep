@@ -29,7 +29,7 @@ world = processGDML("examples/boxes.gdml")
 using GLMakie
 fig = Figure()
 scene = LScene(fig[1, 1])
-draw(scene, world)
+draw!(scene, world)
 display(fig)
 
 

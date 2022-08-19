@@ -32,7 +32,7 @@ function isInside(w::Wedge{T}, x::T, y::T; tol::T=T(0)) where T<:AbstractFloat
     else
       inside = startCheck > -tol || endCheck > -tol
     end
-    #inside &= !isOnSurface(w.along1, w.normal1, x, y) && !isOnSurface(w.along2, w.normal2, x, y)
+    inside &= !isOnSurface(w.along1, w.normal1, x, y) && !isOnSurface(w.along2, w.normal2, x, y)
 end
 
 function isOutside(w::Wedge{T}, x::T, y::T; tol::T=T(0) ) where T<:AbstractFloat

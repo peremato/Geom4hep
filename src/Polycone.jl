@@ -24,29 +24,9 @@ function Base.show(io::IO, pcone::Polycone{T,N}) where {T,N}
     print(io, "Polycone{$T, $N}",(rmin=pcone.rmin, rmax=pcone.rmax, z=pcone.z, ϕ₀=pcone.ϕ₀, Δϕ=pcone.Δϕ))
 end
 
-function GeometryBasics.coordinates(pcone::Polycone{T,N}, facets=36) where {T,N}
-    return (coord + Vector3{T}(0,0,pcone.zᵢ[i]) for i in 1:N for coord in coordinates(pcone.sections[i], facets))
-end
 
-function GeometryBasics.faces(pcone::Polycone{T,N}, facets=36) where {T,N}
-    (; sections, Δϕ) = pcone
-    infacets = facets
-    issector = Δϕ < 2π
-    issector ?  facets =  round(Int64, (facets/2π) * Δϕ) : nothing
-    isodd(facets) ? facets = 2 * div(facets, 2) : nothing
-    nbf = Int(facets / 2)            # Number of faces
-    nbv = issector ? nbf + 1 : nbf   # Number of vertices
-    offset = fill(0,N)
-    for i in 1:N-1
-        ishollow = sections[i].rmin1 > 0 || sections[i].rmin2 > 0
-        nbc = ishollow ? nbv : 1         # Number of centers
-        offset[i+1] = offset[i] + 2 * nbv + 2 * nbc
-    end
-    indexes = Vector{TriangleFace{Int}}()
-    for i in 1:N
-        append!(indexes, [t .+ offset[i] for t in faces(pcone.sections[i], infacets)])
-    end
-    return indexes
+function GeometryBasics.mesh(pcone::Polycone{T,N,L}) where {T,N,L}
+    merge([Mesh(map(x-> x + Vector3{T}(0,0,pcone.zᵢ[i]),coordinates(pcone.sections[i])), faces(pcone.sections[i])) for i in 1:N])
 end
 
 #---Basic functionality-----------------------------------------------------------------------------

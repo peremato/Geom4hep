@@ -4,13 +4,15 @@ using Printf
 
 import GeometryBasics: coordinates, faces, mesh, Mesh
 
-colors = colormap("Grays", 8)
+colors = colormap("Grays", 16)
 
 global drawn = 0
 
+GeometryBasics.mesh(shape::AbstractShape{T}) where T = GeometryBasics.mesh(Tesselation(shape, 64), facetype=typeof(first(GeometryBasics.faces(shape))))
+
 #---Draw a Volume---------------------------------------------------------------
 function draw!(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, wireframe::Bool, bvh::Bool, maxlevel::Int64) where T
-    m = GeometryBasics.mesh(Tesselation(vol.shape, 64), facetype=typeof(first(GeometryBasics.faces(vol.shape))))
+    m = GeometryBasics.mesh(vol.shape)
     if ! isone(t)
         points = GeometryBasics.coordinates(m)
         faces  = GeometryBasics.faces(m)
@@ -18,7 +20,7 @@ function draw!(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, 
         m = GeometryBasics.Mesh(points, faces)
     end
     if wireframe
-        wireframe!(s, m, color=colors[9-level], visible = level == 1 ? false : true)
+        wireframe!(s, m, color=colors[16-level], visible = level == 1 ? false : true)
     else
         mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible = level == 1 ? false : true)
     end
@@ -52,7 +54,7 @@ end
 
 #---Draw a Shape---------------------------------------------------------------
 function draw!(s::LScene, shape::AbstractShape; wireframe::Bool=false)
-    m = GeometryBasics.mesh(Tesselation(shape, 64), facetype=typeof(first(faces(shape))))
+    m = GeometryBasics.mesh(shape)
     if wireframe
         wireframe!(s, m)
     else

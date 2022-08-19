@@ -1,6 +1,9 @@
 #---Boxed volumes used to build the Bounding Volume Hierarchy---------------------------------------
 #   BoxedVolumes wraps around a set of PlacedVolumes indices, and the AABBs (axis aligned bounding 
 #   boxes) of the corresponding daughters, identified by min/max coordinates
+#
+#   Algorithm adapted from https://github.com/jonalm/BoundingVolumeHierarchies.jl
+#---------------------------------------------------------------------------------------------------
 
 struct BoxedVolumes{T<:AbstractFloat}
     min::Matrix{T}
@@ -95,6 +98,7 @@ BVH(b::AABB{T}, inds::Vector{Int64}) where T = BVH{T}(b, (), inds)
 function Base.show(io::IO, bvh::BVH{T}) where T
     print(io, "BVH{$T}",(aabb=bvh.aabb, leaves=_leaves(bvh)))
 end
+
 #--- _Branch and _Leaf are only used to construct the BVH recursively
 struct _Branch{T} data::T; end
 struct _Leaf{T} data::T; end
@@ -122,7 +126,6 @@ buildBVH(pvols::Vector{PlacedVolume{T}}) where T = buildBVH(pvols, BVHParam{T}()
 resetBVH(bvh::BVH, vertices, faces) = nothing
 
 #---Returns an iterator over all subsets of PlacedVolume indices such that `f(x::AABB) == true` for all parent axis aligned bounding boxes `x`.
-
 function _pvolindices!(ind::Vector{Int64}, f::Function, b::BVH{T}) where T
     isempty(b.children) && return append!(ind, b.indices)
     for c in b.children
