@@ -28,7 +28,8 @@ function normal(box::Box{T}, point::Point3{T}) where T
     end
 end
 
-function inside(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
+#@override function inside(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
+@override function inside(box::Box{Float64}, point::Point3{Float64})
     dist = -Inf
     for i in 1:3
         d = abs(point[i]) - box.fDimensions[i]
@@ -36,12 +37,12 @@ function inside(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
             dist = d 
         end
     end
-    abs(dist) <= kTolerance(T)/2 ? kSurface : dist < 0.0 ? kInside : kOutside
+    abs(dist) <= kTolerance(Float64)/2 ? kSurface : dist < 0.0 ? kInside : kOutside
     #dist = maximum(abs.(point) - box.fDimensions)
     #isapprox(dist, 0.0, atol = kTolerance(T)/2) ? kSurface : dist < 0.0 ? kInside : kOutside
 end
 
-function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+@override function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
     safety = -Inf
     for i in 1:3
         d = abs(point[i]) - box.fDimensions[i]
@@ -65,7 +66,7 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) whe
     #safety > kTolerance(T)/2 ? -1.0 : distance
 end
 
-function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+@override function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
     distsurf = Inf
     distance = -Inf
     distout = Inf
@@ -94,11 +95,11 @@ function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T}) wher
     #(distance >= distout || distout <= kTolerance(T)/2 || distsurf <= kTolerance(T)/2) ? Inf : distance
 end
 
-function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     minimum(box.fDimensions - abs.(point))
 end
 
-function safetyToIn(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToIn(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     maximum(abs.(point) - box.fDimensions)
 end
 
@@ -142,7 +143,7 @@ function Base.show(io::IO, box::TBox{T}) where T<:AbstractFloat
 end
 
 #=
-function distanceToOut(box::TBox{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+@override function distanceToOut(box::TBox{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
     for triangle in box.triangles
         dist, ok = intersect(point, direction, triangle)
         ok && return dist

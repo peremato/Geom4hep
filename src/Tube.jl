@@ -115,7 +115,7 @@ function extent(tub::Tube{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
     return (Point3{T}(aMin), Point3{T}(aMax))
 end
 
-function inside(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
+@override function inside(tub::Tube{T}, point::Point3{T})
     x, y, z = point
 
     # Check Z
@@ -215,7 +215,7 @@ function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     end
 end
 
-function safetyToIn(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToIn(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     x,y,z = point
     safety = abs(z) - tub.z
     r  = sqrt(x * x + y * y)
@@ -240,7 +240,7 @@ function safetyToIn(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     return safety
 end
 
-function safetyToOut(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToOut(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     x,y,z = point
     safety = tub.z - abs(z)
     r  = sqrt(x * x + y * y)
@@ -295,7 +295,7 @@ function circleIntersection(point::Point2{T}, dir::Vector2{T}, R²::T; largest::
     return dist
 end
 
-function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})
     x, y, z = point
     dx, dy, dz = dir
     w = tub.ϕWedge
@@ -376,7 +376,7 @@ function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where
     return distance    
 end
 
-function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T}) 
     x, y, z = point
     dx, dy, dz = dir
     w = tub.ϕWedge

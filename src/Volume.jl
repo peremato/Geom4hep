@@ -5,6 +5,7 @@ end
 NoShape{T}() where T = NoShape{T,Nothing}([])
 
 #---Shape--------------------------------------------------------------------------
+#=
 const Shape{T} = Union{NoShape{T},
                        Box{T},
                        Trd{T},
@@ -14,11 +15,11 @@ const Shape{T} = Union{NoShape{T},
                        Polycone{T},
                        CutTube{T},
                        Boolean{T}} where T<:AbstractFloat
-
+=#
 #---Volume-------------------------------------------------------------------------
 struct VolumeP{T<:AbstractFloat,PV}
     label::String
-    shape::Shape{T}                     # Reference to the actual shape
+    shape::AbstractShape{T}             # Reference to the actual shape
     material::Material{T}               # Reference to material
     daughters::Vector{PV}
 end
@@ -34,7 +35,7 @@ end
 const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
 
 #---Constructor--------------------------------------------------------------------
-function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
+function Volume{T}(label::String, shape::AbstractShape{T}, material::Material{T}) where T<:AbstractFloat
     Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())   # call the default constructor
 end
 
@@ -197,7 +198,7 @@ function extent(agg::Aggregate{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
             max((extent(pvol.volume.shape)[2] * pvol.transformation  for pvol in agg.pvolumes)...))
 end
 
-function inside(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+@override function inside(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
     for pvol in agg.pvolumes
         inout = inside(pvol.volume.shape, pvol.transformation * point)
         (inout == kInside || inout == kSurface) && return inout
@@ -205,13 +206,13 @@ function inside(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
     return kOutside
 end
 
-function safetyToOut(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToOut(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
 end
 
-function safetyToIn(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToIn(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
 end
 
-function distanceToOut(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
+@override function distanceToOut(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     for pvol in agg.pvolumes
         lpoint = pvol.transformation * point
         inout = inside(pvol.volume.shape, lpoint)
@@ -221,7 +222,7 @@ function distanceToOut(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) whe
     return T(-1)
 end
 
-function distanceToIn(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
+@override function distanceToIn(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     distance = T(Inf)
     for pvol in agg.pvolumes
         lpoint = pvol.transformation * point

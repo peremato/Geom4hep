@@ -49,7 +49,7 @@ end
 isOutside(w::Wedge{T}, p::Point2{T}; tol::T=T(0) ) where T<:AbstractFloat = isOutside(w, p[1], p[2]; tol=tol)
 isInside(w::Wedge{T}, p::Point2{T}; tol::T=T(0) ) where T<:AbstractFloat = isInside(w, p[1], p[2]; tol=tol)
 
-function safetyToOut(w::Wedge{T}, x::T, y::T) where T<:AbstractFloat
+@override function safetyToOut(w::Wedge{T}, x::T, y::T) where T<:AbstractFloat
     (; normal1, normal2, Δϕ) = w
     dist1 = x * normal1[1] + y * normal1[2]
     dist2 = x * normal2[1] + y * normal2[2]

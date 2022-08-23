@@ -49,7 +49,7 @@ function extent(shape::Boolean{T, SL, SR, OP})::Tuple{Point3{T},Point3{T}} where
     end
 end
  
-function inside(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}) where {T,SL,SR}
+@override function inside(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
     lpoint = transformation * point
 
@@ -74,7 +74,7 @@ function inside(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}) where {T,SL
     end
 end
 
-function inside(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}) where {T,SL,SR}
+@override function inside(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
     lpoint = transformation * point
 
@@ -93,7 +93,7 @@ function inside(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}) wher
     end 
 end
 
-function inside(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}) where {T,SL,SR}
+@override function inside(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
     lpoint = transformation * point
 
@@ -112,14 +112,14 @@ function inside(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}) where
     end
 end
 
-function safetyToOut(shape::Boolean{T, SL, SR, OP}, point::Point3{T})::T where {T,SL,SR, OP}
+@override function safetyToOut(shape::Boolean{T, SL, SR, OP}, point::Point3{T}) where {T,SL,SR, OP}
     return 0
 end
-function safetyToIn(shape::Boolean{T, SL, SR, OP}, point::Point3{T})::T where {T,SL,SR, OP}
+@override function safetyToIn(shape::Boolean{T, SL, SR, OP}, point::Point3{T}) where {T,SL,SR, OP}
     return 0
 end
 
-function distanceToOut(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+@override function distanceToOut(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir::Vector3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
     dist = T(0)
     positionA = inside(left, point)
@@ -175,28 +175,28 @@ function distanceToOut(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir:
     end 
 end
 
-function distanceToOut(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+@override function distanceToOut(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}, dir::Vector3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToOut(left, point, dir)
     distB = distanceToOut(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToOut(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+@override function distanceToOut(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}, dir::Vector3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToOut(left, point, dir)
     distB = distanceToIn(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToIn(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+@override function distanceToIn(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir::Vector3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToIn(left, point, dir)
     distB = distanceToIn(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToIn(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+@override function distanceToIn(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}, dir::Vector3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
 
     positionA = inside(left, point)
@@ -248,7 +248,7 @@ function distanceToIn(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}
     return dist
 end
 
-function distanceToIn(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+@override function distanceToIn(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}, dir::Vector3{T}) where {T,SL,SR}
     (; left, right, transformation) = shape
 
     lpoint = transformation * point

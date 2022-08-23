@@ -95,7 +95,7 @@ function extent(ctube::CutTube{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
     return (Point3{T}(aMin), Point3{T}(aMax))
 end
 
-function inside(ctube::CutTube{T}, point::Point3{T}) where T<:AbstractFloat
+@override function inside(ctube::CutTube{T}, point::Point3{T}) where T<:AbstractFloat
     bot, top = ctube.planes
     tub = ctube.tube
     x, y, z = point
@@ -112,11 +112,11 @@ function inside(ctube::CutTube{T}, point::Point3{T}) where T<:AbstractFloat
     return inplanes == kSurface && intube != kOutside ? inplanes : intube
 end
 
-function safetyToIn(ctube::CutTube{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToIn(ctube::CutTube{T}, point::Point3{T}) where T<:AbstractFloat
 
 end
 
-function distanceToOut(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToOut(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     bot, top = ctube.planes
     # Compute distance to cut planes
     distance = min(distanceToOut(bot, point, dir), distanceToOut(top, point, dir))
@@ -126,7 +126,7 @@ function distanceToOut(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T})::T 
     return distance
 end
 
-function distanceToIn(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToIn(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     bot, top = ctube.planes
 
     distance = T(Inf)

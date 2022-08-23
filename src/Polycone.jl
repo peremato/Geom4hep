@@ -80,7 +80,7 @@ function extent(pcone::Polycone{T,N})::Tuple{Point3{T},Point3{T}} where {T,N}
     return (low + Vector3{T}(0, 0, pcone.zᵢ[1] - pcone.sections[1].z), high + Vector3{T}(0, 0, pcone.zᵢ[N] + pcone.sections[N].z))
 end
 
-function inside(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
+@override function inside(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
     x, y, z = point
     indexLow  = getSectionIndex(pcone, z - kTolerance(T))
     indexHigh = getSectionIndex(pcone, z + kTolerance(T))
@@ -99,7 +99,7 @@ function inside(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
 end
 Base.contains(pcone::Polycone{T,N}, p::Point3{T}) where {T,N} = inside(pcone, p) == kInside
 
-function distanceToIn(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
+@override function distanceToIn(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T}) where {T,N}
     z = point[3]
     dz = dir[3]
     distance = Inf
@@ -117,7 +117,7 @@ function distanceToIn(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::
     return distance
 end
 
-function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
+@override function safetyToIn(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
     (; sections, zᵢ) = pcone
     z = point[3]
     index = getSectionIndex(pcone, z)
@@ -151,7 +151,7 @@ function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     return minSafety
 end
 
-function safetyToOut(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
+@override function safetyToOut(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
     inside(pcone, point) == kOutside && return -1
     (; sections, zᵢ) = pcone
     z = point[3]
@@ -181,7 +181,7 @@ function safetyToOut(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     return minSafety
 end
 
-function distanceToOut(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
+@override function distanceToOut(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T}) where {T,N}
     z = point[3]
     dz = dir[3]
     distance = Inf

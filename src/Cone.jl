@@ -93,7 +93,7 @@ function extent(cone::Cone{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloa
     extent(Tube{T}(min(rmin1,rmin2), max(rmax1,rmax2),z, ϕ₀, Δϕ))
 end
 
-function inside(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
+@override function inside(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     x, y, z = point
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge,
        outerSlope, outerOffset, innerSlope, innerOffset) = cone
@@ -126,7 +126,7 @@ function inside(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     return outside ? kOutside : cinside ? kInside : kSurface
 end
 
-function safetyToIn(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToIn(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     x,y,z = point
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, secRMax, secRMin, 
        outerSlope, outerOffset, innerSlope, innerOffset) = cone
@@ -155,7 +155,7 @@ function safetyToIn(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     return safety
 end
 
-function safetyToOut(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToOut(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     x,y,z = point
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, secRMax, secRMin, 
     outerSlope, outerOffset, innerSlope, innerOffset) = cone
@@ -295,7 +295,7 @@ function distanceToConicalSurface(cone::Cone{T}, point::Point3{T}, dir::Vector3{
     ok ? distance : T(Inf)
 end
 
-function distanceToOut(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToOut(cone::Cone{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     x, y, z = point
     dx, dy, dz = dir
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, secRMax, secRMin, 
@@ -380,7 +380,7 @@ function isInsideR(cone::Cone{T}, hit::Point3{T}) where T<:AbstractFloat
 end
 
 
-function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     x, y, z = point
     dx, dy, dz = dir
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, 

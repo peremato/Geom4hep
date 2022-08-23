@@ -1,10 +1,11 @@
-#--- basic stuff
+#--- basic stuff------------------------------------------------------------------------------------
 abstract type AbstractShape{T<:AbstractFloat} end
 abstract type AbstractMaterial{T<:AbstractFloat} end
 
-function GeometryBasics.Tesselation(shape::AbstractShape{T}, nvertices::NTuple{N,<:Integer}) where {T,N}
-    return Tesselation{3,T,typeof(shape),N}(shape, Int.(nvertices))
-end
+
+#function GeometryBasics.Tesselation(shape::AbstractShape{T}, nvertices::NTuple{N,<:Integer}) where {T,N}
+#    return Tesselation{3,T,typeof(shape),N}(shape, Int.(nvertices))
+#end
   
 const Vector3 = SVector{3}
 const Vector2 = SVector{2}
@@ -19,7 +20,16 @@ Base.:+(p1::Point3, p2::Point3) = Vector3(p1[1]+p2[1], p1[2]+p2[2], p1[3]+p2[3])
 LinearAlgebra.:×(x::Vector3, y::Vector3) = Vector3(x[2]*y[3]-x[3]*y[2], -x[1]*y[3]+x[3]*y[1], x[1]*y[2]-x[2]*y[1])
 unitize(v::Vector3) = v/(v⋅v)
 
-#---constants
+const T = Float64
+@virtual inside(shape::AbstractShape{T}, point::Point3{T}) = error("No default method for inside!")
+@virtual extent(shape::AbstractShape{T}) = error("No default method for extent!")
+@virtual distanceToIn(shape::AbstractShape{T}, point::Point3{T}, dir::Vector3{T}) = error("No default method for distanceToIn!")
+@virtual distanceToOut(shape::AbstractShape{T}, point::Point3{T}, dir::Vector3{T}) = error("No default method for distanceToOut!")
+@virtual safetyToIn(shape::AbstractShape{T}, point::Point3{T}, dir::Vector3{T}) = error("No default method for safetyToIn!")
+@virtual safetyToOut(shape::AbstractShape{T}, point::Point3{T}, dir::Vector3{T}) = error("No default method for safetyToOut!")
+
+
+#---constants---------------------------------------------------------------------------------------
 #const kTolerance = 1e-9
 const kInside  = 0
 const kSurface = 1

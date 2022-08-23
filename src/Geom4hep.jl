@@ -15,7 +15,7 @@ export processGDML
 export Triangle, Intersection, intersect, distanceToPlane
 export Tesselation, coordinates, faces, normals, mesh
 
-using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees
+using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees, Virtual
 include("BasicTypes.jl")
 include("Transformation3D.jl")
 include("TriangleIntersect.jl")

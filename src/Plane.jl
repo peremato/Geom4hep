@@ -28,7 +28,7 @@ function safety(plane::Plane{T}, point::Point3{T})::T where T<:AbstractFloat
     return dot(plane.normal, point) + plane.distance
 end
 
-function distanceToIn(plane::Plane{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToIn(plane::Plane{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     # The function returns a negative distance for points already inside or
     # direction going outwards (along the normal)
     d = T(-Inf)
@@ -38,7 +38,7 @@ function distanceToIn(plane::Plane{T}, point::Point3{T}, dir::Vector3{T})::T whe
     return d
 end
 
-function distanceToOut(plane::Plane{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToOut(plane::Plane{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     # The function returns infinity if the plane is not hit from inside, negative
     # if the point is outside
     d = T(Inf)

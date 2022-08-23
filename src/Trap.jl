@@ -75,7 +75,7 @@ function extent(trap::Trap{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloa
     ( -p, p )
 end
 
-function inside(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
+@override function inside(trap::Trap{T}, point::Point3{T})
     z = point[3]
     planes = trap.planes
     # inside z?
@@ -90,7 +90,7 @@ function inside(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     cinside ? kInside : outside ? kOutside : kSurface
 end
 
-function safetyToOut(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToOut(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     (; z, planes) = trap
     saf = z - abs(point[3])
     for i in 1:4
@@ -100,7 +100,7 @@ function safetyToOut(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     return saf
 end
 
-function safetyToIn(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
+@override function safetyToIn(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     (; z, planes) = trap
     saf = abs(point[3]) - z
     for i in 1:4
@@ -110,7 +110,7 @@ function safetyToIn(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     return saf
 end
 
-function distanceToOut(trap::Trap{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
+@override function distanceToOut(trap::Trap{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     (; z, planes) = trap
     dz = dir[3]
 
@@ -135,7 +135,7 @@ function distanceToOut(trap::Trap{T}, point::Point3{T}, dir::Vector3{T}) where T
     return distance
 end
 
-function distanceToIn(trap::Trap{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
+@override function distanceToIn(trap::Trap{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     (; z, planes) = trap
     dz = dir[3]
     z = point[3]

@@ -53,7 +53,7 @@ end
 
 cross(px, py, vx, vy) = vx * py - vy * px
 
-function inside(trd::Trd{T}, point::Point3{T}) where T<:AbstractFloat
+@override function inside(trd::Trd{T}, point::Point3{T}) where T<:AbstractFloat
     x, y, z = point
 
     # inside z?
@@ -195,8 +195,8 @@ function faceIntersection(trd::Trd{T}, pos::Point3{T}, dir::Vector3{T},
     return ok, dist
 end
 
-function distanceToOut(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
-
+@override function distanceToOut(trd::Trd{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
+#@override function distanceToOut(trd::Trd{Float64}, point::Point3{Float64}, dir::Vector3{Float64})
     x, y, z = point
     dx, dy, dz = dir
     distance = 0.0
@@ -257,7 +257,7 @@ function distanceToOut(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where 
     return distance 
 end
 
-function distanceToIn(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+@override function distanceToIn(trd::Trd{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
     x, y, z = point
     dx, dy, dz = dir
     distance::T = Inf
@@ -351,7 +351,7 @@ function Base.show(io::IO, trd::TTrd{T}) where T
     print(io, "TTrd{$T}",(x1=trd.x1, x2=trd.x2, y1=trd.y1, y2=trd.y2, z=trd.z))
 end
 
-function distanceToOut(trd::TTrd{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+@override function distanceToOut(trd::TTrd{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
     for triangle in trd.triangles
         dist, ok = intersect(point, direction, triangle)
         ok && return dist
