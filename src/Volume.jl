@@ -1,10 +1,6 @@
-#---Used for Aggregates------------------------------------------------------------- 
-struct NoShape{T,PV} <: AbstractShape{T}
-    pvolumes::Vector{PV}
-end
-NoShape{T}() where T = NoShape{T,Nothing}([])
 
 #---Shape--------------------------------------------------------------------------
+#=
 const Shape{T} = Union{NoShape{T},
                        Box{T},
                        Trd{T},
@@ -14,34 +10,43 @@ const Shape{T} = Union{NoShape{T},
                        Polycone{T},
                        CutTube{T},
                        Boolean{T}} where T<:AbstractFloat
-
-#---Volume-------------------------------------------------------------------------
-struct VolumeP{T<:AbstractFloat,PV}
-    label::String
-    shape::Shape{T}                     # Reference to the actual shape
-    material::Material{T}               # Reference to material
-    daughters::Vector{PV}
-end
+=#
 
 #---PlacedVolume-------------------------------------------------------------------
 struct PlacedVolume{T<:AbstractFloat}
     idx::Int64
     transformation::Transformation3D{T}
-    volume::VolumeP{T,PlacedVolume{T}}
+    volume::AbstractVolume{T}
 end
 
+#---Volume-------------------------------------------------------------------------
+struct Volume{T<:AbstractFloat,S<:AbstractShape{T}} <: AbstractVolume{T}
+    label::String
+    shape::S                            # Reference to the actual shape
+    material::Material{T}               # Reference to material
+    daughters::Vector{PlacedVolume{T}}
+end
+
+PlacedVolume{T}(trans::Transformation3D{T}, vol::AbstractVolume{T}) where T = PlacedVolume{T}(-1, trans, vol)
+
+#---Used for Aggregates------------------------------------------------------------- 
+struct NoShape{T} <: AbstractShape{T}
+    pvolumes::Vector{PlacedVolume{T}}
+end
+NoShape{T}() where T = NoShape{T}(PlacedVolume{T}[])
+
 #---Convenient Alias to simplify signatures---------------------------------------
-const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
+#const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
 
 #---Constructor--------------------------------------------------------------------
-function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
-    Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())   # call the default constructor
+function Volume{T}(label::String, shape::AbstractShape{T}, material::Material{T}) where T<:AbstractFloat
+    Volume{T,typeof(shape)}(label, shape, material, PlacedVolume{T}[])   # call the default constructor
 end
 
 #---Utilities----------------------------------------------------------------------
-function Base.show(io::IO, vol::Volume{T}) where T
+function Base.show(io::IO, vol::Volume{T,S}) where {T,S}
     name = vol.label
-    print(io, "Volume{$T} name = $name")
+    print(io, "Volume{$T,$S} name = $name")
 end
 
 function AbstractTrees.children(vol::Volume{T}) where T
@@ -56,18 +61,18 @@ function Base.getindex(vol::Volume{T}, indx...) where T
     return v
 end
 
-@inline contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pvol.volume.shape, pvol.transformation * p) == kInside
-@inline contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
-@inline distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
+@inline contains(pvol::PlacedVolume{T}, p::Point3{T}) where T = inside(pvol.volume.shape, pvol.transformation * p) == kInside
+@inline contains(vol::Volume{T,S}, p::Point3{T}) where {T,S} = inside(vol.shape, p) == kInside
+@inline distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 
-
-function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
+function placeDaughter!(volume::Volume{T,S1}, placement::Transformation3D{T}, subvol::Volume{T,S2}) where {T,S1,S2}
     if subvol.shape isa NoShape
         for d in subvol.daughters
-            push!(volume.daughters, PlacedVolume(length(volume.daughters)+1, d.transformation * placement, d.volume))
+            vol = d.volume
+            push!(volume.daughters, PlacedVolume{T}(length(volume.daughters)+1, d.transformation * placement, vol))
         end
     else
-        push!(volume.daughters, PlacedVolume(length(volume.daughters)+1, placement,subvol))
+        push!(volume.daughters, PlacedVolume{T}(length(volume.daughters)+1, placement,subvol))
     end
     volume
 end
@@ -156,13 +161,13 @@ end
 
 function Assembly{T}(label::String) where T<:AbstractFloat
     pvolumes = Vector{PlacedVolume{T}}()
-    Volume{T}(label, NoShape{T,PlacedVolume{T}}(pvolumes), Material{T}("vacuum"; density=0), pvolumes)   # call the default constructor
+    Volume{T}(label, NoShape{T}(pvolumes), Material{T}("vacuum"; density=0), pvolumes)   # call the default constructor
 end
 
-const Aggregate{T} =  NoShape{T,PlacedVolume{T}} where T
+const Aggregate{T} =  NoShape{T} where T
 
 #---Printing and Plotting---------------------------------------------------------------------------
-function Base.show(io::IO, shape::NoShape{T,PlacedVolume{T}}) where T
+function Base.show(io::IO, shape::NoShape{T}) where T
     print(io, "Aggregate{$T} with ", length(shape.pvolumes), " volumes: \n")
     for d in shape.pvolumes
         print(io, "  $d\n")

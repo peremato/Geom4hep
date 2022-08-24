@@ -51,8 +51,8 @@ end
 #---NavigatorState----------------------------------------------------------------------------------
 mutable struct NavigatorState{T<:AbstractFloat, NAV<:AbstractNavigator} <: AbstractNavigatorState
     navigator::NAV                               # Navigator to be used
-    topvol::Volume{T}                            # Typically the unplaced world
-    currvol::Volume{T}                           # the current volume
+    topvol::AbstractVolume{T}                    # Typically the unplaced world
+    currvol::AbstractVolume{T}                           # the current volume
     isinworld::Bool                              # inside world volume
     volstack::Vector{Int64}                      # keep the indexes of all daughters up to the current one 
     tolocal::Vector{Transformation3D{T}}         # Stack of transformations
@@ -92,7 +92,7 @@ end
     end
 end
 
-@inline function pushIn!(state::NavigatorState{T}, pvol::PlacedVolume{T}) where T<:AbstractFloat
+@inline function pushIn!(state::NavigatorState{T}, pvol::PlacedVolume{T}) where T
     push!(state.volstack, pvol.idx)
     push!(state.tolocal, pvol.transformation)
     state.currvol = pvol.volume

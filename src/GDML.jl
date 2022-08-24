@@ -244,7 +244,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                                     end
                                 end
                             end
-                            push!(pvols, PlacedVolume{T}(-1, transformation, daughter))
+                            push!(pvols, PlacedVolume{T}(transformation, daughter))
                         end
                     end
                 end
