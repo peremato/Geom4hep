@@ -199,11 +199,11 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                     end
                 end
                 if elemname == "union"
-                    solids[attrs["name"]] = Boolean(:Union, first, second, transformation)
+                    solids[attrs["name"]] = BooleanUnion(first, second, transformation)
                 elseif elemname == "subtraction"
-                    solids[attrs["name"]] = Boolean(:Subtraction, first, second, transformation)
+                    solids[attrs["name"]] = BooleanSubtraction(first, second, transformation)
                 elseif elemname == "intersection"
-                    solids[attrs["name"]] = Boolean(:Intersection, first, second, transformation)
+                    solids[attrs["name"]] = BooleanIntersection(first, second, transformation)
                 end
             else
                 @printf "Shape %s not yet suported. Using NoShape\n" elemname

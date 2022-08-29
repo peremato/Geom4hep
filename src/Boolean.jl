@@ -1,55 +1,86 @@
-#---Boolean-------------------------------------------------------------
-struct Boolean{T<:AbstractFloat, SL<:AbstractShape, SR<:AbstractShape, OP} <: AbstractShape{T}
+#---Boolean Types----------------------------------------------------------------------------------
+struct BooleanUnion{T<:AbstractFloat, SL<:AbstractShape, SR<:AbstractShape} <: AbstractShape{T}
+    left::SL        # the mother (or left) volume A in unplaced form
+    right::SR       # (or right) volume B in placed form, acting on A with a boolean operation
+    transformation::Transformation3D{T} # placement of "right" with respect of "left"
+end
+struct BooleanSubtraction{T<:AbstractFloat, SL<:AbstractShape, SR<:AbstractShape} <: AbstractShape{T}
+    left::SL        # the mother (or left) volume A in unplaced form
+    right::SR       # (or right) volume B in placed form, acting on A with a boolean operation
+    transformation::Transformation3D{T} # placement of "right" with respect of "left"
+end
+struct BooleanIntersection{T<:AbstractFloat, SL<:AbstractShape, SR<:AbstractShape} <: AbstractShape{T}
     left::SL        # the mother (or left) volume A in unplaced form
     right::SR       # (or right) volume B in placed form, acting on A with a boolean operation
     transformation::Transformation3D{T} # placement of "right" with respect of "left"
 end
 
 #---Constructor------------------------------------------------------------------------------------
-function Boolean(op::Symbol, left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
-    @assert op in (:Union, :Subtraction, :Intersection) "Boolean suppoted operations are: :Union, :Subtraction, :Intersection"
-    Boolean{T,typeof(left),typeof(right),op}(left, right, place)
-end
 function BooleanUnion(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
-    Boolean{T,typeof(left),typeof(right),:Union}(left, right, place)
+    BooleanUnion{T,typeof(left),typeof(right)}(left, right, place)
 end
-function Subtraction(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
-    Boolean{T,typeof(left),typeof(right),:Subtraction}(left, right, place)
+function BooleanSubtraction(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
+    BooleanSubtraction{T,typeof(left),typeof(right)}(left, right, place)
 end
-function Intersection(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
-    Boolean{T,typeof(left),typeof(right),:Intersection}(left, right, place)
+function BooleanIntersection(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
+    BooleanIntersection{T,typeof(left),typeof(right)}(left, right, place)
 end
 
 #---Utilities---------------------------------------------------------------------------------------
 
 #---Printing and Plotting---------------------------------------------------------------------------
-function Base.show(io::IO, shape::Boolean{T, SL, SR, OP}) where {T,SL,SR,OP}
+function Base.show(io::IO, shape::BooleanUnion{T, SL, SR}) where {T,SL,SR}
     (; left, right, transformation) = shape
     placement = isone(transformation) ? nothing : isone(transformation.rotation) ? transformation.translation : transformation
-    print(io, "Boolean{$OP}",(left=left, right=right, placement=placement))
+    print(io, "BooleanUnion",(left=left, right=right, placement=placement))
+end
+function Base.show(io::IO, shape::BooleanSubtraction{T, SL, SR}) where {T,SL,SR}
+    (; left, right, transformation) = shape
+    placement = isone(transformation) ? nothing : isone(transformation.rotation) ? transformation.translation : transformation
+    print(io, "BooleanSubtraction",(left=left, right=right, placement=placement))
+end
+function Base.show(io::IO, shape::BooleanIntersection{T, SL, SR}) where {T,SL,SR}
+    (; left, right, transformation) = shape
+    placement = isone(transformation) ? nothing : isone(transformation.rotation) ? transformation.translation : transformation
+    print(io, "BooleanIntersection",(left=left, right=right, placement=placement))
 end
 
-function GeometryBasics.mesh(shape::Boolean{T, SL, SR, OP}) where {T,SL,SR,OP}
+
+function GeometryBasics.mesh(shape::BooleanUnion{T, SL, SR}) where {T,SL,SR}
+    (; left, right, transformation) = shape
+    rmesh = mesh(right)
+    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+end
+function GeometryBasics.mesh(shape::BooleanSubtraction{T, SL, SR}) where {T,SL,SR}
+    (; left, right, transformation) = shape
+    rmesh = mesh(right)
+    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+end
+function GeometryBasics.mesh(shape::BooleanIntersection{T, SL, SR}) where {T,SL,SR}
     (; left, right, transformation) = shape
     rmesh = mesh(right)
     merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
 end
 
 #---Basic functions---------------------------------------------------------------------------------
-function extent(shape::Boolean{T, SL, SR, OP})::Tuple{Point3{T},Point3{T}} where {T,SL,SR,OP}
+function extent(shape::BooleanUnion{T, SL, SR})::Tuple{Point3{T},Point3{T}} where {T,SL,SR}
     (; left, right, transformation) = shape
     minLeft, maxLeft = extent(left)
     minRight, maxRight = extent(right) .* Ref(transformation)
-    if OP == :Union
-        (min.(minLeft, minRight), max.(maxLeft, maxRight))
-    elseif  OP == :Subtraction
-        (minLeft, maxLeft)
-    elseif  OP == :Intersection
-        (max.(minLeft, minRight), min.(maxLeft, maxRight))
-    end
+    (min.(minLeft, minRight), max.(maxLeft, maxRight))
 end
+function extent(shape::BooleanSubtraction{T, SL, SR})::Tuple{Point3{T},Point3{T}} where {T,SL,SR}
+    extent(shape.left)
+end
+function extent(shape::BooleanIntersection{T, SL, SR})::Tuple{Point3{T},Point3{T}} where {T,SL,SR}
+    (; left, right, transformation) = shape
+    minLeft, maxLeft = extent(left)
+    minRight, maxRight = extent(right) .* Ref(transformation)
+    (max.(minLeft, minRight), min.(maxLeft, maxRight))
+end
+
  
-function inside(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}) where {T,SL,SR}
+function inside(shape::BooleanUnion{T, SL, SR}, point::Point3{T})::Int64 where {T,SL,SR}
     (; left, right, transformation) = shape
     lpoint = transformation * point
 
@@ -74,7 +105,7 @@ function inside(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}) where {T,SL
     end
 end
 
-function inside(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}) where {T,SL,SR}
+function inside(shape::BooleanIntersection{T, SL, SR}, point::Point3{T})::Int64  where {T,SL,SR}
     (; left, right, transformation) = shape
     lpoint = transformation * point
 
@@ -93,7 +124,7 @@ function inside(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}) wher
     end 
 end
 
-function inside(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}) where {T,SL,SR}
+function inside(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T})::Int64  where {T,SL,SR}
     (; left, right, transformation) = shape
     lpoint = transformation * point
 
@@ -112,14 +143,27 @@ function inside(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}) where
     end
 end
 
-function safetyToOut(shape::Boolean{T, SL, SR, OP}, point::Point3{T})::T where {T,SL,SR, OP}
+function safetyToOut(shape::BooleanUnion{T, SL, SR}, point::Point3{T})::T where {T,SL,SR}
     return 0
 end
-function safetyToIn(shape::Boolean{T, SL, SR, OP}, point::Point3{T})::T where {T,SL,SR, OP}
+function safetyToOut(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T})::T where {T,SL,SR}
+    return 0
+end
+function safetyToOut(shape::BooleanIntersection{T, SL, SR}, point::Point3{T})::T where {T,SL,SR}
     return 0
 end
 
-function distanceToOut(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+function safetyToIn(shape::BooleanUnion{T, SL, SR}, point::Point3{T})::T where {T,SL,SR}
+    return 0
+end
+function safetyToIn(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T})::T where {T,SL,SR}
+    return 0
+end
+function safetyToIn(shape::BooleanIntersection{T, SL, SR}, point::Point3{T})::T where {T,SL,SR}
+    return 0
+end
+
+function distanceToOut(shape::BooleanUnion{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
     dist = T(0)
     positionA = inside(left, point)
@@ -175,28 +219,28 @@ function distanceToOut(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir:
     end 
 end
 
-function distanceToOut(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+function distanceToOut(shape::BooleanIntersection{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToOut(left, point, dir)
     distB = distanceToOut(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToOut(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+function distanceToOut(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToOut(left, point, dir)
     distB = distanceToIn(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToIn(shape::Boolean{T, SL, SR, :Union}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+function distanceToIn(shape::BooleanUnion{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToIn(left, point, dir)
     distB = distanceToIn(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToIn(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+function distanceToIn(shape::BooleanIntersection{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
 
     positionA = inside(left, point)
@@ -248,7 +292,7 @@ function distanceToIn(shape::Boolean{T, SL, SR, :Intersection}, point::Point3{T}
     return dist
 end
 
-function distanceToIn(shape::Boolean{T, SL, SR, :Subtraction}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+function distanceToIn(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
 
     lpoint = transformation * point

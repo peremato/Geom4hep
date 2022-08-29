@@ -28,7 +28,7 @@ function normal(box::Box{T}, point::Point3{T}) where T
     end
 end
 
-function inside(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
+function inside(box::Box{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     dist = -Inf
     for i in 1:3
         d = abs(point[i]) - box.fDimensions[i]
@@ -41,7 +41,7 @@ function inside(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     #isapprox(dist, 0.0, atol = kTolerance(T)/2) ? kSurface : dist < 0.0 ? kInside : kOutside
 end
 
-function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
     safety = -Inf
     for i in 1:3
         d = abs(point[i]) - box.fDimensions[i]
@@ -65,7 +65,7 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T}) whe
     #safety > kTolerance(T)/2 ? -1.0 : distance
 end
 
-function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T}) where T<:AbstractFloat
+function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
     distsurf = Inf
     distance = -Inf
     distout = Inf

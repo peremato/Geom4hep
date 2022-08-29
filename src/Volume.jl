@@ -13,7 +13,9 @@ const Shape{T} = Union{NoShape{T},
                        Cone{T},
                        Polycone{T},
                        CutTube{T},
-                       Boolean{T}} where T<:AbstractFloat
+                       BooleanUnion{T},
+                       BooleanIntersection{T}, 
+                       BooleanSubtraction{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
 struct VolumeP{T<:AbstractFloat,PV}
@@ -56,9 +58,15 @@ function Base.getindex(vol::Volume{T}, indx...) where T
     return v
 end
 
-@inline contains(pvol::PlacedVolume{T}, p::Point3{T}) where T<:AbstractFloat = inside(pvol.volume.shape, pvol.transformation * p) == kInside
-@inline contains(vol::Volume{T}, p::Point3{T}) where T<:AbstractFloat = inside(vol.shape, p) == kInside
-@inline distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
+function contains(pvol::PlacedVolume{T}, p::Point3{T})::Bool where T<:AbstractFloat
+    inside(pvol.volume.shape, pvol.transformation * p) == kInside
+end
+function contains(vol::Volume{T}, p::Point3{T})::Bool where T<:AbstractFloat
+    inside(vol.shape, p) == kInside
+end
+function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T})::T where T<:AbstractFloat
+    distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
+end
 
 
 function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
@@ -197,7 +205,7 @@ function extent(agg::Aggregate{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
             max((extent(pvol.volume.shape)[2] * pvol.transformation  for pvol in agg.pvolumes)...))
 end
 
-function inside(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+function inside(agg::Aggregate{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     for pvol in agg.pvolumes
         inout = inside(pvol.volume.shape, pvol.transformation * point)
         (inout == kInside || inout == kSurface) && return inout
@@ -211,7 +219,7 @@ end
 function safetyToIn(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
 end
 
-function distanceToOut(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
+function distanceToOut(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     for pvol in agg.pvolumes
         lpoint = pvol.transformation * point
         inout = inside(pvol.volume.shape, lpoint)
@@ -221,9 +229,10 @@ function distanceToOut(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) whe
     return T(-1)
 end
 
-function distanceToIn(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T}) where T<:AbstractFloat
+function distanceToIn(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     distance = T(Inf)
-    for pvol in agg.pvolumes
+    for i in eachindex(agg.pvolumes)
+        pvol = agg.pvolumes[i]
         lpoint = pvol.transformation * point
         inout = inside(pvol.volume.shape, lpoint)
         inout == kInside && return T(-1)

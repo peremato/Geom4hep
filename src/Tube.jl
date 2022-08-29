@@ -115,7 +115,7 @@ function extent(tub::Tube{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
     return (Point3{T}(aMin), Point3{T}(aMax))
 end
 
-function inside(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
+function inside(tub::Tube{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     x, y, z = point
 
     # Check Z

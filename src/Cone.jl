@@ -93,7 +93,7 @@ function extent(cone::Cone{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloa
     extent(Tube{T}(min(rmin1,rmin2), max(rmax1,rmax2),z, ϕ₀, Δϕ))
 end
 
-function inside(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
+function inside(cone::Cone{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     x, y, z = point
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge,
        outerSlope, outerOffset, innerSlope, innerOffset) = cone

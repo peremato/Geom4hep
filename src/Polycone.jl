@@ -32,7 +32,7 @@ end
 #---Basic functionality-----------------------------------------------------------------------------
 getNz(::Polycone{T,N}) where {T,N} = N + 1
 getNSections(::Polycone{T,N}) where {T,N} = N
-function getSectionIndex(pcone::Polycone{T,N}, zpos) where {T,N}
+function getSectionIndex(pcone::Polycone{T,N}, zpos::T) where {T,N}
     (; sections, zᵢ) = pcone
     zpos < zᵢ[1] - sections[1].z && return -1
     for i  in 1:N
@@ -69,7 +69,8 @@ function extent(pcone::Polycone{T,N})::Tuple{Point3{T},Point3{T}} where {T,N}
     rmax::T = 0
     rmin::T = 0
     z::T = 0
-    for cone in pcone.sections
+    for i in eachindex(pcone.sections)
+        cone = pcone.sections[i]
         cone.rmax1 > rmax && (rmax = cone.rmax1)
         cone.rmax2 > rmax && (rmax = cone.rmax2)
         cone.rmin1 < rmin && (rmin = cone.rmin1)
@@ -80,7 +81,7 @@ function extent(pcone::Polycone{T,N})::Tuple{Point3{T},Point3{T}} where {T,N}
     return (low + Vector3{T}(0, 0, pcone.zᵢ[1] - pcone.sections[1].z), high + Vector3{T}(0, 0, pcone.zᵢ[N] + pcone.sections[N].z))
 end
 
-function inside(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
+function inside(pcone::Polycone{T,N}, point::Point3{T})::Int64  where {T,N}
     x, y, z = point
     indexLow  = getSectionIndex(pcone, z - kTolerance(T))
     indexHigh = getSectionIndex(pcone, z + kTolerance(T))

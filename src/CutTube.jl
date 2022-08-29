@@ -95,7 +95,7 @@ function extent(ctube::CutTube{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
     return (Point3{T}(aMin), Point3{T}(aMax))
 end
 
-function inside(ctube::CutTube{T}, point::Point3{T}) where T<:AbstractFloat
+function inside(ctube::CutTube{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     bot, top = ctube.planes
     tub = ctube.tube
     x, y, z = point

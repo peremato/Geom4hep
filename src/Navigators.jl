@@ -99,7 +99,7 @@ end
 end
 
 #---Basic loops implemented using acceleration structures-------------------------------------------
-containedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}) where T = vol.daughters
+containedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}) where T = eachindex(vol.daughters)
 function containedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}) where T
     id = objectid(vol)
     if haskey(nav.bvhdict, id)
@@ -108,10 +108,10 @@ function containedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{
     else
         append!(empty!(nav.pvolind), 1:length(vol.daughters))
     end
-    return (vol.daughters[i] for i in  nav.pvolind)
+    return nav.pvolind
 end
 
-intersectedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}, ::Vector3{T}) where T = vol.daughters
+intersectedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}, ::Vector3{T}) where T = eachindex(vol.daughters)
 function intersectedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}, dir::Vector3{T}) where T
     id = objectid(vol)
     if haskey(nav.bvhdict, id)
@@ -120,7 +120,7 @@ function intersectedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point
     else
         append!(empty!(nav.pvolind), 1:length(vol.daughters))
     end
-    return (vol.daughters[i] for i in  nav.pvolind)
+    return nav.pvolind
 end
 
 #---Locate global point and initialize state-------------------------------------------------------- 
@@ -136,7 +136,8 @@ function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) wher
     isinside = true
     while isinside
         isinside = false
-        for pvol in containedDaughters(nav, vol, point)
+        for i in containedDaughters(nav, vol, point)
+            pvol = vol.daughters[i]
             if contains(pvol, point)
                 pushIn!(state, pvol)
                 isinside = true
@@ -157,7 +158,8 @@ function getClosestDaughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::
     step = step_limit
     candidate = 0
     #---Linear loop over the daughters-------------------------------------------------
-    for pvol in intersectedDaughters(nav, volume, point, dir)
+    for i in intersectedDaughters(nav, volume, point, dir)
+        pvol = volume.daughters[i]
         #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
         dist = distanceToIn(pvol, point, dir)
         dist < 0. && return (zero(T), pvol.idx ) 
