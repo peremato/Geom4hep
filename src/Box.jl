@@ -41,59 +41,6 @@ function inside(box::Box{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     #isapprox(dist, 0.0, atol = kTolerance(T)/2) ? kSurface : dist < 0.0 ? kInside : kOutside
 end
 
-function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
-    safety = -Inf
-    for i in 1:3
-        d = abs(point[i]) - box.fDimensions[i]
-        if d  > safety 
-            safety = d 
-        end
-    end
-    if safety > kTolerance(T)/2
-        return -1.0
-    end 
-    dist = Inf
-    for i in 1:3
-        d = (copysign(box.fDimensions[i], direction[i]) - point[i])/direction[i]
-        if d < dist
-            dist = d
-        end
-    end
-    return dist
-    #safety = maximum(abs.(point) - box.fDimensions)
-    #distance = minimum((copysign.(box.fDimensions, direction) - point) * (1.0 ./ direction))
-    #safety > kTolerance(T)/2 ? -1.0 : distance
-end
-
-function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
-    distsurf = Inf
-    distance = -Inf
-    distout = Inf
-    for i in 1:3
-        din  = (-copysign(box.fDimensions[i],direction[i]) - point[i])/direction[i]
-        tout =   copysign(box.fDimensions[i],direction[i]) - point[i]
-        dout = tout/direction[i]
-        dsur = copysign(tout, direction[i])
-        if din > distance 
-            distance = din 
-        end
-        if dout < distout
-            distout = dout
-        end
-        if dsur < distsurf
-            distsurf = dsur
-        end 
-    end
-    (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
-    #invdir = 1.0 ./ direction
-    #tempIn  = -copysign.(box.fDimensions, direction) - point
-    #tempOut =  copysign.(box.fDimensions, direction) - point
-    #distance = maximum(tempIn * invdir)
-    #distout  = minimum(tempOut * invdir)
-    #distsurf = abs(minimum(copysign.(tempOut, direction)))
-    #(distance >= distout || distout <= kTolerance(T)/2 || distsurf <= kTolerance(T)/2) ? Inf : distance
-end
-
 function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     minimum(box.fDimensions - abs.(point))
 end

@@ -34,6 +34,9 @@ include("Volume.jl")
 include("BVH.jl")
 include("Navigators.jl")
 include("GDML.jl")
+include("./DistanceIn.jl")
+include("./DistanceOut.jl")
+include("./Distance.jl")
 include("Benchmark.jl")
 #include("CuGeom.jl")  # PackageCompiler fails?
 
