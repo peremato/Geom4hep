@@ -1,5 +1,5 @@
 #Boolean
-function distanceToOut_booleanunion(shape, point, dir::Vector3{T})::T where T
+function distanceToOut_booleanunion(shape::BooleanUnion{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
     dist = T(0)
     positionA = inside(left, point)
@@ -54,13 +54,13 @@ function distanceToOut_booleanunion(shape, point, dir::Vector3{T})::T where T
         end
     end 
 end
-function distanceToOut_booleanintersection(shape, point, dir::Vector3{T})::T where T
+function distanceToOut_booleanintersection(shape::BooleanIntersection{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToOut(left, point, dir)
     distB = distanceToOut(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
-function distanceToOut_booleansubtraction(shape, point, dir::Vector3{T})::T where T
+function distanceToOut_booleansubtraction(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
     distA = distanceToOut(left, point, dir)
     distB = distanceToIn(right, transformation * point, transformation * dir)

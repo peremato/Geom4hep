@@ -5,58 +5,58 @@ function distanceToIn_booleanunion(shape::BooleanUnion{T, SL, SR}, point::Point3
     distB = distanceToIn(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
-# function distanceToIn_booleanintersection(shape::BooleanIntersection{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
-#     (; left, right, transformation) = shape
+function distanceToIn_booleanintersection(shape::BooleanIntersection{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+    (; left, right, transformation) = shape
 
-#     positionA = inside(left, point)
-#     lpoint = transformation * point
-#     positionB = inside(right, lpoint)
+    positionA = inside(left, point)
+    lpoint = transformation * point
+    positionB = inside(right, lpoint)
 
-#     inLeft = positionA == kInside
-#     inRight = positionB == kInside
+    inLeft = positionA == kInside
+    inRight = positionB == kInside
 
-#     inLeft && inRight && return T(-1)
+    inLeft && inRight && return T(-1)
 
-#     dist = T(0)
-#     npoint = point
-#     ldir = transformation * dir
-#     #  main loop
-#     while true
-#         d1 = d2 = 0
-#         if !inLeft
-#             d1 = distanceToIn(left, npoint, dir)
-#             d1 = max(d1, kTolerance(T))
-#             d1 == T(Inf) && return T(Inf)
-#         end
-#         if !inRight
-#             d2 = distanceToIn(right, lpoint, ldir)
-#             d2 = max(d2, kTolerance(T))
-#             d2 == T(Inf) && return T(Inf)
-#         end
-#         if d1 > d2
-#             # propagate to left shape
-#             dist += d1
-#             inleft = true
-#             npoint += d1 * dir
-#             lpoint = transformation * npoint
-#             # check if propagated point is inside right shape, check is done with a little push
-#             inRight = inside(right, lpoint + kTolerance(T) * ldir) == kInside
-#             inRight && return dist
-#             # here inleft=true, inright=false
-#         else
-#             # propagate to right shape
-#             dist += d2
-#             inright = true
-#             # check if propagated point is inside left shape, check is done with a little push
-#             npoint += d2 * dir
-#             lpoint = transformation * npoint
-#             inLeft = inside(left, npoint + kTolerance(T) * dir) == kInside
-#             inLeft && return dist
-#         end
-#     end
-#     return dist
-# end
-function distanceToIn_booleansubtraction(shape, point::Point3{T}, dir) where T
+    dist = T(0)
+    npoint = point
+    ldir = transformation * dir
+    #  main loop
+    while true
+        d1 = d2 = 0
+        if !inLeft
+            d1 = distanceToIn(left, npoint, dir)
+            d1 = max(d1, kTolerance(T))
+            d1 == T(Inf) && return T(Inf)
+        end
+        if !inRight
+            d2 = distanceToIn(right, lpoint, ldir)
+            d2 = max(d2, kTolerance(T))
+            d2 == T(Inf) && return T(Inf)
+        end
+        if d1 > d2
+            # propagate to left shape
+            dist += d1
+            inleft = true
+            npoint += d1 * dir
+            lpoint = transformation * npoint
+            # check if propagated point is inside right shape, check is done with a little push
+            inRight = inside(right, lpoint + kTolerance(T) * ldir) == kInside
+            inRight && return dist
+            # here inleft=true, inright=false
+        else
+            # propagate to right shape
+            dist += d2
+            inright = true
+            # check if propagated point is inside left shape, check is done with a little push
+            npoint += d2 * dir
+            lpoint = transformation * npoint
+            inLeft = inside(left, npoint + kTolerance(T) * dir) == kInside
+            inLeft && return dist
+        end
+    end
+    return dist
+end
+function distanceToIn_booleansubtraction(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
 
     lpoint = transformation * point
