@@ -1,5 +1,4 @@
 function inside(shape, point)
-    @nospecialize shape
     if shape isa Trap
         inside_trap(shape, point)
     elseif shape isa Trd
