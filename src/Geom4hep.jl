@@ -15,6 +15,7 @@ export processGDML
 export Triangle, Intersection, intersect, distanceToPlane
 export Tesselation, coordinates, faces, normals, mesh
 
+using Requires
 using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees
 include("BasicTypes.jl")
 include("Transformation3D.jl")
@@ -32,9 +33,12 @@ include("Materials.jl")
 include("Volume.jl")
 include("BVH.jl")
 include("Navigators.jl")
-include("Drawing.jl")
 include("GDML.jl")
 include("Benchmark.jl")
 #include("CuGeom.jl")  # PackageCompiler fails?
+
+function __init__()
+    @require Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a" include("Drawing.jl")
+end
 
 end # module
