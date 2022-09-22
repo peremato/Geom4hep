@@ -93,38 +93,6 @@ function extent(cone::Cone{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloa
     extent(Tube{T}(min(rmin1,rmin2), max(rmax1,rmax2),z, ϕ₀, Δϕ))
 end
 
-function inside(cone::Cone{T}, point::Point3{T})::Int64  where T<:AbstractFloat
-    x, y, z = point
-    (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge,
-       outerSlope, outerOffset, innerSlope, innerOffset) = cone
-
-    # Check Z
-    outside = abs(z) > cone.z + kTolerance(T)/2
-    outside && return kOutside
-    cinside = abs(z) < cone.z - kTolerance(T)/2
-
-    # Check on RMax
-    r2 = x * x + y * y
-    rmax = rmax1 == rmax2 ? rmax1 : outerOffset + outerSlope * z
-    outside |= r2 > rmax * rmax + kTolerance(T) * rmax
-    outside && return kOutside
-    cinside &= r2 < rmax * rmax - kTolerance(T) * rmax
-
-    # Check on RMin
-    if rmin1 > 0. || rmin2 > 0.
-        rmin = rmin1 == rmin2 ? rmin1 : innerOffset + innerSlope * z
-        outside |= r2 <= rmin * rmin - kTolerance(T) * rmin
-        outside && return kOutside
-        cinside &= r2 > rmin * rmin + kTolerance(T) * rmin
-    end
-    
-    # Check on Phi
-    if Δϕ < 2π
-        outside |= isOutside(ϕWedge, x, y)
-        cinside &= isInside(ϕWedge, x, y)
-    end
-    return outside ? kOutside : cinside ? kInside : kSurface
-end
 
 function safetyToIn(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     x,y,z = point

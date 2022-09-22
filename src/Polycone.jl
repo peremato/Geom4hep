@@ -81,23 +81,6 @@ function extent(pcone::Polycone{T,N})::Tuple{Point3{T},Point3{T}} where {T,N}
     return (low + Vector3{T}(0, 0, pcone.zᵢ[1] - pcone.sections[1].z), high + Vector3{T}(0, 0, pcone.zᵢ[N] + pcone.sections[N].z))
 end
 
-function inside(pcone::Polycone{T,N}, point::Point3{T})::Int64  where {T,N}
-    x, y, z = point
-    indexLow  = getSectionIndex(pcone, z - kTolerance(T))
-    indexHigh = getSectionIndex(pcone, z + kTolerance(T))
-    indexLow < 0 && indexHigh < 0 && return kOutside
-    indexLow < 0 && indexHigh == 1 && return inside(pcone.sections[1], point-Vector3{T}(0,0,pcone.zᵢ[1]))
-    indexHigh < 0 && indexLow == N && return inside(pcone.sections[N], point-Vector3{T}(0,0,pcone.zᵢ[N]))
-    if indexLow == indexHigh
-        return inside(pcone.sections[indexLow], point-Vector3{T}(0,0,pcone.zᵢ[indexLow]))
-    else
-        insideLow = inside(pcone.sections[indexLow], point-Vector3{T}(0,0,pcone.zᵢ[indexLow]))
-        insideHigh = inside(pcone.sections[indexHigh], point-Vector3{T}(0,0,pcone.zᵢ[indexHigh]))
-        insideLow == kSurface && insideHigh == kSurface && return kInside
-        insideLow == kOutside && insideHigh == kOutside && return kOutside
-        return kSurface
-    end
-end
 Base.contains(pcone::Polycone{T,N}, p::Point3{T}) where {T,N} = inside(pcone, p) == kInside
 
 function distanceToIn(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}

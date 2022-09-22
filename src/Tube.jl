@@ -115,36 +115,6 @@ function extent(tub::Tube{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
     return (Point3{T}(aMin), Point3{T}(aMax))
 end
 
-function inside(tub::Tube{T}, point::Point3{T})::Int64  where T<:AbstractFloat
-    x, y, z = point
-
-    # Check Z
-    outside = abs(z) > tub.z + kTolerance(T)/2
-    outside && return kOutside
-    cinside = abs(z) < tub.z - kTolerance(T)/2
-
-    # Check on RMax
-    r2 = x * x + y * y
-    outside |= r2 > tub.rmax2 + kTolerance(T) * tub.rmax
-    outside && return kOutside
-    cinside &= r2 < tub.rmax2 - kTolerance(T) * tub.rmax  
-    
-    # Check on RMin
-    if tub.rmin > 0.
-        outside |= r2 <= tub.rmin2 - kTolerance(T) * tub.rmin
-        outside && return kOutside
-        cinside &= r2 > tub.rmin2 + kTolerance(T) * tub.rmin
-    end
-    
-    # Check on Phi
-    if tub.Δϕ < 2π
-        outside |= isOutside(tub.ϕWedge, x, y)
-        cinside &= isInside(tub.ϕWedge, x, y)
-    end
-
-    return outside ? kOutside : cinside ? kInside : kSurface
-end
-
 function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     x, y, z = point
     norm = zeros(T,3) 

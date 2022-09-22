@@ -205,13 +205,14 @@ function extent(agg::Aggregate{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
             max((extent(pvol.volume.shape)[2] * pvol.transformation  for pvol in agg.pvolumes)...))
 end
 
-function inside(agg::Aggregate{T}, point::Point3{T})::Int64  where T<:AbstractFloat
-    for pvol in agg.pvolumes
-        inout = inside(pvol.volume.shape, pvol.transformation * point)
-        (inout == kInside || inout == kSurface) && return inout
-    end
-    return kOutside
-end
+# FIXME never used
+# function inside(agg::Aggregate{T}, point::Point3{T})::Int64  where T<:AbstractFloat
+#     for pvol in agg.pvolumes
+#         inout = inside(pvol.volume.shape, pvol.transformation * point)
+#         (inout == kInside || inout == kSurface) && return inout
+#     end
+#     return kOutside
+# end
 
 function safetyToOut(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
 end

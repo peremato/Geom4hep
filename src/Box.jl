@@ -28,19 +28,6 @@ function normal(box::Box{T}, point::Point3{T}) where T
     end
 end
 
-function inside(box::Box{T}, point::Point3{T})::Int64  where T<:AbstractFloat
-    dist = -Inf
-    for i in 1:3
-        d = abs(point[i]) - box.fDimensions[i]
-        if d  > dist 
-            dist = d 
-        end
-    end
-    abs(dist) <= kTolerance(T)/2 ? kSurface : dist < 0.0 ? kInside : kOutside
-    #dist = maximum(abs.(point) - box.fDimensions)
-    #isapprox(dist, 0.0, atol = kTolerance(T)/2) ? kSurface : dist < 0.0 ? kInside : kOutside
-end
-
 function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     minimum(box.fDimensions - abs.(point))
 end

@@ -80,69 +80,6 @@ function extent(shape::BooleanIntersection{T, SL, SR})::Tuple{Point3{T},Point3{T
 end
 
  
-function inside(shape::BooleanUnion{T, SL, SR}, point::Point3{T})::Int64 where {T,SL,SR}
-    (; left, right, transformation) = shape
-    lpoint = transformation * point
-
-    positionA = inside(left, point)
-    positionA == kInside && return kInside
-
-    positionB = inside(right, lpoint)
-    positionB == kInside && return kInside
-
-    if positionA == kSurface && positionB == kSurface
-        normalA = normal(left, point)
-        normalB = normal(right, lpoint) * transformation
-        if dot(normalA, normalB) < 0
-            return kInside    # touching solids -)(-
-        else 
-            return kSurface   # overlapping solids =))
-        end
-    elseif positionA == kSurface || positionB == kSurface
-        return kSurface
-    else
-        return kOutside
-    end
-end
-
-function inside(shape::BooleanIntersection{T, SL, SR}, point::Point3{T})::Int64  where {T,SL,SR}
-    (; left, right, transformation) = shape
-    lpoint = transformation * point
-
-    positionA = inside(left, point)
-    positionA == kOutside && return kOutside
-
-    positionB = inside(right, lpoint)
-    if positionA == kInside && positionB == kInside
-        return kInside
-    elseif  positionA == kInside && positionB == kSurface ||
-            positionA == kSurface && positionB == kInside ||
-            positionA == kSurface && positionB == kSurface
-        return kSurface
-    else
-        return kOutside
-    end 
-end
-
-function inside(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T})::Int64  where {T,SL,SR}
-    (; left, right, transformation) = shape
-    lpoint = transformation * point
-
-    positionA = inside(left, point)
-    positionA == kOutside && return kOutside
-
-    positionB = inside(right, lpoint)
-
-    if positionA == kInside && positionB == kOutside
-        return kInside;
-    elseif positionA == kInside && positionB == kSurface ||
-           positionB == kOutside && positionA == kSurface
-        return kSurface
-    else
-        return kOutside
-    end
-end
-
 function safetyToOut(shape::BooleanUnion{T, SL, SR}, point::Point3{T})::T where {T,SL,SR}
     return 0
 end
