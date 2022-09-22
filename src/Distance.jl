@@ -19,6 +19,8 @@ function distanceToIn(shape, point, dir)
         distanceToIn_booleansubtraction(shape, point, dir)
     elseif shape isa BooleanIntersection
         distanceToIn_booleanintersection(shape, point, dir)
+    elseif shape isa PlacedVolume
+        distanceToIn_placedvolume(shape, point, dir)
     end
 end
 function distanceToOut(shape, point, dir)

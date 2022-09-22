@@ -1,3 +1,6 @@
+function distanceToIn_placedvolume(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T})::T where T<:AbstractFloat
+    distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
+end
 ## Boolean
 function distanceToIn_booleanunion(shape::BooleanUnion{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
