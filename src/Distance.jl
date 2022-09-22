@@ -20,7 +20,8 @@ function distanceToIn(shape, point, dir)
     elseif shape isa BooleanIntersection
         distanceToIn_booleanintersection(shape, point, dir)
     elseif shape isa PlacedVolume
-        distanceToIn_placedvolume(shape, point, dir)
+        xf = shape.transformation
+        distanceToIn_placedvolume(shape.volume.shape, xf*point, xf*dir)
     end
 end
 function distanceToOut(shape, point, dir)
