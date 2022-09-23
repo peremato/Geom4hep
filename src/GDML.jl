@@ -225,7 +225,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                 volname = attrs["name"]
                 shape = nothing
                 material = nothing
-                pvols = PlacedVolume{T}[]
+                pvols = []
                 for cc in child_nodes(e)  #--- loop over ref to solid, material and daughters
                     if is_elementnode(cc)
                         aa = attributes_dict(XMLElement(cc))
@@ -244,7 +244,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                                     end
                                 end
                             end
-                            push!(pvols, PlacedVolume{T}(-1, transformation, daughter))
+                            push!(pvols, PlacedVolume(-1, transformation, daughter))
                         end
                     end
                 end

@@ -13,9 +13,7 @@ const Shape{T} = Union{NoShape{T},
                        Cone{T},
                        Polycone{T},
                        CutTube{T},
-                       BooleanUnion{T},
-                       BooleanIntersection{T}, 
-                       BooleanSubtraction{T}} where T<:AbstractFloat
+                       AbstractBoolean{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
 struct VolumeP{T<:AbstractFloat,PV}
