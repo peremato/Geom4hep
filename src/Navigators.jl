@@ -49,18 +49,18 @@ function Base.show(io::IO, nav::BVHNavigator{T}) where T
 end
 
 #---NavigatorState----------------------------------------------------------------------------------
-struct NavigatorState{T<:AbstractFloat, VT1, VT2, NAV<:AbstractNavigator} <: AbstractNavigatorState
+struct NavigatorState{T<:AbstractFloat, NAV<:AbstractNavigator} <: AbstractNavigatorState
     navigator::NAV                               # Navigator to be used
-    topvol::VT1
-    currvol::VT2
-    isinworld::Bool                              # inside world volume
+    topvol:: Base.RefValue{Volume}
+    currvol::Base.RefValue{Volume}
+    isinworld::Ref{Bool}                              # inside world volume
     volstack::Vector{Int64}                      # keep the indexes of all daughters up to the current one 
     tolocal::Vector{Transformation3D{T}}         # Stack of transformations
 end
 
 #---Constructors------------------------------------------------------------------------------------
 function NavigatorState(top::Volume{T}, nav::AbstractNavigator=TrivialNavigator{T}(top)) where T
-    x = NavigatorState(nav, top, top, false, Vector{Int64}(), Vector{Transformation3D{T}}()) 
+    x = NavigatorState(nav, Ref{Volume}(top), Ref{Volume}(top), Ref(false), Vector{Int64}(), Vector{Transformation3D{T}}()) 
     sizehint!(x.volstack,16)
     sizehint!(x.tolocal,16)
     return x
@@ -69,33 +69,35 @@ end
 @inline function reset!(state::NavigatorState{T}) where T<:AbstractFloat
     empty!(state.volstack)
     empty!(state.tolocal)
-    @set state.currvol = state.topvol
-    @set state.isinworld = false 
+    state.currvol[] = state.topvol[]
+    state.isinworld[] = false 
+    nothing
 end
 
 @inline function currentVolume(state::NavigatorState{T}) where T<:AbstractFloat
-    return state.currvol
+    return state.currvol[]
 end
 
 @inline function popOut!(state::NavigatorState{T}) where T<:AbstractFloat
-    if !isempty(state.volstack)
+    res = if !isempty(state.volstack)
         pop!(state.volstack)
         pop!(state.tolocal)
-        vol = state.topvol
+        vol = state.topvol[]
         for idx in state.volstack
             vol = vol.daughters[idx].volume
         end
-        @set state.currvol = vol
+        state.currvol[] = vol
     else
-        @set state.currvol = state.topvol
-        @set state.isinworld = false
+        state.currvol[] = state.topvol[]
+        state.isinworld[] = false
     end
+    nothing
 end
 
 @inline function pushIn!(state::NavigatorState{T}, pvol::PlacedVolume{T}) where T<:AbstractFloat
     push!(state.volstack, pvol.idx)
     push!(state.tolocal, pvol.transformation)
-    @set state.currvol = pvol.volume
+    state.currvol[] = pvol.volume
 end
 
 #---Basic loops implemented using acceleration structures-------------------------------------------
@@ -127,10 +129,10 @@ end
 function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) where {T, NAV}
     nav = state.navigator
     reset!(state)
-    vol = state.topvol
+    vol = state.topvol[]
     if contains(vol, point)
-        @set state.currvol = vol
-        @set state.isinworld = true
+        state.currvol[] = vol
+        state.isinworld[] = true
     end
     # check the daughters in a recursive manner
     isinside = true
@@ -147,11 +149,11 @@ function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) wher
             end
         end
     end
-    return state.isinworld
+    nothing
 end
 
 @inline function isInVolume(state::NavigatorState{T}) where T<:AbstractFloat
-    state.isinworld
+    state.isinworld[]
 end
 
 function getClosestDaughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::Vector3{T}, step_limit::T ) where {T,NAV}
@@ -180,7 +182,7 @@ function computeStep!(state::NavigatorState{T,NAV}, gpoint::Point3{T}, gdir::Vec
     if idx == 0
         step = distanceToOut(volume.shape, lpoint, ldir)
         if step > -kTolerance(T)
-            popOut!(state)
+            state = popOut!(state)
         elseif step < 0
             shape = volume.shape
             volstack = state.volstack
@@ -190,7 +192,7 @@ function computeStep!(state::NavigatorState{T,NAV}, gpoint::Point3{T}, gdir::Vec
     #---We hit a daughter, push it into the stack
         step += kPushTolerance(T)  # to ensure that do not stay in the surface of the daughter
         pvol = volume.daughters[idx]
-        pushIn!(state, pvol)
+        state = pushIn!(state, pvol)
     end
     return step
 end
