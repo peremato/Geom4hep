@@ -1,70 +1,74 @@
 #Boolean
-function distanceToOut_booleanunion(shape::BooleanUnion{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
-    (; left, right, transformation) = shape
-    dist = T(0)
-    positionA = inside(left, point)
-    if positionA != kOutside  # point inside A
-        while(true)
-            distA = distanceToOut(left, point, dir)
-            dist += (distA > 0 && distA < Inf) ? distA : 0
-            dist += kPushTolerance(T)
-            npoint = point + dist * dir
-            lpoint = transformation * npoint
-            if inside(right, lpoint) != kOutside # B could be overlapping with A -- and/or connecting A to another part of A
-                ldir = transformation * dir
-                distB = distanceToOut(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0
-                dist += kPushTolerance(T)
-                npoint = point + dist * dir
-                if inside(left, npoint) == kOutside
-                    break
-                end
-            else
-                break
-            end
-        end
-        return dist - kPushTolerance(T)
-    else
-        lpoint = transformation * point
-        positionB = inside(right, lpoint)
-        if positionB != kOutside  # point inside B
-            ldir = transformation * dir
-            while(true)
-                distB = distanceToOut(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0
-                dist += kPushTolerance(T) # Give a push
-                npoint = point + dist * dir
-                if inside(left, npoint) != kOutside # A could be overlapping with B -- and/or connecting B to another part of B
-                    ldir = transformation * dir
-                    distA = distanceToOut(left, npoint, dir)
+function distanceToOut_boolean(shape::AbstractBoolean, point::Point3{T}, dir::Vector3{T})::T where {T}
+    @compactified shape::AbstractBoolean begin
+        BooleanUnion => begin
+            (; left, right, transformation) = shape
+            dist = T(0)
+            positionA = inside(left, point)
+            if positionA != kOutside  # point inside A
+                while(true)
+                    distA = distanceToOut(left, point, dir)
                     dist += (distA > 0 && distA < Inf) ? distA : 0
                     dist += kPushTolerance(T)
                     npoint = point + dist * dir
                     lpoint = transformation * npoint
-                    if inside(right, lpoint) == kOutside
+                    if inside(right, lpoint) != kOutside # B could be overlapping with A -- and/or connecting A to another part of A
+                        ldir = transformation * dir
+                        distB = distanceToOut(right, lpoint, ldir)
+                        dist += (distB > 0 && distB < Inf) ? distB : 0
+                        dist += kPushTolerance(T)
+                        npoint = point + dist * dir
+                        if inside(left, npoint) == kOutside
+                            break
+                        end
+                    else
                         break
                     end
-                else
-                    break
                 end
-            end
-            return dist - kPushTolerance(T)
-        else
-            return T(-1)
+                return dist - kPushTolerance(T)
+            else
+                lpoint = transformation * point
+                positionB = inside(right, lpoint)
+                if positionB != kOutside  # point inside B
+                    ldir = transformation * dir
+                    while(true)
+                        distB = distanceToOut(right, lpoint, ldir)
+                        dist += (distB > 0 && distB < Inf) ? distB : 0
+                        dist += kPushTolerance(T) # Give a push
+                        npoint = point + dist * dir
+                        if inside(left, npoint) != kOutside # A could be overlapping with B -- and/or connecting B to another part of B
+                            ldir = transformation * dir
+                            distA = distanceToOut(left, npoint, dir)
+                            dist += (distA > 0 && distA < Inf) ? distA : 0
+                            dist += kPushTolerance(T)
+                            npoint = point + dist * dir
+                            lpoint = transformation * npoint
+                            if inside(right, lpoint) == kOutside
+                                break
+                            end
+                        else
+                            break
+                        end
+                    end
+                    return dist - kPushTolerance(T)
+                else
+                    return T(-1)
+                end
+            end 
         end
-    end 
-end
-function distanceToOut_booleanintersection(shape::BooleanIntersection{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
-    (; left, right, transformation) = shape
-    distA = distanceToOut(left, point, dir)
-    distB = distanceToOut(right, transformation * point, transformation * dir)
-    return min(distA, distB)
-end
-function distanceToOut_booleansubtraction(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
-    (; left, right, transformation) = shape
-    distA = distanceToOut(left, point, dir)
-    distB = distanceToIn(right, transformation * point, transformation * dir)
-    return min(distA, distB)
+        BooleanIntersection => begin
+            (; left, right, transformation) = shape
+            distA = distanceToOut(left, point, dir)
+            distB = distanceToOut(right, transformation * point, transformation * dir)
+            return min(distA, distB)
+        end
+        BooleanSubtraction => begin 
+            (; left, right, transformation) = shape
+            distA = distanceToOut(left, point, dir)
+            distB = distanceToIn(right, transformation * point, transformation * dir)
+            return min(distA, distB)
+        end
+    end
 end
 
 #Plane
