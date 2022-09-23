@@ -16,7 +16,7 @@ export Triangle, Intersection, intersect, distanceToPlane
 export Tesselation, coordinates, faces, normals, mesh
 
 using Requires
-using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees
+using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees, Accessors
 include("BasicTypes.jl")
 include("Transformation3D.jl")
 include("TriangleIntersect.jl")

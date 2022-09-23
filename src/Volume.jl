@@ -5,39 +5,39 @@ end
 NoShape{T}() where T = NoShape{T,Nothing}([])
 
 #---Shape--------------------------------------------------------------------------
-const Shape{T} = Union{NoShape{T},
-                       Box{T},
-                       Trd{T},
-                       Trap{T},
-                       Tube{T},
-                       Cone{T},
-                       Polycone{T},
-                       CutTube{T},
-                       BooleanUnion{T},
-                       BooleanIntersection{T}, 
-                       BooleanSubtraction{T}} where T<:AbstractFloat
+# const Shape{T} = Union{NoShape{T},
+#                        Box{T},
+#                        Trd{T},
+#                        Trap{T},
+#                        Tube{T},
+#                        Cone{T},
+#                        Polycone{T},
+#                        CutTube{T},
+#                        BooleanUnion{T},
+#                        BooleanIntersection{T}, 
+#                        BooleanSubtraction{T}} where T<:AbstractFloat
 
 #---Volume-------------------------------------------------------------------------
-struct VolumeP{T<:AbstractFloat,PV}
+struct Volume{T<:AbstractFloat, S, PV}
     label::String
-    shape::Shape{T}                     # Reference to the actual shape
-    material::Material{T}               # Reference to material
+    shape::S
+    material::Material{T}
     daughters::Vector{PV}
 end
 
 #---PlacedVolume-------------------------------------------------------------------
-struct PlacedVolume{T<:AbstractFloat}
+struct PlacedVolume{T<:AbstractFloat, VT}
     idx::Int64
     transformation::Transformation3D{T}
-    volume::VolumeP{T,PlacedVolume{T}}
+    volume::VT
 end
 
 #---Convenient Alias to simplify signatures---------------------------------------
-const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
+# const Volume{T} = VolumeP{T,S,PlacedVolume{T}} where {T<:AbstractFloat, S<:AbstractShape{T}}
 
 #---Constructor--------------------------------------------------------------------
-function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
-    Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())   # call the default constructor
+function Volume(label, shape, material::Material{T}) where T<:AbstractFloat
+    Volume(label, shape, material, Vector{PlacedVolume{T}}())   # call the default constructor
 end
 
 #---Utilities----------------------------------------------------------------------
@@ -85,7 +85,7 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         box = Box{T}((high - low)/2. .+ 0.1)  # increase the bounding box
         tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
         mat = Material{T}("vacuum"; density=0)
-        world = Volume{T}("world", box, mat)
+        world = Volume("world", box, mat)
         placeDaughter!(world, tra, vol)
         return world
     end

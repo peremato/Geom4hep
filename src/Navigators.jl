@@ -49,18 +49,18 @@ function Base.show(io::IO, nav::BVHNavigator{T}) where T
 end
 
 #---NavigatorState----------------------------------------------------------------------------------
-mutable struct NavigatorState{T<:AbstractFloat, NAV<:AbstractNavigator} <: AbstractNavigatorState
+struct NavigatorState{T<:AbstractFloat, VT1, VT2, NAV<:AbstractNavigator} <: AbstractNavigatorState
     navigator::NAV                               # Navigator to be used
-    topvol::Volume{T}                            # Typically the unplaced world
-    currvol::Volume{T}                           # the current volume
+    topvol::VT1
+    currvol::VT2
     isinworld::Bool                              # inside world volume
     volstack::Vector{Int64}                      # keep the indexes of all daughters up to the current one 
     tolocal::Vector{Transformation3D{T}}         # Stack of transformations
 end
 
 #---Constructors------------------------------------------------------------------------------------
-function NavigatorState{T}(top::Volume{T}, nav::AbstractNavigator=TrivialNavigator{T}(top)) where T
-    x = NavigatorState{T,typeof(nav)}(nav, top, top, false, Vector{Int64}(), Vector{Transformation3D{T}}()) 
+function NavigatorState(top::Volume{T}, nav::AbstractNavigator=TrivialNavigator{T}(top)) where T
+    x = NavigatorState(nav, top, top, false, Vector{Int64}(), Vector{Transformation3D{T}}()) 
     sizehint!(x.volstack,16)
     sizehint!(x.tolocal,16)
     return x
@@ -69,8 +69,8 @@ end
 @inline function reset!(state::NavigatorState{T}) where T<:AbstractFloat
     empty!(state.volstack)
     empty!(state.tolocal)
-    state.currvol = state.topvol
-    state.isinworld = false 
+    @set state.currvol = state.topvol
+    @set state.isinworld = false 
 end
 
 @inline function currentVolume(state::NavigatorState{T}) where T<:AbstractFloat
@@ -85,17 +85,17 @@ end
         for idx in state.volstack
             vol = vol.daughters[idx].volume
         end
-        state.currvol = vol
+        @set state.currvol = vol
     else
-        state.currvol = state.topvol
-        state.isinworld = false
+        @set state.currvol = state.topvol
+        @set state.isinworld = false
     end
 end
 
 @inline function pushIn!(state::NavigatorState{T}, pvol::PlacedVolume{T}) where T<:AbstractFloat
     push!(state.volstack, pvol.idx)
     push!(state.tolocal, pvol.transformation)
-    state.currvol = pvol.volume
+    @set state.currvol = pvol.volume
 end
 
 #---Basic loops implemented using acceleration structures-------------------------------------------
@@ -129,8 +129,8 @@ function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) wher
     reset!(state)
     vol = state.topvol
     if contains(vol, point)
-        state.currvol = vol
-        state.isinworld = true
+        @set state.currvol = vol
+        @set state.isinworld = true
     end
     # check the daughters in a recursive manner
     isinside = true

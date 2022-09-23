@@ -244,11 +244,11 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                                     end
                                 end
                             end
-                            push!(pvols, PlacedVolume{T}(-1, transformation, daughter))
+                            push!(pvols, PlacedVolume(-1, transformation, daughter))
                         end
                     end
                 end
-                volume = elemname == "volume" ? Volume{T}(volname, shape, material) : Assembly{T}(volname)
+                volume = elemname == "volume" ? Volume(volname, shape, material) : Assembly{T}(volname)
                 for pvol in pvols
                     placeDaughter!(volume, pvol.transformation, pvol.volume)
                 end
