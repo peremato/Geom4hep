@@ -27,7 +27,6 @@ include("Tube.jl")
 include("Cone.jl")
 include("Polycone.jl")
 include("CutTube.jl")
-using Unityper
 include("Boolean.jl")
 include("Trap.jl")
 include("Materials.jl")
