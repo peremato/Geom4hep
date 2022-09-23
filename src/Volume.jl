@@ -33,24 +33,25 @@ struct PlacedVolume{T<:AbstractFloat}
 end
 
 #---Convenient Alias to simplify signatures---------------------------------------
-const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
+# const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
 
 #---Constructor--------------------------------------------------------------------
-function Volume{T}(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
-    Volume{T}(label, shape, material, Vector{PlacedVolume{T}}())   # call the default constructor
+function VolumeP(label::String, shape::Shape{T}, material::Material{T}) where T<:AbstractFloat
+    PV = PlacedVolume{T}
+    VolumeP{T, PV}(label, shape, material, Vector{PV}())   # call the default constructor
 end
 
 #---Utilities----------------------------------------------------------------------
-function Base.show(io::IO, vol::Volume{T}) where T
-    name = vol.label
-    print(io, "Volume{$T} name = $name")
-end
+# function Base.show(io::IO, vol::Volume{T}) where T
+#     name = vol.label
+#     print(io, "Volume{$T} name = $name")
+# end
 
-function AbstractTrees.children(vol::Volume{T}) where T
-    collect((d.volume for d in vol.daughters))
-end
+# function AbstractTrees.children(vol::Volume{T}) where T
+#     collect((d.volume for d in vol.daughters))
+# end
 
-function Base.getindex(vol::Volume{T}, indx...) where T
+function Base.getindex(vol::VolumeP, indx...)::VolumeP
     v = vol
     for i in indx
         v = v.daughters[i].volume
@@ -61,12 +62,12 @@ end
 function contains(pvol::PlacedVolume{T}, p::Point3{T})::Bool where T<:AbstractFloat
     inside(pvol.volume.shape, pvol.transformation * p) == kInside
 end
-function contains(vol::Volume{T}, p::Point3{T})::Bool where T<:AbstractFloat
+function contains(vol::VolumeP, p::Point3{T})::Bool where T<:AbstractFloat
     inside(vol.shape, p) == kInside
 end
 
 
-function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
+function placeDaughter!(volume::VolumeP, placement::Transformation3D{T}, subvol::VolumeP) where T<:AbstractFloat
     if subvol.shape isa NoShape
         for d in subvol.daughters
             push!(volume.daughters, PlacedVolume(length(volume.daughters)+1, d.transformation * placement, d.volume))
@@ -77,7 +78,7 @@ function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvo
     volume
 end
 
-function getWorld(vol::Volume{T}) where T<:AbstractFloat
+function getWorld(vol::VolumeP{T, S}) where {T<:AbstractFloat, S}
     if vol.label == "world"
         return vol
     else
@@ -85,7 +86,7 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         box = Box{T}((high - low)/2. .+ 0.1)  # increase the bounding box
         tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
         mat = Material{T}("vacuum"; density=0)
-        world = Volume{T}("world", box, mat)
+        world = VolumeP("world", box, mat)
         placeDaughter!(world, tra, vol)
         return world
     end

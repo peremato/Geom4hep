@@ -7,7 +7,7 @@ const idx = [2 3 1; 1 3 2; 1 2 3]
 const rdx = [3 1 2; 1 3 2; 1 2 3]
 
 # Generate a X-Ray of a geometry----------------------------------------------
-function generateXRay(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, view::Int=1) where T<:AbstractFloat
+function generateXRay(nav::AbstractNavigator, vol::VolumeP{T, S}, npoints::Number, view::Int=1) where {T<:AbstractFloat, S}
     world = getWorld(vol)
     # Setup plane of points and results
     lower, upper = extent(world.shape)

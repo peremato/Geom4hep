@@ -3,16 +3,16 @@ name = LightXML.name
 
 include("Units.jl")
 
-struct GDMLDicts{T<:AbstractFloat}
+struct GDMLDicts{T<:AbstractFloat, S}
     materials::Dict{String,AbstractMaterial{T}}
     solids::Dict{String,AbstractShape{T}}
-    volumes::Dict{String,Volume{T}}
+    volumes::Dict{String,VolumeP{T, S}}
     positions::Dict{String, Vector3{T}}
     rotations::Dict{String, RotXYZ{T}}
-    function GDMLDicts{T}() where T<:AbstractFloat
+    function GDMLDicts{T, S}() where {T<:AbstractFloat, S}
         new(Dict{String,AbstractMaterial{T}}(),
             Dict{String,AbstractShape{T}}(),
-            Dict{String,Volume{T}}(),
+            Dict{String,VolumeP{T, S}}(),
             Dict{String, Vector3{T}}(),
             Dict{String, RotXYZ{T}}()
         )
@@ -20,7 +20,7 @@ struct GDMLDicts{T<:AbstractFloat}
 end
 
 # process <define/>
-function fillDefine!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fillDefine!(dicts::GDMLDicts{T, S}, element::XMLElement) where {T<:AbstractFloat, S}
     (; positions, rotations) = dicts
     for c in child_nodes(element)
         if is_elementnode(c)
@@ -248,7 +248,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                         end
                     end
                 end
-                volume = elemname == "volume" ? Volume{T}(volname, shape, material) : Assembly{T}(volname)
+                volume = elemname == "volume" ? VolumeP(volname, shape, material) : Assembly{T}(volname)
                 for pvol in pvols
                     placeDaughter!(volume, pvol.transformation, pvol.volume)
                 end
@@ -289,7 +289,7 @@ end
 
 # process the full file
 function processGDML(fname::String, ::Type{T}=Float64) where T
-    dicts = GDMLDicts{T}()
+    dicts = GDMLDicts{T, PlacedVolume{T}}()
     world = nothing
     xdoc = parse_file(fname)
     xroot = root(xdoc) 

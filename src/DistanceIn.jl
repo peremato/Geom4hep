@@ -59,7 +59,8 @@ function distanceToIn_booleanintersection(shape::BooleanIntersection{T, SL, SR},
     end
     return dist
 end
-function distanceToIn_booleansubtraction(shape::BooleanSubtraction{T, SL, SR}, point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
+function distanceToIn_booleansubtraction(shape::BooleanSubtraction{T, SL, SR}, 
+        point::Point3{T}, dir::Vector3{T})::T where {T,SL,SR}
     (; left, right, transformation) = shape
 
     lpoint = transformation * point
