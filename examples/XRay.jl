@@ -20,7 +20,7 @@ function generateXRay(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, v
     z = lower[iz] + kTolerance(T)
  
     result = zeros(T, nx,ny)
-    state = NavigatorState(world, nav)
+    state = NavigatorState{T}(world, nav)
     _dir = (0, 0, 1)
     dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi]) 
 
