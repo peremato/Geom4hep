@@ -158,11 +158,10 @@ function getClosestDaughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::
     step = step_limit
     candidate = 0
     #---Linear loop over the daughters-------------------------------------------------
-    @inbounds for i in intersectedDaughters(nav, volume, point, dir)
+    for i in intersectedDaughters(nav, volume, point, dir)
         pvol = volume.daughters[i]
         #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
-        xf = pvol.transformation
-        dist = distanceToIn(pvol.volume.shape, xf*point, xf*dir)
+        dist = distanceToIn(pvol, point, dir)
         dist < 0. && return (zero(T), pvol.idx ) 
         if dist > 0. && dist != Inf && dist < step
             step = dist
