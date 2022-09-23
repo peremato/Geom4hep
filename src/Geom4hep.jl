@@ -7,7 +7,7 @@ export CutTube, Plane, Boolean, Trap, BooleanUnion
 export getindex, capacity, surface, extent, normal, distanceToOut,  distanceToIn, inside, safetyToOut, safetyToIn
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
-export PlacedVolume, Volume, Assembly, placeDaughter!, draw, draw!, drawDistanceToIn, drawDistanceToOut, getWorld, children
+export PlacedVolume, VolumeP, Assembly, placeDaughter!, draw, draw!, drawDistanceToIn, drawDistanceToOut, getWorld, children
 export AABB, area, volume, BVHParam, buildBVH, BVH, pvolindices, pushPvolIndices!
 export AbstractNavigator, TrivialNavigator, BVHNavigator, NavigatorState, computeStep!, locateGlobalPoint!, reset!, isInVolume, currentVolume, getClosestDaughter, containedDaughters
 export kTolerance
@@ -34,6 +34,10 @@ include("Volume.jl")
 include("BVH.jl")
 include("Navigators.jl")
 include("GDML.jl")
+include("./DistanceIn.jl")
+include("./DistanceOut.jl")
+include("./Distance.jl")
+include("./Inside.jl")
 include("Benchmark.jl")
 #include("CuGeom.jl")  # PackageCompiler fails?
 

@@ -95,23 +95,6 @@ function extent(ctube::CutTube{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
     return (Point3{T}(aMin), Point3{T}(aMax))
 end
 
-function inside(ctube::CutTube{T}, point::Point3{T})::Int64  where T<:AbstractFloat
-    bot, top = ctube.planes
-    tub = ctube.tube
-    x, y, z = point
-
-    # Check the cut planes first
-    a = safety(bot, point)
-    b = safety(top, point)
-    outside = a > kTolerance(T)/2  || b > kTolerance(T)/2 
-    outside && return kOutside
-    cinside = a < -kTolerance(T)/2 && b < -kTolerance(T)/2
-    inplanes = cinside ? kInside : kSurface
-    # Check the tube
-    intube = inside(tub, point)
-    return inplanes == kSurface && intube != kOutside ? inplanes : intube
-end
-
 function safetyToIn(ctube::CutTube{T}, point::Point3{T}) where T<:AbstractFloat
 
 end

@@ -75,20 +75,6 @@ function extent(trap::Trap{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloa
     ( -p, p )
 end
 
-function inside(trap::Trap{T}, point::Point3{T})::Int64  where T<:AbstractFloat
-    z = point[3]
-    planes = trap.planes
-    # inside z?
-    outside = abs(z) > trap.z + kTolerance(T)/2
-    cinside = abs(z) < trap.z - kTolerance(T)/2
-
-    for i in 1:4
-        s = safety(planes[i], point)  #  positive if the point is on the outside halfspace, negative otherwise.
-        outside |= s > kTolerance(T)/2
-        cinside &= s < -kTolerance(T)/2
-    end
-    cinside ? kInside : outside ? kOutside : kSurface
-end
 
 function safetyToOut(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     (; z, planes) = trap

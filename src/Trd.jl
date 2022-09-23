@@ -53,26 +53,6 @@ end
 
 cross(px, py, vx, vy) = vx * py - vy * px
 
-function inside(trd::Trd{T}, point::Point3{T})::Int64  where T<:AbstractFloat
-    x, y, z = point
-
-    # inside z?
-    outside = abs(z) > (trd.z + kTolerance(T)/2)
-    inside = abs(z) < (trd.z - kTolerance(T)/2)
-
-    # inside x?
-    c = cross(abs(x)-trd.x1, z+trd.z, trd.x2-trd.x1, 2*trd.z)
-    outside |= (c < -kTolerance(T)/2)
-    inside &= (c > kTolerance(T)/2)
-
-    # inside y?
-    c = cross(abs(y)-trd.y1, z+trd.z, trd.y2-trd.y1, 2*trd.z)
-    outside |= (c < -kTolerance(T)/2)
-    inside &= (c > kTolerance(T)/2)
-
-    # return 
-    inside ? kInside : outside ? kOutside : kSurface
-end
 
 function normal(trd::Trd{T}, point::Point3{T}) where T<:AbstractFloat
     x, y, z = point
