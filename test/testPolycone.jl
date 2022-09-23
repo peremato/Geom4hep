@@ -24,11 +24,11 @@ include("../src/Units.jl")
 
     @test getNz(poly1) == 4
     @test getNSections(poly1) == 3
-    @test getSectionIndex(poly1, -0.8) == 1
-    @test getSectionIndex(poly1, 0.51) == 3
-    @test getSectionIndex(poly1, 0.) == 2
-    @test getSectionIndex(poly1, -2.) == -1
-    @test getSectionIndex(poly1, 3.) == -2
+    @test getSectionIndex(poly1, T(-0.8)) == 1
+    @test getSectionIndex(poly1, T(0.51)) == 3
+    @test getSectionIndex(poly1, T(0)) == 2
+    @test getSectionIndex(poly1, T(-2)) == -1
+    @test getSectionIndex(poly1, T(3)) == -2
 
     @test capacity(poly1) > 0.
     @test capacity(poly1) ≈ capacity(section1) + capacity(section2) + capacity(section3)

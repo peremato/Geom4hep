@@ -421,7 +421,7 @@ function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where 
         okz &= tub.rmin2 <= r2
     end
     if tub.Δϕ < 2π
-        okz &= isInside(w, hitx, hity, tol=kTolerance(T)/2)
+        okz &= isInside(w, hitx, hity, tol=kTolerance(T)/2, includeSurface=true)
     end
     !done && okz && (distance = distz)
     done |= okz

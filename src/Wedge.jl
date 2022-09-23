@@ -23,7 +23,7 @@ function isOnSurface(along::Vector2{T}, normal::Vector2{T}, x::T, y::T) where T<
     along[1]*x + along[2]*y >= 0. && abs(normal[1]*x + normal[2]*y) < kTolerance(T)
 end
 
-function isInside(w::Wedge{T}, x::T, y::T; tol::T=T(0)) where T<:AbstractFloat
+function isInside(w::Wedge{T}, x::T, y::T; tol::T=T(0), includeSurface::Bool=false) where T<:AbstractFloat
     w.Δϕ == T(2π) && return true
     startCheck = (-x * w.along1[2] + y * w.along1[1])
     endCheck   = (-w.along2[1] * y + w.along2[2] * x)
@@ -32,6 +32,7 @@ function isInside(w::Wedge{T}, x::T, y::T; tol::T=T(0)) where T<:AbstractFloat
     else
       inside = startCheck > -tol || endCheck > -tol
     end
+    includeSurface && return inside
     inside &= !isOnSurface(w.along1, w.normal1, x, y) && !isOnSurface(w.along2, w.normal2, x, y)
 end
 

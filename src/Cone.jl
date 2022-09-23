@@ -454,11 +454,11 @@ function distanceToIn(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T where
         d = Vector2{T}(dx,dy)
         distPhi = phiPlaneIntersection(p, d, ϕWedge.along1, ϕWedge.normal1, toIn=true)
         hit = point + distPhi * dir
-        !isnan(distPhi) && abs(z + distPhi * dz) <= cone.z && isInsideR(cone, hit) && isInside(ϕWedge, hit[1],hit[2], tol=kTolerance(T)) && distPhi < distance && (distance = distPhi)  
+        !isnan(distPhi) && abs(z + distPhi * dz) <= cone.z && isInsideR(cone, hit) && isInside(ϕWedge, hit[1],hit[2], tol=kTolerance(T), includeSurface=true) && distPhi < distance && (distance = distPhi)  
         if Δϕ != π
             distPhi = phiPlaneIntersection(p, d, ϕWedge.along2, ϕWedge.normal2, toIn=true)
             hit = point + distPhi * dir
-            !isnan(distPhi) && abs(z + distPhi * dz) <= cone.z && isInsideR(cone, hit) && isInside(ϕWedge, hit[1],hit[2], tol=kTolerance(T)) && distPhi < distance && (distance = distPhi)
+            !isnan(distPhi) && abs(z + distPhi * dz) <= cone.z && isInsideR(cone, hit) && isInside(ϕWedge, hit[1],hit[2], tol=kTolerance(T), includeSurface=true) && distPhi < distance && (distance = distPhi)
         end
     end
     return distance
