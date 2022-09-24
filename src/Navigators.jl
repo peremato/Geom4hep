@@ -28,7 +28,7 @@ function BVHNavigator(world::Volume{T}; SAHfrac::T=T(8)) where T
 end
 
 function buildBVH(nav::BVHNavigator{T}, vol::Volume{T}, set::Set{UInt64}) where T
-    id = objectid(vol)
+    id = vol.id
     #---return immediatelly if BVH is already there----
     id in set && return
     push!(set, id)
@@ -101,7 +101,7 @@ end
 #---Basic loops implemented using acceleration structures-------------------------------------------
 containedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}) where T = eachindex(vol.daughters)
 function containedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}) where T
-    id = objectid(vol)
+    id = vol.id
     if haskey(nav.bvhdict, id)
         bvh = nav.bvhdict[id]
         pvolindices!(nav.pvolind, x -> inside(x, point), bvh)
@@ -113,7 +113,7 @@ end
 
 intersectedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}, ::Vector3{T}) where T = eachindex(vol.daughters)
 function intersectedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}, dir::Vector3{T}) where T
-    id = objectid(vol)
+    id = vol.id
     if haskey(nav.bvhdict, id)
         bvh = nav.bvhdict[id]
         pvolindices!(nav.pvolind, x -> intersect(x, point, dir), bvh)

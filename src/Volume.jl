@@ -19,11 +19,21 @@ const Shape{T} = Union{NoShape{T},
 
 #---Volume-------------------------------------------------------------------------
 struct VolumeP{T<:AbstractFloat,PV}
+    id::UInt64
     label::String
     shape::Shape{T}                     # Reference to the actual shape
     material::Material{T}               # Reference to material
     daughters::Vector{PV}
 end
+
+_last_volume_id::UInt64 = 1
+
+function VolumeP{T, PV}(label::String, shape::Shape{T}, material::Material{T}, daughters::Vector{PV}) where {T<:AbstractFloat, PV}
+    global _last_volume_id
+    _last_volume_id += 1
+    VolumeP(_last_volume_id, label, shape, material, daughters)
+end
+
 
 #---PlacedVolume-------------------------------------------------------------------
 struct PlacedVolume{T<:AbstractFloat}
