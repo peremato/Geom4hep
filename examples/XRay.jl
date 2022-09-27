@@ -47,14 +47,14 @@ function generateXRay(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, v
                 error("Reached max number of steps. \nstep = $step \nstate = $state \npoint = $point \ndir =   $dir" )
             end
         end
-        result[i,j] = mass
+        result[i,j] = -log(nsteps+1)
     end
     return xrange, yrange, result
 end
 
 using GLMakie
 
-#if abspath(PROGRAM_FILE) == @__FILE__
+if abspath(PROGRAM_FILE) == @__FILE__
     #-----build detector---------------------------------------
     #full = processGDML("examples/trackML.gdml", Float64)
     #volume = full[2,1]
@@ -76,7 +76,7 @@ using GLMakie
     limits = (min(minimum(rx[3]), minimum(ry[3]), minimum(rz[3])), max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
  
     #----Plot the results--------------------------------------
-    fig = Figure(resolution = (2000, 2000))
+    fig = Figure(resolution = (1000, 1000))
     @printf "ploting the results\n"
     heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
     heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
@@ -84,4 +84,4 @@ using GLMakie
     draw!(LScene(fig[2, 2]), volume; wireframe=true, maxlevel=2)
     #display(fig)
     save("cms2018.png", fig)
-#end
+end
