@@ -1,21 +1,8 @@
-#---Used for Aggregates------------------------------------------------------------- 
-struct NoShape{T,PV} <: AbstractShape{T}
-    pvolumes::Vector{PV}
-end
-NoShape{T}() where T = NoShape{T,Nothing}([])
-
-#---Shape--------------------------------------------------------------------------
-const Shape{T} = Union{NoShape{T},
-                       Box{T},
-                       Trd{T},
-                       Trap{T},
-                       Tube{T},
-                       Cone{T},
-                       Polycone{T},
-                       CutTube{T},
-                       BooleanUnion{T},
-                       BooleanIntersection{T}, 
-                       BooleanSubtraction{T}} where T<:AbstractFloat
+#---Shapes---------------------------------------------------------------------------
+const Shape{T<:AbstractFloat} = Union{BaseShape{T}, 
+                                      BooleanUnion{T}, 
+                                      BooleanSubtraction{T}, 
+                                      BooleanIntersection{T}}
 
 #---Volume-------------------------------------------------------------------------
 struct VolumeP{T<:AbstractFloat,PV}
