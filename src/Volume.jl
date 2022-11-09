@@ -121,19 +121,25 @@ function intersect(bb::AABB{T}, point::Point3{T},dir::Vector3{T}) where T
     distance = -Inf
     distout = Inf
     for i in 1:3
-        din  = (-copysign(dimens[i],dir[i]) - point[i])/dir[i]
-        tout =   copysign(dimens[i],dir[i]) - point[i]
-        dout = tout/dir[i]
-        dsur = copysign(tout, dir[i])
-        if din > distance 
-            distance = din 
-        end
-        if dout < distout
-            distout = dout
-        end
-        if dsur < distsurf
-            distsurf = dsur
-        end 
+        d=dir[i]
+        invd=inv(d)
+        signeddim = copysign(dimens[i],dir[i]) 
+        din  = (-signeddim - point[i])*invd
+        tout =   signeddim - point[i]
+        dout = tout*invd
+        dsur = copysign(tout, d)
+        distance =din > distance  ? din : distance
+        distout= dout < distout ? dout : distout
+        distsurf = dsur < distsurf ? dsur : distsurf
+        # if din > distance 
+        #     distance = din 
+        # end
+        # if dout < distout
+        #     distout = dout
+        # end
+        # if dsur < distsurf
+        #     distsurf = dsur
+        # end 
     end
     (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? false : true
 end

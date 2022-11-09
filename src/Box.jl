@@ -69,20 +69,28 @@ function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T w
     distsurf = Inf
     distance = -Inf
     distout = Inf
+    # invdirection = inv.(direction)
     for i in 1:3
-        din  = (-copysign(box.fDimensions[i],direction[i]) - point[i])/direction[i]
-        tout =   copysign(box.fDimensions[i],direction[i]) - point[i]
-        dout = tout/direction[i]
-        dsur = copysign(tout, direction[i])
-        if din > distance 
-            distance = din 
-        end
-        if dout < distout
-            distout = dout
-        end
-        if dsur < distsurf
-            distsurf = dsur
-        end 
+        d=direction[i]
+        dinv=inv(d)
+        temp =copysign(box.fDimensions[i],d)
+        tout =   temp - point[i]
+        din  = (-temp - point[i])*dinv
+        dout = tout*dinv
+        dsur = copysign(tout, d)
+
+        distance =din > distance  ? din : distance
+        # if din > distance 
+        #     distance = din 
+        # end
+        distout= dout < distout ? dout : distout
+        # if dout < distout
+        #     distout = dout
+        # end
+        distsurf = dsur < distsurf ? dsur : distsurf
+        # if dsur < distsurf
+        #     distsurf = dsur
+        # end 
     end
     (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
     #invdir = 1.0 ./ direction
