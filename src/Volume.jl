@@ -61,7 +61,7 @@ end
 function contains(vol::Volume{T}, p::Point3{T})::Bool where T<:AbstractFloat
     inside(vol.shape, p) == kInside
 end
-function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T})::T where T<:AbstractFloat
+@inline function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T})::T where T<:AbstractFloat
     distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 end
 

@@ -2,20 +2,24 @@
 struct Transformation3D{T<:AbstractFloat}
     rotation::RotMatrix3{T}
     translation::Vector3{T}
+    # optimization
+    has_rot::Bool
+    has_trans::Bool
+    Transformation3D{T}(rot::RotMatrix3{T}, trans::Vector3{T}) where T = new(rot, trans, !isone(rot), !iszero(trans))
 end
 
 Transformation3D() = Transformation3D{Float64}()
 
 # Usefull constructors 
-Transformation3D{T}(dx, dy, dz) where T<:AbstractFloat = Transformation3D(one(RotMatrix3{T}), Vector3{T}(dx, dy, dz))
-Transformation3D{T}(dx, dy, dz, rotx, roty, rotz) where T<:AbstractFloat = Transformation3D(RotMatrix3{T}(RotXYZ{T}(rotx, roty, rotz)), Vector3{T}(dx, dy, dz))
-Transformation3D{T}(dx, dy, dz, rot::Rotation{3,T}) where T<:AbstractFloat = Transformation3D(RotMatrix3{T}(rot), Vector3{T}(dx, dy, dz))
+Transformation3D{T}(dx, dy, dz) where T<:AbstractFloat = Transformation3D{T}(one(RotMatrix3{T}), Vector3{T}(dx, dy, dz))
+Transformation3D{T}(dx, dy, dz, rotx, roty, rotz) where T<:AbstractFloat = Transformation3D{T}(RotMatrix3{T}(RotXYZ{T}(rotx, roty, rotz)), Vector3{T}(dx, dy, dz))
+Transformation3D{T}(dx, dy, dz, rot::Rotation{3,T}) where T<:AbstractFloat = Transformation3D{T}(RotMatrix3{T}(rot), Vector3{T}(dx, dy, dz))
 
 # Transforms
-@inline transform(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat = t.rotation * (p - t.translation)
-@inline transform(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat = t.rotation * d
-@inline invtransform(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat = t.translation + (p' * t.rotation)'
-@inline invtransform(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat = (d' * t.rotation)'
+@inline transform(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat = t.has_rot ? t.rotation * (t.has_trans ? (p - t.translation) : p) : (t.has_trans ? (p - t.translation) : p)
+@inline transform(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat = t.has_rot ? t.rotation * d : d
+@inline invtransform(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat = t.has_trans ? (t.translation + (t.has_rot ? (p' * t.rotation)' : p)) : ( t.has_rot ? (p' * t.rotation)' : p)
+@inline invtransform(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat = t.has_rot ? (d' * t.rotation)' : d
 @inline Base.:*(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat =  transform(t,p)
 @inline Base.:*(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat =  transform(t,d)
 @inline Base.:*(p::Point3{T}, t::Transformation3D{T}) where T<:AbstractFloat =  invtransform(t,p)
