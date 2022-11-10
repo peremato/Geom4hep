@@ -114,34 +114,101 @@ GeometryBasics.faces(::AABB{T}) where T = QuadFace{Int64}[(1,3,7,2), (1,2,6,4), 
 GeometryBasics.normals(::AABB{T}) where T = Point3{T}[(0,0,-1), (0,-1,0), (-1,0,0), (1,0,0), (0,1,0), (0,0,1)]
 
 inside(bb::AABB{T}, point::Point3{T}) where T =  all(bb.min .< point .< bb.max)
-function intersect(bb::AABB{T}, point::Point3{T},dir::Vector3{T}) where T
-    point = point - (bb.max + bb.min)/2
-    dimens = (bb.max - bb.min)/2
+function intersect(bb::AABB{T}, point::Point3{T},dir::Vector3{T},rcp_dir::Vector3{T}=inv.(dir)) where T
+    
     distsurf = Inf
-    distance = -Inf
-    distout = Inf
-    for i in 1:3
-        d=dir[i]
-        invd=inv(d)
-        signeddim = copysign(dimens[i],dir[i]) 
-        din  = (-signeddim - point[i])*invd
-        tout =   signeddim - point[i]
-        dout = tout*invd
-        dsur = copysign(tout, d)
-        distance =din > distance  ? din : distance
-        distout= dout < distout ? dout : distout
-        distsurf = dsur < distsurf ? dsur : distsurf
-        # if din > distance 
-        #     distance = din 
-        # end
-        # if dout < distout
-        #     distout = dout
-        # end
-        # if dsur < distsurf
-        #     distsurf = dsur
-        # end 
-    end
+    (distance,distout)= intersectAABoxRay(bb.min,bb.max,point,dir,rcp_dir)
     (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? false : true
+end
+# function intersect(bb::AABB{T}, point::Point3{T},dir::Vector3{T},rcp_dir::Vector3{T}=inv.(dir)) where T
+#     point = point - (bb.max + bb.min)/2
+#     dimens = (bb.max - bb.min)/2
+#     distsurf = Inf
+#     distance = -Inf
+#     distout = Inf
+#     for i in 1:3
+#         d=dir[i]
+#         invd=rcp_dir[i]
+#         signeddim = copysign(dimens[i],d) 
+#         din  = (-signeddim - point[i])*invd
+#         tout =   signeddim - point[i]
+#         dout = tout*invd
+#         dsur = copysign(tout, d)
+#         distance =din > distance  ? din : distance
+#         distout= dout < distout ? dout : distout
+#         distsurf = dsur < distsurf ? dsur : distsurf
+#     end
+#     (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? false : true
+# end
+
+
+# function intersectAABBRay(bbmin::Point3{T},bbmax::Point3{T},point::Point3{T},dir::Vector3{T},rcp_dir::Vector3{T}=inv.(dir)) where T
+#     tmin=typemin(T)
+#     tmax=typemax(T)
+#     for i in 1:3
+#         invd=rcp_dir[i]
+#         p=point[i]
+#         t1 = (bbmin[i]-p)*invd
+#         t2 = (bbmax[i]-p)*invd
+#         tmin=min(max(t1,tmin),max(t2,tmin))
+#         tmax=max(min(t1,tmax),min(t2,tmax))
+#     end
+#     (tmin,tmax) 
+# end
+
+
+# function intersectAABBRay(bbmin::Point3{T},bbmax::Point3{T},point::Point3{T},dir::Vector3{T},rcp_dir::Vector3{T}=inv.(dir)) where T
+
+
+#     t1v=(bbmin-point)*rcp_dir
+#     t2v=(bbmax-point)*rcp_dir
+#     # From here on down all we are doing is calculating the following commented lines
+#     # tmin = maximum(min.(t1v,t2v))
+#     # tmax = minimum(max.(t1v,t2v))
+
+#     t1 = t1v[1]
+#     t2 = t2v[1]
+#     flip = t1 > t2
+#     tmin =ifelse(flip,t2,t1)
+#     tmax =ifelse(flip,t1,t2)
+#     for i in 2:3 
+#         t1 = t1v[i]
+#         t2 = t2v[i]
+#         flip = t1 > t2
+#         t1 =ifelse(flip,t2,t1)
+#         t2 =ifelse(flip,t1,t2)
+#         tmin = ifelse(t1>tmin,t1,tmin)
+#         tmax = ifelse(t2<tmax,t2,tmax)
+#     end
+#     (tmin,tmax)
+# end
+function intersectAABoxRay(bbmin::Point3{T},bbmax::Point3{T},point::Point3{T},dir::Vector3{T},rcp_dir::Vector3{T}=inv.(dir)) where T
+
+
+    t1v=(bbmin-point)*rcp_dir
+    t2v=(bbmax-point)*rcp_dir
+    # From here on down all we are doing is calculating the following commented lines
+    # tmin = maximum(min.(t1v,t2v))
+    # tmax = minimum(max.(t1v,t2v))
+
+    min(x,y) = ifelse(x < y , x, y)
+    max(x,y) = ifelse(x > y , x, y)
+
+    t1 = t1v[1]
+    t2 = t2v[1]
+    flip = t1 > t2
+    tmin =ifelse(flip,t2,t1)
+    tmax =ifelse(flip,t1,t2)
+    for i in 2:3 
+        t1 = t1v[i]
+        t2 = t2v[i]
+        flip = t1 > t2
+        t1 =ifelse(flip,t2,t1)
+        t2 =ifelse(flip,t1,t2)
+        tmin = max(t1,tmin)
+        tmax = min(t2,tmax)
+    end
+    (tmin,tmax)
 end
 
 function AABB(pvol::PlacedVolume{T}) where T

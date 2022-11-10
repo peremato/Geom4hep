@@ -65,42 +65,41 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T 
     #safety > kTolerance(T)/2 ? -1.0 : distance
 end
 
-function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
+function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T},rcp_direction::Vector3{T}=inv.(direction))::T where T<:AbstractFloat
     distsurf = Inf
-    distance = -Inf
-    distout = Inf
-    # invdirection = inv.(direction)
-    for i in 1:3
-        d=direction[i]
-        dinv=inv(d)
-        temp =copysign(box.fDimensions[i],d)
-        tout =   temp - point[i]
-        din  = (-temp - point[i])*dinv
-        dout = tout*dinv
-        dsur = copysign(tout, d)
-
-        distance =din > distance  ? din : distance
-        # if din > distance 
-        #     distance = din 
-        # end
-        distout= dout < distout ? dout : distout
-        # if dout < distout
-        #     distout = dout
-        # end
-        distsurf = dsur < distsurf ? dsur : distsurf
-        # if dsur < distsurf
-        #     distsurf = dsur
-        # end 
-    end
+    max=Point3{T}(box.fDimensions)
+    (distance,distout)= intersectAABoxRay(-max,max,point,direction,rcp_direction)
     (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
-    #invdir = 1.0 ./ direction
-    #tempIn  = -copysign.(box.fDimensions, direction) - point
-    #tempOut =  copysign.(box.fDimensions, direction) - point
-    #distance = maximum(tempIn * invdir)
-    #distout  = minimum(tempOut * invdir)
-    #distsurf = abs(minimum(copysign.(tempOut, direction)))
-    #(distance >= distout || distout <= kTolerance(T)/2 || distsurf <= kTolerance(T)/2) ? Inf : distance
 end
+# function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
+#     distsurf = Inf
+#     distance = -Inf
+#     distout = Inf
+#     # invdirection = inv.(direction)
+#     for i in 1:3
+#         d=direction[i]
+#         dinv=inv(d)
+#         temp =copysign(box.fDimensions[i],d)
+#         tout =   temp - point[i]
+#         din  = (-temp - point[i])*dinv
+#         dout = tout*dinv
+#         dsur = copysign(tout, d)
+
+#         distance =din > distance  ? din : distance
+#         # if din > distance 
+#         #     distance = din 
+#         # end
+#         distout= dout < distout ? dout : distout
+#         # if dout < distout
+#         #     distout = dout
+#         # end
+#         distsurf = dsur < distsurf ? dsur : distsurf
+#         # if dsur < distsurf
+#         #     distsurf = dsur
+#         # end 
+#     end
+#     (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
+# end
 
 function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     minimum(box.fDimensions - abs.(point))
