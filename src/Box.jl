@@ -70,7 +70,7 @@ function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T},rcp_d
     max=Point3{T}(box.fDimensions)
     (distance,distout)= intersectAABoxRay(-max,max,point,direction,rcp_direction)
     ##I have left the distsurf check in this line even though intersectAABoxRay doesn't return it.
-    (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
+    (distance >= distout || isnan(distance) || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
 end
 
 function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat

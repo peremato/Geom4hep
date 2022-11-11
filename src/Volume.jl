@@ -114,11 +114,11 @@ GeometryBasics.faces(::AABB{T}) where T = QuadFace{Int64}[(1,3,7,2), (1,2,6,4), 
 GeometryBasics.normals(::AABB{T}) where T = Point3{T}[(0,0,-1), (0,-1,0), (-1,0,0), (1,0,0), (0,1,0), (0,0,1)]
 
 inside(bb::AABB{T}, point::Point3{T}) where T =  all(bb.min .< point .< bb.max)
-function intersect(bb::AABB{T}, point::Point3{T},dir::Vector3{T},rcp_dir::Vector3{T}=inv.(dir)) where T
-    
+function intersect(bb::AABB{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
+
     distsurf = Inf
-    (distance,distout)= intersectAABoxRay(bb.min,bb.max,point,dir,rcp_dir)
-    (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? false : true
+    (distance, distout) = intersectAABoxRay(bb.min, bb.max, point, dir, rcp_dir)
+    (distance >= distout || isnan(distance) || distout <= kTolerance(T) / 2 || abs(distsurf) <= kTolerance(T) / 2) ? false : true
 end
 
 #---Fast Axial Aligned Bounded Box Ray intersection routine.  Returns both distances to the intesections
@@ -142,10 +142,8 @@ function intersectAABoxRay(bbmin::Point3{T}, bbmax::Point3{T}, point::Point3{T},
         t1 = t1v[i]
         t2 = t2v[i]
         flip = t1 > t2
-        t1 = ifelse(flip, t2, t1)
-        t2 = ifelse(flip, t1, t2)
-        tmin = max(t1, tmin)
-        tmax = min(t2, tmax)
+        tmin = max(ifelse(flip, t2, t1), tmin)
+        tmax = min(ifelse(flip, t1, t2), tmax)
     end
     (tmin, tmax)
 end
