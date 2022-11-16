@@ -123,8 +123,13 @@ end
 
 #---Fast Axial Aligned Bounded Box Ray intersection routine.  Returns both distances to the intesections
 function intersectAABoxRay(bbmin::Point3{T}, bbmax::Point3{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
+    
+    tmin = typemin(T)
+    tmax = typemax(T)
+
     t1v = (bbmin - point) * rcp_dir
     t2v = (bbmax - point) * rcp_dir
+
     # From here on down all we are doing is calculating the following commented lines
     # Importantly this is non branching and fast without using fastmath 
     # tmin = maximum(min.(t1v,t2v))
@@ -133,19 +138,14 @@ function intersectAABoxRay(bbmin::Point3{T}, bbmax::Point3{T}, point::Point3{T},
     min(x, y) = ifelse(x < y, x, y)
     max(x, y) = ifelse(x > y, x, y)
 
-    t1 = t1v[1]
-    t2 = t2v[1]
-    flip = t1 > t2
-    tmin = ifelse(flip, t2, t1)
-    tmax = ifelse(flip, t1, t2)
-    for i in 2:3
+    for i in 1:3
         t1 = t1v[i]
         t2 = t2v[i]
         flip = t1 > t2
         tmin = max(ifelse(flip, t2, t1), tmin)
         tmax = min(ifelse(flip, t1, t2), tmax)
     end
-    (tmin, tmax)
+
 end
 
 function AABB(pvol::PlacedVolume{T}) where T
