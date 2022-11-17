@@ -27,6 +27,16 @@ struct PlacedVolume{T<:AbstractFloat}
     idx::Int64
     transformation::Transformation3D{T}
     volume::VolumeP{T,PlacedVolume{T}}
+    aabb::AABB{T}
+end
+PlacedVolume(idx::Int64,transformation::Transformation3D{T},volume::VolumeP{T,PlacedVolume{T}}) where {T} = PlacedVolume{T}(idx,transformation,volume)
+function PlacedVolume{T}(idx::Int64,transformation::Transformation3D{T},volume::VolumeP{T,PlacedVolume{T}}) where {T}
+    if volume.shape isa NoShape
+        aabb=AABB{T}(Point3{T}(0,0,0),Point3{T}(0,0,0))
+    else
+        aabb=AABB{T}(transform_extent(extent(volume.shape),transformation)...)
+    end
+    return PlacedVolume{T}(idx,transformation,volume,aabb)
 end
 
 #---Convenient Alias to simplify signatures---------------------------------------
@@ -62,6 +72,9 @@ function contains(vol::Volume{T}, p::Point3{T})::Bool where T<:AbstractFloat
     inside(vol.shape, p) == kInside
 end
 @inline function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T})::T where T<:AbstractFloat
+    
+    !intersect(pvol.aabb,p,d) && return T(Inf);
+
     distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 end
 
