@@ -26,7 +26,7 @@ inside(bb::AABB{T}, point::Point3{T}) where T =  all(bb.min .< point .< bb.max)
 function intersect(bb::AABB{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
 
     distsurf = Inf
-    (distance, distout) = @inline intersectAABoxRay(bb.min, bb.max, point, dir, rcp_dir)
+    (distance, distout) =  intersectAABoxRay(bb.min, bb.max, point, dir, rcp_dir)
     (distance >= distout  || distout <= kTolerance(T) / 2 ) ? false : true
 end
 
