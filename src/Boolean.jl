@@ -13,11 +13,19 @@ struct BooleanShape{T<:AbstractFloat, OP} <: AbstractShape{T}
     left::Union{BaseShape{T}, BooleanShape{T}}   # the mother (or left) volume A in unplaced form
     right::Union{BaseShape{T}, BooleanShape{T}}  # (or right) volume B in placed form, acting on A with a boolean operation
     transformation::Transformation3D{T}          # placement of "right" with respect of "left" 
+    left_aabb::AABB{T}
+    right_aabb::AABB{T}
 end
 
 const BooleanUnion{T} = BooleanShape{T, :union}
 const BooleanSubtraction{T} =  BooleanShape{T, :subtraction}
 const BooleanIntersection{T} = BooleanShape{T, :intersection}
+
+function BooleanShape{T,OP}(left,right,place) where {T, OP}
+    left_aabb=AABB(extent(left)...)
+    right_aabb=AABB(transform_extent(extent(right),place)...)
+    BooleanShape{T,OP}(left,right,place,left_aabb,right_aabb)
+end
 
 #---Constructor------------------------------------------------------------------------------------
 function BooleanUnion(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
@@ -28,6 +36,18 @@ function BooleanSubtraction(left::AbstractShape{T}, right::AbstractShape{T}, pla
 end
 function BooleanIntersection(left::AbstractShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
     BooleanIntersection{T}(left, right, place)
+end
+
+function BooleanSubtraction(left::NoShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
+    return left
+end
+
+function BooleanIntersection(left::NoShape{T}, right::AbstractShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
+    return left
+end
+
+function BooleanIntersection(left::AbstractShape{T}, right::NoShape{T}, place::Transformation3D{T}=one(Transformation3D{T})) where T<:AbstractFloat
+    return right
 end
 
 #---Utilities---------------------------------------------------------------------------------------
@@ -70,7 +90,8 @@ end
 function extent(shape::BooleanUnion{T})::Tuple{Point3{T},Point3{T}} where {T}
     (; left, right, transformation) = shape
     minLeft, maxLeft = extent(left)
-    minRight, maxRight = extent(right) .* Ref(transformation)
+    # minRight, maxRight = extent(right) .* Ref(transformation)
+    minRight, maxRight = transform_extent(extent(right),transformation)
     (min.(minLeft, minRight), max.(maxLeft, maxRight))
 end
 function extent(shape::BooleanSubtraction{T})::Tuple{Point3{T},Point3{T}} where {T}
@@ -79,7 +100,8 @@ end
 function extent(shape::BooleanIntersection{T})::Tuple{Point3{T},Point3{T}} where {T}
     (; left, right, transformation) = shape
     minLeft, maxLeft = extent(left)
-    minRight, maxRight = extent(right) .* Ref(transformation)
+    # minRight, maxRight = extent(right) .* Ref(transformation)
+    minRight, maxRight = transform_extent(extent(right),transformation)
     (max.(minLeft, minRight), min.(maxLeft, maxRight))
 end
 
@@ -238,13 +260,28 @@ function distanceToOut(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vect
 end
 
 function distanceToIn(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+    invdir=inv.(dir)
+    course_intersects_left=intersect(shape.left_aabb,point,dir,invdir)
+    course_intersects_right=intersect(shape.right_aabb,point,dir,invdir)
+    !course_intersects_left && !course_intersects_right && return T(Inf)
+    
     (; left, right, transformation) = shape
+    course_intersects_left && !course_intersects_right && return distanceToIn(left, point, dir)
+    course_intersects_right && !course_intersects_left && return distanceToIn(right, transformation * point, transformation * dir)
+    
     distA = distanceToIn(left, point, dir)
     distB = distanceToIn(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
 function distanceToIn(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+    invdir=inv.(dir)
+    course_intersects_left=intersect(shape.left_aabb,point,dir,invdir)
+    course_intersects_right=intersect(shape.right_aabb,point,dir,invdir)
+
+    !(course_intersects_left && course_intersects_right) && return T(Inf)
+
+
     (; left, right, transformation) = shape
 
     positionA = inside(left, point)
@@ -297,7 +334,16 @@ function distanceToIn(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vect
 end
 
 function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+    
+    invdir=inv.(dir)
+    course_intersects_left=intersect(shape.left_aabb,point,dir,invdir)
+    course_intersects_right=intersect(shape.right_aabb,point,dir,invdir)
+
+    !course_intersects_left && return T(Inf)
+    
     (; left, right, transformation) = shape
+    !course_intersects_right && return distanceToIn(left, point, dir)
+
 
     lpoint = transformation * point
     ldir = transformation * dir
@@ -336,3 +382,43 @@ function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vecto
         inRight = true
     end
 end
+# function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+#     (; left, right, transformation) = shape
+
+#     lpoint = transformation * point
+#     ldir = transformation * dir
+#     positionB = inside(left, lpoint)
+#     inRight = positionB == kInside
+
+#     npoint = point
+#     dist = T(0)
+
+#     while true
+#         if inRight
+#             # propagate to outside of '- / RightShape'
+#             d1 = distanceToOut(right, lpoint, ldir)
+#             dist += (d1 >= 0 && d1 < Inf) ? d1 + kPushTolerance(T) : 0
+#             npoint = point + (dist + kPushTolerance(T)) * dir
+#             lpoint = transformation * npoint
+#             # now master outside 'B'; check if inside 'A'
+#             inside(left, npoint) == kInside && distanceToOut(left, npoint, dir) > kPushTolerance(T) && return dist
+#         end
+
+#         # if outside of both we do a max operation master outside '-' and outside '+' ;  find distances to both
+#         d2 = distanceToIn(left, npoint, dir)
+#         d2 = max(d2, 0)
+#         d2 == T(Inf) && return T(Inf)
+
+#         d1 = distanceToIn(right, lpoint, ldir)
+#         if d2 < d1 - kTolerance(T)
+#           dist += d2 + kPushTolerance(T)
+#           return dist
+#         end
+
+#         #   propagate to '-'
+#         dist += (d1 >= 0 && d1 < Inf) ? d1 : 0
+#         npoint = point + (dist + kPushTolerance(T)) * dir
+#         lpoint = transformation * npoint
+#         inRight = true
+#     end
+# end

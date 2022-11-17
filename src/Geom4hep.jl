@@ -20,6 +20,7 @@ using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees
 include("BasicTypes.jl")
 include("Transformation3D.jl")
 include("TriangleIntersect.jl")
+include("BoundingBox.jl")
 include("Trd.jl")
 include("Box.jl")
 include("Wedge.jl")
