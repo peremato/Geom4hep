@@ -66,11 +66,16 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T 
 end
 
 function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T},rcp_direction::Vector3{T}=inv.(direction))::T where T<:AbstractFloat
-    distsurf = Inf
+    
     max=Point3{T}(box.fDimensions)
     (distance,distout)= intersectAABoxRay(-max,max,point,direction,rcp_direction)
-    ##I have left the distsurf check in this line even though intersectAABoxRay doesn't return it.
-    (distance >= distout || isnan(distance) || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
+    
+    # The checks are as follows:
+    # 1.) distance < -kTolerance(T) would mean that we are already further in the volume than a micro step
+    # 2.) distance >= distout Not sure if this is still needed
+    # 3.) isnan(distance) NaN use to escape the intersect intersection routine and would cause problems
+    # 4.) distout <= kTolerance(T)/2) Checks to see if we are entering and immediatelly exiting
+    (distance < -kTolerance(T) || distance >= distout || isnan(distance) || distout <= kTolerance(T)/2) ? Inf : distance
 end
 
 function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
