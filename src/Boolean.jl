@@ -263,12 +263,18 @@ function distanceToIn(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})
     invdir=inv.(dir)
     course_intersects_left=intersect(shape.left_aabb,point,dir,invdir)
     course_intersects_right=intersect(shape.right_aabb,point,dir,invdir)
+
+    # If it doesn't intersect either BB skip everything
     !course_intersects_left && !course_intersects_right && return T(Inf)
     
     (; left, right, transformation) = shape
+    
+    
+    # If it intersects one BB but not the other just use that one 
     course_intersects_left && !course_intersects_right && return distanceToIn(left, point, dir)
     course_intersects_right && !course_intersects_left && return distanceToIn(right, transformation * point, transformation * dir)
     
+    # If it gets here we have to calculate the distance the complicated way
     distA = distanceToIn(left, point, dir)
     distB = distanceToIn(right, transformation * point, transformation * dir)
     return min(distA, distB)
@@ -279,9 +285,10 @@ function distanceToIn(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vect
     course_intersects_left=intersect(shape.left_aabb,point,dir,invdir)
     course_intersects_right=intersect(shape.right_aabb,point,dir,invdir)
 
+    # If it doesn't intersect both BB skip everything
     !(course_intersects_left && course_intersects_right) && return T(Inf)
 
-
+    # If it gets here we have to calculate the distance the complicated way
     (; left, right, transformation) = shape
 
     positionA = inside(left, point)
@@ -335,16 +342,20 @@ end
 
 function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
     
+
     invdir=inv.(dir)
     course_intersects_left=intersect(shape.left_aabb,point,dir,invdir)
     course_intersects_right=intersect(shape.right_aabb,point,dir,invdir)
 
+    # If it doesn't intersect the left shape BB we can skip everyingthing
     !course_intersects_left && return T(Inf)
-    
+
     (; left, right, transformation) = shape
+
+    # If it doesn't intersect the right we can us just the left distance function 
     !course_intersects_right && return distanceToIn(left, point, dir)
 
-
+    # If it gets here we have to calculate the distance the complicated way
     lpoint = transformation * point
     ldir = transformation * dir
     positionB = inside(left, lpoint)
@@ -382,43 +393,4 @@ function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vecto
         inRight = true
     end
 end
-# function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
-#     (; left, right, transformation) = shape
 
-#     lpoint = transformation * point
-#     ldir = transformation * dir
-#     positionB = inside(left, lpoint)
-#     inRight = positionB == kInside
-
-#     npoint = point
-#     dist = T(0)
-
-#     while true
-#         if inRight
-#             # propagate to outside of '- / RightShape'
-#             d1 = distanceToOut(right, lpoint, ldir)
-#             dist += (d1 >= 0 && d1 < Inf) ? d1 + kPushTolerance(T) : 0
-#             npoint = point + (dist + kPushTolerance(T)) * dir
-#             lpoint = transformation * npoint
-#             # now master outside 'B'; check if inside 'A'
-#             inside(left, npoint) == kInside && distanceToOut(left, npoint, dir) > kPushTolerance(T) && return dist
-#         end
-
-#         # if outside of both we do a max operation master outside '-' and outside '+' ;  find distances to both
-#         d2 = distanceToIn(left, npoint, dir)
-#         d2 = max(d2, 0)
-#         d2 == T(Inf) && return T(Inf)
-
-#         d1 = distanceToIn(right, lpoint, ldir)
-#         if d2 < d1 - kTolerance(T)
-#           dist += d2 + kPushTolerance(T)
-#           return dist
-#         end
-
-#         #   propagate to '-'
-#         dist += (d1 >= 0 && d1 < Inf) ? d1 : 0
-#         npoint = point + (dist + kPushTolerance(T)) * dir
-#         lpoint = transformation * npoint
-#         inRight = true
-#     end
-# end
