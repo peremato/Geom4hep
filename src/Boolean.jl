@@ -21,6 +21,7 @@ const BooleanUnion{T} = BooleanShape{T, :union}
 const BooleanSubtraction{T} =  BooleanShape{T, :subtraction}
 const BooleanIntersection{T} = BooleanShape{T, :intersection}
 
+# Since all the other constructors only use 3 arguments we can sneak the AABB calc in here
 function BooleanShape{T,OP}(left,right,place) where {T, OP}
     left_aabb=AABB(extent(left)...)
     right_aabb=AABB(transform_extent(extent(right),place)...)
@@ -98,7 +99,7 @@ function extent(shape::BooleanSubtraction{T})::Tuple{Point3{T},Point3{T}} where 
     extent(shape.left)
 end
 function extent(shape::BooleanIntersection{T})::Tuple{Point3{T},Point3{T}} where {T}
-    (; left, right, transformation) = shape
+     (; left, right, transformation) = shape
     minLeft, maxLeft = extent(left)
     # minRight, maxRight = extent(right) .* Ref(transformation)
     minRight, maxRight = transform_extent(extent(right),transformation)
@@ -107,8 +108,21 @@ end
 
  
 function inside(shape::BooleanUnion{T}, point::Point3{T})::Int64 where {T}
+
+    course_inside_left=inside(shape.left_aabb,point)
+    course_inside_right=inside(shape.right_aabb,point)
+
+    # If the point isn't in either of the BB it is not inside
+    !course_inside_left && !course_inside_right && return kOutside
+    
     (; left, right, transformation) = shape
+    
+    # If inside one BB but not the other
+    course_inside_left && !course_inside_right && return inside(left, point)
     lpoint = transformation * point
+    course_inside_right && !course_inside_left && return inside(right, lpoint)
+
+
 
     positionA = inside(left, point)
     positionA == kInside && return kInside
@@ -132,7 +146,14 @@ function inside(shape::BooleanUnion{T}, point::Point3{T})::Int64 where {T}
 end
 
 function inside(shape::BooleanIntersection{T}, point::Point3{T})::Int64  where {T}
+    
+    course_inside_left=inside(shape.left_aabb,point)
+    course_inside_right=inside(shape.right_aabb,point)
+
+    # If the point isn't in both BB it is not in the shape
+    !(course_inside_left && course_inside_right) && return kOutside
     (; left, right, transformation) = shape
+
     lpoint = transformation * point
 
     positionA = inside(left, point)
@@ -151,7 +172,13 @@ function inside(shape::BooleanIntersection{T}, point::Point3{T})::Int64  where {
 end
 
 function inside(shape::BooleanSubtraction{T}, point::Point3{T})::Int64  where {T}
+    course_inside_left=inside(shape.left_aabb,point)
+    course_inside_right=inside(shape.right_aabb,point)
+    
     (; left, right, transformation) = shape
+    # If the point is the left BB but not the right 
+    course_inside_left && !course_inside_right && return inside(left, point)
+
     lpoint = transformation * point
 
     positionA = inside(left, point)
@@ -190,7 +217,16 @@ function safetyToIn(shape::BooleanIntersection{T}, point::Point3{T})::T where {T
 end
 
 function distanceToOut(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+
+    invdir=inv.(dir)
+    course_intersects_left=intersect(shape.left_aabb,point,dir,invdir)
+    course_intersects_right=intersect(shape.right_aabb,point,dir,invdir)
+
     (; left, right, transformation) = shape
+    # If it intersects one BB but not the other just use that one 
+    course_intersects_left && !course_intersects_right && return distanceToOut(left, point, dir)
+    course_intersects_right && !course_intersects_left && return distanceToOut(right, transformation * point, transformation * dir)
+
     dist = T(0)
     positionA = inside(left, point)
     if positionA != kOutside  # point inside A

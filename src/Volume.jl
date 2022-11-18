@@ -152,8 +152,19 @@ function surface(agg::Aggregate{T}) where T<:AbstractFloat
 end
 
 function extent(agg::Aggregate{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
-    return (min((extent(pvol.volume.shape)[1] * pvol.transformation  for pvol in agg.pvolumes)...),
-            max((extent(pvol.volume.shape)[2] * pvol.transformation  for pvol in agg.pvolumes)...))
+    tm=typemax(T)
+    mmin = Point3{T}(tm,tm,tm)
+
+    tm=typemin(T)
+    mmax = Point3{T}(tm,tm,tm)
+    for pvol in agg.pvolumes
+        pmin = pvol.aabb.min
+        pmax = pvol.aabb.max
+        mmin = min.(mmin,pmin)
+        mmax = min.(max,pmax)
+    end
+
+    return (mmin,mmax)
 end
 
 function inside(agg::Aggregate{T}, point::Point3{T})::Int64  where T<:AbstractFloat

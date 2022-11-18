@@ -30,6 +30,10 @@ function intersect(bb::AABB{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vect
     (distance >= distout  || distout <= kTolerance(T) / 2 ) ? false : true
 end
 
+function inside(b::AABB{T}, point::Point3{T}) where {T}
+    all(b.min .<= point) && all(b.max .>= point)
+end
+
 #---Fast Axial Aligned Bounded Box Ray intersection routine.  Returns both distances to the intesections
 function intersectAABoxRay(bbmin::Point3{T}, bbmax::Point3{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
     
