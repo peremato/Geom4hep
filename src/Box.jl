@@ -65,33 +65,17 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T 
     #safety > kTolerance(T)/2 ? -1.0 : distance
 end
 
-function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
-    distsurf = Inf
-    distance = -Inf
-    distout = Inf
-    for i in 1:3
-        din  = (-copysign(box.fDimensions[i],direction[i]) - point[i])/direction[i]
-        tout =   copysign(box.fDimensions[i],direction[i]) - point[i]
-        dout = tout/direction[i]
-        dsur = copysign(tout, direction[i])
-        if din > distance 
-            distance = din 
-        end
-        if dout < distout
-            distout = dout
-        end
-        if dsur < distsurf
-            distsurf = dsur
-        end 
-    end
-    (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? Inf : distance
-    #invdir = 1.0 ./ direction
-    #tempIn  = -copysign.(box.fDimensions, direction) - point
-    #tempOut =  copysign.(box.fDimensions, direction) - point
-    #distance = maximum(tempIn * invdir)
-    #distout  = minimum(tempOut * invdir)
-    #distsurf = abs(minimum(copysign.(tempOut, direction)))
-    #(distance >= distout || distout <= kTolerance(T)/2 || distsurf <= kTolerance(T)/2) ? Inf : distance
+function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T},rcp_direction::Vector3{T}=inv.(direction))::T where T<:AbstractFloat
+    
+    max=Point3{T}(box.fDimensions)
+    (distance,distout)= intersectAABoxRay(-max,max,point,direction,rcp_direction)
+    
+    # The checks are as follows:
+    # 1.) distance < -kTolerance(T) would mean that we are already further in the volume than a micro step
+    # 2.) distance >= distout Not sure if this is still needed
+    # 3.) isnan(distance) NaN use to escape the intersect intersection routine and would cause problems
+    # 4.) distout <= kTolerance(T)/2) Checks to see if we are entering and immediatelly exiting
+    (distance < -kTolerance(T) || distance >= distout || isnan(distance) || distout <= kTolerance(T)/2) ? Inf : distance
 end
 
 function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat

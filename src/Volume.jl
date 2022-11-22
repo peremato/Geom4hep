@@ -3,7 +3,7 @@ const Shape{T<:AbstractFloat} = Union{BaseShape{T},
                                       BooleanUnion{T}, 
                                       BooleanSubtraction{T}, 
                                       BooleanIntersection{T}}
-
+# const Shape{T<:AbstractFloat} = AbstractShape{T}
 #---Volume-------------------------------------------------------------------------
 struct VolumeP{T<:AbstractFloat,PV}
     id::Int64
@@ -27,6 +27,16 @@ struct PlacedVolume{T<:AbstractFloat}
     idx::Int64
     transformation::Transformation3D{T}
     volume::VolumeP{T,PlacedVolume{T}}
+    aabb::AABB{T}
+end
+PlacedVolume(idx::Int64,transformation::Transformation3D{T},volume::VolumeP{T,PlacedVolume{T}}) where {T} = PlacedVolume{T}(idx,transformation,volume)
+function PlacedVolume{T}(idx::Int64,transformation::Transformation3D{T},volume::VolumeP{T,PlacedVolume{T}}) where {T}
+    if volume.shape isa NoShape
+        aabb=AABB{T}(Point3{T}(0,0,0),Point3{T}(0,0,0))
+    else
+        aabb=AABB{T}(transform_extent(extent(volume.shape),transformation)...)
+    end
+    return PlacedVolume{T}(idx,transformation,volume,aabb)
 end
 
 #---Convenient Alias to simplify signatures---------------------------------------
@@ -62,6 +72,9 @@ function contains(vol::Volume{T}, p::Point3{T})::Bool where T<:AbstractFloat
     inside(vol.shape, p) == kInside
 end
 @inline function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T})::T where T<:AbstractFloat
+    
+    !intersect(pvol.aabb,p,d) && return T(Inf);
+
     distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 end
 
@@ -91,69 +104,10 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
     end
 end
 
-#---Bounding Boxes---------------------------------------------------------------------------------
-# Axis Aligned Bounding Box, defined by the min/max coordinates
-struct AABB{T<:AbstractFloat}
-    min::Point3{T}
-    max::Point3{T}
-end
-
-_area(d) = 2(d[1]*d[2] + d[2]*d[3] + d[3]*d[1])
-_volume(d) = d[1]*d[2]*d[3]
-
-diagonal(bb::AABB{T}) where T = bb.max .- bb.min
-area(bb::AABB{T}) where T = _area(diagonal(bb))
-volume(bb::AABB{T}) where T = _volume(diagonal(bb))
-
-function GeometryBasics.coordinates(bb::AABB{T}) where T
-    a, b = bb.min, bb.max
-    Point3{T}[a, (b[1], a[2], a[3]), (a[1], b[2], a[3]), (a[1], a[2], b[3]),
-                 (a[1], b[2], b[3]), (b[1], a[2], b[3]), (b[1], b[2], a[3]), b]
-end
-GeometryBasics.faces(::AABB{T}) where T = QuadFace{Int64}[(1,3,7,2), (1,2,6,4), (1,4,5,3), (8,6,2,7), (8,7,3,5), (8,5,4,6)]
-GeometryBasics.normals(::AABB{T}) where T = Point3{T}[(0,0,-1), (0,-1,0), (-1,0,0), (1,0,0), (0,1,0), (0,0,1)]
-
-inside(bb::AABB{T}, point::Point3{T}) where T =  all(bb.min .< point .< bb.max)
-function intersect(bb::AABB{T}, point::Point3{T},dir::Vector3{T}) where T
-    point = point - (bb.max + bb.min)/2
-    dimens = (bb.max - bb.min)/2
-    distsurf = Inf
-    distance = -Inf
-    distout = Inf
-    for i in 1:3
-        din  = (-copysign(dimens[i],dir[i]) - point[i])/dir[i]
-        tout =   copysign(dimens[i],dir[i]) - point[i]
-        dout = tout/dir[i]
-        dsur = copysign(tout, dir[i])
-        if din > distance 
-            distance = din 
-        end
-        if dout < distout
-            distout = dout
-        end
-        if dsur < distsurf
-            distsurf = dsur
-        end 
-    end
-    (distance >= distout || distout <= kTolerance(T)/2 || abs(distsurf) <= kTolerance(T)/2) ? false : true
-end
 
 function AABB(pvol::PlacedVolume{T}) where T
-    a, b = extent(pvol.volume.shape)
-    min_ = [ Inf,  Inf,  Inf]
-    max_ = [ -Inf,  -Inf,  -Inf] 
-    coords =  Point3{T}[a, (b[1], a[2], a[3]), (a[1], b[2], a[3]), (a[1], a[2], b[3]),
-                           (a[1], b[2], b[3]), (b[1], a[2], b[3]), (b[1], b[2], a[3]), b]
-    for c in coords
-        p = c * pvol.transformation
-        for i in 1:3 
-            p[i] > max_[i] && (max_[i] = p[i])
-            p[i] < min_[i] && (min_[i] = p[i])
-        end
-    end
-    return AABB{T}(Point3{T}(min_), Point3{T}(max_))
+    AABB{T}(transform_extent(extent(pvol.volume.shape),pvol.transformation)...)
 end
-
 
 #---Assemblies--------------------------------------------------------------------------------------
 struct Assembly{T<:AbstractFloat}
@@ -198,8 +152,19 @@ function surface(agg::Aggregate{T}) where T<:AbstractFloat
 end
 
 function extent(agg::Aggregate{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
-    return (min((extent(pvol.volume.shape)[1] * pvol.transformation  for pvol in agg.pvolumes)...),
-            max((extent(pvol.volume.shape)[2] * pvol.transformation  for pvol in agg.pvolumes)...))
+    tm=typemax(T)
+    mmin = Point3{T}(tm,tm,tm)
+
+    tm=typemin(T)
+    mmax = Point3{T}(tm,tm,tm)
+    for pvol in agg.pvolumes
+        pmin = pvol.aabb.min
+        pmax = pvol.aabb.max
+        mmin = min.(mmin,pmin)
+        mmax = min.(max,pmax)
+    end
+
+    return (mmin,mmax)
 end
 
 function inside(agg::Aggregate{T}, point::Point3{T})::Int64  where T<:AbstractFloat
