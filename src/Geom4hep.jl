@@ -10,13 +10,13 @@ export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation,
 export PlacedVolume, Volume, Assembly, placeDaughter!, draw, draw!, drawDistanceToIn, drawDistanceToOut, getWorld, children
 export AABB, area, volume, BVHParam, buildBVH, BVH, pvolindices, pushPvolIndices!
 export AbstractNavigator, TrivialNavigator, BVHNavigator, NavigatorState, computeStep!, locateGlobalPoint!, reset!, isInVolume, currentVolume, getClosestDaughter, containedDaughters
-export kTolerance
+export kTolerance, kPushTolerance
 export processGDML
 export Triangle, Intersection, intersect, distanceToPlane
 export Tesselation, coordinates, faces, normals, mesh
 
 using Requires
-using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees
+using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees, DataStructures
 include("BasicTypes.jl")
 include("Transformation3D.jl")
 include("TriangleIntersect.jl")

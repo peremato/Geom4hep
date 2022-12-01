@@ -1,5 +1,3 @@
-
-
 #---Bounding Boxes---------------------------------------------------------------------------------
 # Axis Aligned Bounding Box, defined by the min/max coordinates
 struct AABB{T<:AbstractFloat}

@@ -107,8 +107,8 @@ function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:Abstrac
     end
     fig = Figure()
     s = LScene(fig[1, 1])
-    scatter!(s, result, color=:black, makersize=20)
-    scatter!(s, [low, hi], color=:blue, markersize=50)
+    scatter!(s, result, color=:black, markersize=1)
+    scatter!(s, [low, hi], color=:blue, markersize=10)
     display(fig)
     return s
 end
@@ -132,8 +132,8 @@ function drawDistanceToIn(shape::AbstractShape{T}, N::Integer) where T<:Abstract
     end
     fig = Figure()
     s = LScene(fig[1, 1])
-    scatter!(s, result, color=:black, markerspace=SceneSpace, markersize=dim[1]/500)
-    scatter!(s, [low, hi], color=:blue, markerspace=SceneSpace, markersize=dim[1]/100)
+    scatter!(s, result, color=:black, markersize=1)
+    scatter!(s, [low, hi], color=:blue, markersize=10)
     display(fig)
     return s
 end

@@ -68,16 +68,15 @@ end
 function contains(pvol::PlacedVolume{T}, p::Point3{T})::Bool where T<:AbstractFloat
     inside(pvol.volume.shape, pvol.transformation * p) == kInside
 end
+
 function contains(vol::Volume{T}, p::Point3{T})::Bool where T<:AbstractFloat
     inside(vol.shape, p) == kInside
 end
-@inline function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T})::T where T<:AbstractFloat
-    
-    !intersect(pvol.aabb,p,d) && return T(Inf);
 
+@inline function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}, rcp_d::Vector3{T}=inv.(d))::T where T<:AbstractFloat
+    !intersect(pvol.aabb, p, d, rcp_d) && return T(Inf)
     distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 end
-
 
 function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
     if subvol.shape isa NoShape
@@ -95,7 +94,7 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         return vol
     else
         low, high = extent(vol.shape)
-        box = Box{T}((high - low)/2. .+ 0.1)  # increase the bounding box
+        box = Box{T}((high - low)/2. * 1.05)  # increase the bounding box
         tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
         mat = Material{T}("vacuum"; density=0)
         world = Volume{T}("world", box, mat)

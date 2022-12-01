@@ -18,26 +18,26 @@ Transformation3D{T}(dx, dy, dz, rot::Rotation{3,T}) where T<:AbstractFloat = Tra
 # Transforms
 @inline transform(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat = t.has_rot ? t.rotation * (t.has_trans ? (p - t.translation) : p) : (t.has_trans ? (p - t.translation) : p)
 @inline transform(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat = t.has_rot ? t.rotation * d : d
-@inline invtransform(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat = t.has_trans ? (t.translation + (t.has_rot ? (p' * t.rotation)' : p)) : ( t.has_rot ? (p' * t.rotation)' : p)
+@inline invtransform(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat = t.has_trans ? ((t.has_rot ? (p' * t.rotation)' : p) + t.translation) : ( t.has_rot ? (p' * t.rotation)' : p)
 @inline invtransform(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat = t.has_rot ? (d' * t.rotation)' : d
 @inline Base.:*(t::Transformation3D{T}, p::Point3{T}) where T<:AbstractFloat =  transform(t,p)
 @inline Base.:*(t::Transformation3D{T}, d::Vector3{T}) where T<:AbstractFloat =  transform(t,d)
 @inline Base.:*(p::Point3{T}, t::Transformation3D{T}) where T<:AbstractFloat =  invtransform(t,p)
 @inline Base.:*(d::Vector3{T}, t::Transformation3D{T}) where T<:AbstractFloat =  invtransform(t,d)
 
-function transform(v::Vector{Transformation3D{T}}, p::Point3{T}) where T<:AbstractFloat
+function transform(v, p::Point3{T}) where T<:AbstractFloat
     for t in v
         p = t.rotation * (p - t.translation)
     end
     return p
 end
-function transform(v::Vector{Transformation3D{T}}, d::Vector3{T}) where T<:AbstractFloat
+function transform(v, d::Vector3{T}) where T<:AbstractFloat
     for t in v
         d = t.rotation * d
     end
     return d
 end
-function transform(v::Vector{Transformation3D{T}}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat
+function transform(v, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat
     for t in v
         p = t.rotation * (p - t.translation)
         d = t.rotation * d

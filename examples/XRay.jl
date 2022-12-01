@@ -2,6 +2,7 @@ using Revise
 using Geom4hep
 using Printf
 using StaticArrays
+using TimerOutputs
 
 const idx = [2 3 1; 1 3 2; 1 2 3]
 const rdx = [3 1 2; 1 3 2; 1 2 3]
@@ -14,10 +15,12 @@ function generateXRay(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, v
     ix, iy, iz = idx[view, :]
     xi, yi, zi = rdx[view, :]
 
-    nx = ny = round(Int, sqrt(npoints))
-    xrange = range(lower[ix], upper[ix], length = nx)
-    yrange = range(lower[iy], upper[iy], length = ny)
-    z = lower[iz] + kTolerance(T)
+    #nx = ny = round(Int, sqrt(npoints))
+    nx = npoints
+    ny = trunc(Int, nx * (upper[iy] - lower[iy])/(upper[ix] - lower[ix]))
+    xrange = range(lower[ix], upper[ix], length = nx+1)[1:nx]
+    yrange = range(lower[iy], upper[iy], length = ny+1)[1:ny]
+    z = lower[iz] + kPushTolerance(T)
  
     result = zeros(T, nx,ny)
     state = NavigatorState{T}(world, nav)
@@ -27,6 +30,7 @@ function generateXRay(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, v
     for (i,x) in enumerate(xrange), (j,y) in enumerate(yrange)
         _point = (x, y, z)
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
+        #@timeit Geom4hep.to "point" locateGlobalPoint!(state, point)
         locateGlobalPoint!(state, point)
         mass = T(0)
         step = T(0)
@@ -34,7 +38,8 @@ function generateXRay(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, v
         maxsteps = 1000
         while isInVolume(state) && nsteps < maxsteps
             density = currentVolume(state).material.density
-            step = computeStep!(state, point, dir, T(1000))
+            #@timeit Geom4hep.to "computeStep" step = computeStep!(state, point, dir, T(10000))
+            step = computeStep!(state, point, dir, T(10000))
             if step == -1
                 error("step == -1 may indicate a navigation error. \nstate = $state \npoint = $point \ndir =   $dir" )
             end
@@ -54,7 +59,7 @@ end
 
 using GLMakie
 
-if abspath(PROGRAM_FILE) == @__FILE__
+#if abspath(PROGRAM_FILE) == @__FILE__
     #-----build detector---------------------------------------
     #full = processGDML("examples/trackML.gdml", Float64)
     #volume = full[2,1]
@@ -68,11 +73,11 @@ if abspath(PROGRAM_FILE) == @__FILE__
 
     #-----Generate and Plot results----------------------------
     @printf "generating x-projection\n"
-    rx = generateXRay(nav, world, 1e6, 1)
+    rx = generateXRay(nav, world, 1000, 1)
     @printf "generating y-projection\n"
-    ry = generateXRay(nav, world, 1e6, 2)
+    ry = generateXRay(nav, world, 1000, 2)
     @printf "generating z-projection\n"
-    rz = generateXRay(nav, world, 1e6, 3)
+    rz = generateXRay(nav, world, 1000, 3)
     limits = (min(minimum(rx[3]), minimum(ry[3]), minimum(rz[3])), max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
  
     #----Plot the results--------------------------------------
@@ -81,7 +86,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
     heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
     heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
-    draw!(LScene(fig[2, 2]), volume; wireframe=true, maxlevel=2)
+    #draw!(LScene(fig[2, 2]), volume; wireframe=true, maxlevel=2)
     #display(fig)
     save("cms2018.png", fig)
-end
+#end
