@@ -71,26 +71,41 @@ function surface(trap::Trap{T}) where T<:AbstractFloat
 end
 
 function extent(trap::Trap{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
-    p = Point3{T}( max(trap.x1, trap.x2, trap.x3, trap.x4), max(trap.y1, trap.y2), trap.z)
-    ( -p, p )
+    # from the vertices: the faces can be shifted (θ, ϕ) and skewed (α1, α2)
+    pts = trap.coordinates
+    (reduce((a, b) -> min.(a, b), pts), reduce((a, b) -> max.(a, b), pts))
 end
 
 function inside(trap::Trap{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     z = point[3]
     planes = trap.planes
     # inside z?
-    outside = abs(z) > trap.z + kTolerance(T)/2
-    cinside = abs(z) < trap.z - kTolerance(T)/2
+    outside = abs(z) > trap.z + tolerance(T)/2
+    cinside = abs(z) < trap.z - tolerance(T)/2
 
     for i in 1:4
         s = safety(planes[i], point)  #  positive if the point is on the outside halfspace, negative otherwise.
-        outside |= s > kTolerance(T)/2
-        cinside &= s < -kTolerance(T)/2
+        outside |= s > tolerance(T)/2
+        cinside &= s < -tolerance(T)/2
     end
     cinside ? kInside : outside ? kOutside : kSurface
 end
 
-function safetyToOut(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
+function normal(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
+    inside(trap, point) != kSurface && return zero(Vector3{T})
+    n = zero(Vector3{T})
+    count = 0
+    z = point[3]
+    abs(z - trap.z) <= tolerance(T)/2 && (n += Vector3{T}(0, 0, 1); count += 1)
+    abs(z + trap.z) <= tolerance(T)/2 && (n += Vector3{T}(0, 0, -1); count += 1)
+    for plane in trap.planes
+        abs(safety(plane, point)) <= tolerance(T)/2 && (n += plane.normal; count += 1)
+    end
+    count == 0 && return zero(Vector3{T})
+    return normalize(n)
+end
+
+function safety_to_out(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     (; z, planes) = trap
     saf = z - abs(point[3])
     for i in 1:4
@@ -100,7 +115,7 @@ function safetyToOut(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     return saf
 end
 
-function safetyToIn(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
+function safety_to_in(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     (; z, planes) = trap
     saf = abs(point[3]) - z
     for i in 1:4
@@ -110,12 +125,12 @@ function safetyToIn(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
     return saf
 end
 
-function distanceToOut(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distance_to_out(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     (; z, planes) = trap
     dz = dir[3]
 
     # step 0: if point is outside any plane --> return -1, otherwise initialize at Infinity
-    outside = abs(point[3]) > z + kTolerance(T)/2
+    outside = abs(point[3]) > z + tolerance(T)/2
     outside && return T(-1)
     distance = T(Inf)
 
@@ -128,14 +143,14 @@ function distanceToOut(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T wher
         ndir = dot(dir, planes[i].normal)
         safe = safety(planes[i], point)
 
-        safe > kTolerance(T) && return T(-1)
-        ndir > 0 && safe < kTolerance(T) && (dist = -safe/ndir)
+        safe > tolerance(T) && return T(-1)
+        ndir > 0 && safe < tolerance(T) && (dist = -safe/ndir)
         dist < distance && (distance = dist)
     end
     return distance
 end
 
-function distanceToIn(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distance_to_in(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     (; z, planes) = trap
     dz = dir[3]
     z = point[3]
@@ -143,7 +158,7 @@ function distanceToIn(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T where
     # step 1.a: input particle is moving away --> return infinity
     signZdir = copysign(1,dz)
     max = signZdir * trap.z - z
-    signZdir * max < kTolerance(T)/2 && return Inf
+    signZdir * max < tolerance(T)/2 && return T(Inf)
 
     # step 1.b General case:
     smax = max/dz
@@ -156,16 +171,16 @@ function distanceToIn(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T where
         safe = safety(planes[i], point)
         dist = -safe/ndir
         
-        done |= (safe > kTolerance(T)/2 && ndir >= 0) || (safe > -kTolerance(T) && ndir > 0)
+        done |= (safe > tolerance(T)/2 && ndir >= 0) || (safe > -tolerance(T) && ndir > 0)
 
-        posPoint = safe > -kTolerance(T)/2
+        posPoint = safe > -tolerance(T)/2
         posDir   = ndir > 0
         !posPoint && posDir && dist < smax && (smax = dist)
         posPoint && !posDir && dist > smin && (smin = dist)
     end
     done && return T(Inf)
-    distance = smin <= smax ? smin : Inf
-    distance < -kTolerance(T)/2 && return T(-1)
+    distance = smin <= smax ? smin : T(Inf)
+    distance < -tolerance(T)/2 && return T(-1)
     return distance
 end 
 

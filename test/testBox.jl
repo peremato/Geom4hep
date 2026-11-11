@@ -101,73 +101,73 @@
     vxmy = Vector3{T}(1/√2, -1/√2, 0.)
     vxmz = Vector3{T}(1/√2, 0., -1/√2)
 
-    # distanceToOut(P,V) with asserts for normal and convex
-    dist = distanceToOut(b1, pzero, vx)
+    # distance_to_out(P,V) with asserts for normal and convex
+    dist = distance_to_out(b1, pzero, vx)
     norm = normal(b1, pzero + dist * vx) 
     @test dist ≈ 20 && norm ≈ vx
 
-    dist = distanceToOut(b1, pzero, vmx)
+    dist = distance_to_out(b1, pzero, vmx)
     norm = normal(b1, pzero + dist * vmx) 
     @test dist ≈ 20 && norm ≈ vmx 
 
-    dist = distanceToOut(b1, pzero, vy)
+    dist = distance_to_out(b1, pzero, vy)
     norm = normal(b1, pzero + dist * vy) 
     @test dist ≈ 30 && norm ≈ vy 
 
-    dist = distanceToOut(b1, pzero, vmy)
+    dist = distance_to_out(b1, pzero, vmy)
     norm = normal(b1, pzero + dist * vmy) 
     @test dist ≈ 30 && norm ≈ vmy 
 
-    dist = distanceToOut(b1, pzero, vz)
+    dist = distance_to_out(b1, pzero, vz)
     norm = normal(b1, pzero + dist * vz) 
     @test dist ≈ 40 && norm ≈ vz 
 
-    dist = distanceToOut(b1, pzero, vmz)
+    dist = distance_to_out(b1, pzero, vmz)
     norm = normal(b1, pzero + dist * vmz) 
     @test dist ≈ 40 && norm ≈ vmz 
 
-    dist = distanceToOut(b1, pzero, vxy)
+    dist = distance_to_out(b1, pzero, vxy)
     norm = normal(b1, pzero + dist * vxy) 
     @test dist ≈ √800
 
 
     #testing a few special directions ( with special zero values )
     # important since we sometimes operate with sign bits etc.
-    @test distanceToOut(b1, pzero, Vector3{T}(-0., -0., -1.)) ≈ 40.
-    @test distanceToOut(b1, pzero, Vector3{T}( 0., -0., -1.)) ≈ 40.
-    @test distanceToOut(b1, pzero, Vector3{T}( 0.,  0., -1.)) ≈ 40.
-    @test distanceToOut(b1, pzero, Vector3{T}( 0.,  1.,  0.)) ≈ 30.
-    @test distanceToOut(b1, pzero, Vector3{T}( 0.,  1., -0.)) ≈ 30.
-    @test distanceToOut(b1, pzero, Vector3{T}(-0.,  1.,  0.)) ≈ 30.
-    @test distanceToOut(b1, pzero, Vector3{T}( 1., -0.,  0.)) ≈ 20.
-    @test distanceToOut(b1, pzero, Vector3{T}( 1.,  0., -0.)) ≈ 20.
-    @test distanceToOut(b1, pzero, Vector3{T}( 1., -0., -0.)) ≈ 20.
+    @test distance_to_out(b1, pzero, Vector3{T}(-0., -0., -1.)) ≈ 40.
+    @test distance_to_out(b1, pzero, Vector3{T}( 0., -0., -1.)) ≈ 40.
+    @test distance_to_out(b1, pzero, Vector3{T}( 0.,  0., -1.)) ≈ 40.
+    @test distance_to_out(b1, pzero, Vector3{T}( 0.,  1.,  0.)) ≈ 30.
+    @test distance_to_out(b1, pzero, Vector3{T}( 0.,  1., -0.)) ≈ 30.
+    @test distance_to_out(b1, pzero, Vector3{T}(-0.,  1.,  0.)) ≈ 30.
+    @test distance_to_out(b1, pzero, Vector3{T}( 1., -0.,  0.)) ≈ 20.
+    @test distance_to_out(b1, pzero, Vector3{T}( 1.,  0., -0.)) ≈ 20.
+    @test distance_to_out(b1, pzero, Vector3{T}( 1., -0., -0.)) ≈ 20.
     
-    dist = distanceToOut(b1, ponxside, vx)
+    dist = distance_to_out(b1, ponxside, vx)
     norm = normal(b1, ponxside + dist * vx)
     @test dist ≈ 0. && norm ≈ vx
     
-    dist = distanceToOut(b1, ponmxside, vmx)
+    dist = distance_to_out(b1, ponmxside, vmx)
     norm = normal(b1, ponmxside + dist * vmx)
     @test dist ≈ 0. && norm ≈ vmx
     
-    dist = distanceToOut(b1, ponmxside, vmx)
+    dist = distance_to_out(b1, ponmxside, vmx)
     norm = normal(b1, ponmxside + dist * vmx)
     @test dist ≈ 0. && norm ≈ vmx
     
-    dist = distanceToOut(b1, ponyside, vy)
+    dist = distance_to_out(b1, ponyside, vy)
     norm = normal(b1, ponyside + dist * vy)
     @test dist ≈ 0. && norm ≈ vy
     
-    dist = distanceToOut(b1, ponmyside, vmy)
+    dist = distance_to_out(b1, ponmyside, vmy)
     norm = normal(b1, ponmyside + dist * vmy)
     @test dist ≈ 0. && norm ≈ vmy
     
-    dist = distanceToOut(b1, ponzside, vz)
+    dist = distance_to_out(b1, ponzside, vz)
     norm = normal(b1, ponzside + dist * vz)
     @test dist ≈ 0. && norm ≈ vz
     
-    dist = distanceToOut(b1, ponmzside, vmz)
+    dist = distance_to_out(b1, ponmzside, vmz)
     norm = normal(b1, ponmzside + dist * vmz)
     @test dist ≈ 0. && norm ≈ vmz
 
@@ -191,67 +191,67 @@
     @test inside(b2, Point3{T}(10., 20., 20.)) == kOutside
 
     # SafetyToOut(P)
-    @test safetyToOut(b1, pzero) ≈ 20
-    @test safetyToOut(b1, Point3{T}(1.,0.,0.)) ≈ 19
-    @test safetyToOut(b1, Point3{T}(0.,1.,0.)) ≈ 20
-    @test safetyToOut(b1, Point3{T}(0.,0.,1.)) ≈ 20
+    @test safety_to_out(b1, pzero) ≈ 20
+    @test safety_to_out(b1, Point3{T}(1.,0.,0.)) ≈ 19
+    @test safety_to_out(b1, Point3{T}(0.,1.,0.)) ≈ 20
+    @test safety_to_out(b1, Point3{T}(0.,0.,1.)) ≈ 20
 
     # SafetyToIn(P)
-    @test safetyToIn(b1, pbigx) ≈ 80
-    @test safetyToIn(b1, pbigmx) ≈ 80
-    @test safetyToIn(b1, pbigy) ≈ 70
-    @test safetyToIn(b1, pbigmy) ≈ 70
-    @test safetyToIn(b1, pbigz) ≈ 60
-    @test safetyToIn(b1, pbigmz) ≈ 60
+    @test safety_to_in(b1, pbigx) ≈ 80
+    @test safety_to_in(b1, pbigmx) ≈ 80
+    @test safety_to_in(b1, pbigy) ≈ 70
+    @test safety_to_in(b1, pbigmy) ≈ 70
+    @test safety_to_in(b1, pbigz) ≈ 60
+    @test safety_to_in(b1, pbigmz) ≈ 60
 
     # DistanceToIn(P,V)
-    @test distanceToIn(b1, pbigx, vmx) ≈ 80
-    @test distanceToIn(b1, pbigmx, vx) ≈ 80
-    @test distanceToIn(b1, pbigy, vmy) ≈ 70
-    @test distanceToIn(b1, pbigmy, vy) ≈ 70
-    @test distanceToIn(b1, pbigz, vmz) ≈ 60
-    @test distanceToIn(b1, pbigmz, vz) ≈ 60
+    @test distance_to_in(b1, pbigx, vmx) ≈ 80
+    @test distance_to_in(b1, pbigmx, vx) ≈ 80
+    @test distance_to_in(b1, pbigy, vmy) ≈ 70
+    @test distance_to_in(b1, pbigmy, vy) ≈ 70
+    @test distance_to_in(b1, pbigz, vmz) ≈ 60
+    @test distance_to_in(b1, pbigmz, vz) ≈ 60
 
     # testing a few special directions ( with special zero values )
     # important since we sometimes operate with sign bits etc.
-    @test distanceToIn(b1, Point3{T}(0., 0., -50.), Vector3{T}(-0., 0., 1.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}(0., 0., -50.), Vector3{T}( 0.,-0., 1.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}(0., 0.,  50.), Vector3{T}( 0., 0.,-1.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}(0., -40., 0.), Vector3{T}( 0., 1., 0.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}(0., -40., 0.), Vector3{T}( 0., 1.,-0.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}(0., -40., 0.), Vector3{T}(-0., 1., 0.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}(-30., 0., 0.), Vector3{T}( 1.,-0., 0.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}( 30,  0., 0.), Vector3{T}(-1., 0.,-0.)) ≈ 10
-    @test distanceToIn(b1, Point3{T}(-30., 0., 0.), Vector3{T}( 1.,-0.,-0.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(0., 0., -50.), Vector3{T}(-0., 0., 1.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(0., 0., -50.), Vector3{T}( 0.,-0., 1.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(0., 0.,  50.), Vector3{T}( 0., 0.,-1.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(0., -40., 0.), Vector3{T}( 0., 1., 0.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(0., -40., 0.), Vector3{T}( 0., 1.,-0.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(0., -40., 0.), Vector3{T}(-0., 1., 0.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(-30., 0., 0.), Vector3{T}( 1.,-0., 0.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}( 30,  0., 0.), Vector3{T}(-1., 0.,-0.)) ≈ 10
+    @test distance_to_in(b1, Point3{T}(-30., 0., 0.), Vector3{T}( 1.,-0.,-0.)) ≈ 10
 
-    @test distanceToIn(b1, pbigx, vxy) ≈ Inf
-    @test distanceToIn(b1, pbigmx, vxy) ≈ Inf
+    @test distance_to_in(b1, pbigx, vxy) ≈ Inf
+    @test distance_to_in(b1, pbigmx, vxy) ≈ Inf
 
     pJohnXZ = Point3{T}(9., 0., 12.)
-    @test distanceToIn(b2, pJohnXZ, vxmz) ≈ Inf
+    @test distance_to_in(b2, pJohnXZ, vxmz) ≈ Inf
     pJohnXY = Point3{T}(12., 9., 0.)
-    @test distanceToIn(b2, pJohnXY, vxmy) ≈ Inf
-    @test distanceToIn(b2, pJohnXY, vmx) ≈ 2
+    @test distance_to_in(b2, pJohnXY, vxmy) ≈ Inf
+    @test distance_to_in(b2, pJohnXY, vmx) ≈ 2
     pMyXY = Point3{T}(32., -11., 0.)
-    @test distanceToIn(b2, pMyXY, vmxy) ≈ Inf
-    @test distanceToIn(b1, Point3{T}(-25., -35., 0.), vx) ≈ Inf
-    @test distanceToIn(b1, Point3{T}(-25., -35., 0.), vy) ≈ Inf
-    @test distanceToIn(b2, pJohnXY, vmx) ≈ 2
+    @test distance_to_in(b2, pMyXY, vmxy) ≈ Inf
+    @test distance_to_in(b1, Point3{T}(-25., -35., 0.), vx) ≈ Inf
+    @test distance_to_in(b1, Point3{T}(-25., -35., 0.), vy) ≈ Inf
+    @test distance_to_in(b2, pJohnXY, vmx) ≈ 2
 
     tempDir = normalize(Vector3{T}(-0.76165597579890043, 0.64364445891356026, -0.074515708658524193))
-    d = distanceToIn(box3, Point3{T}(0.15000000185, -22.048743592955137, 2.4268539333219472), tempDir)
+    d = distance_to_in(box3, Point3{T}(0.15000000185, -22.048743592955137, 2.4268539333219472), tempDir)
     @test isapprox(d, 0, atol=1e-6)
 
     # testing tolerance of DistanceToIn
     b4 = Box{T}(5., 5., 5.)
     # a point very slightly inside should return 0
     tempDir = normalize(Vector3{T}(0.76315134679548990437, 0.53698876104646497964, -0.35950395323836459305))
-    @test distanceToIn(b4, Point3{T}(-3.0087437277453119577, -5.0+kTolerance(T)/2, 4.8935648380409944025), tempDir) <= 0.0
+    @test distance_to_in(b4, Point3{T}(-3.0087437277453119577, -5.0+tolerance(T)/2, 4.8935648380409944025), tempDir) <= 0.0
 
 
     # a point on the surface pointing outside must return infinity length
-    @test distanceToIn(b2,Point3{T}(10., 0., 0.), Vector3{T}(1., 0., 0.)) == Inf
-    @test distanceToIn(b2,Point3{T}(10. - 0.9*eps(), 0., 0.), Vector3{T}(1.,0.,0.)) >= Inf
+    @test distance_to_in(b2,Point3{T}(10., 0., 0.), Vector3{T}(1., 0., 0.)) == Inf
+    @test distance_to_in(b2,Point3{T}(10. - 0.9*eps(), 0., 0.), Vector3{T}(1.,0.,0.)) >= Inf
 
 end
 
@@ -266,15 +266,15 @@ end
     # slightly outside of +x face and entering and exiting
     testp = Point3{T}(1.,0.,0.) + T(6e-15) * vx
     testv = normalize(Vector3{T}(0.,1.,1.) - T(4e-6) * vx)
-    dist = distanceToIn(bx, testp, testv)
+    dist = distance_to_in(bx, testp, testv)
     @test isapprox(dist, 0, atol=1e-6)
 
-    dist = distanceToOut(bx, testp, testv)
+    dist = distance_to_out(bx, testp, testv)
     norm = normal(bx, testp + dist*testv)
     @test dist ≈ 200*√2
     @test norm ≈ normalize(vy+vz)
 
-    dist = distanceToOut(bx, testp, vx)
+    dist = distance_to_out(bx, testp, vx)
     norm = normal(bx, testp + dist * vx)
     @test isapprox(dist, 0., atol=1e-6)
     @test norm ≈ vx
@@ -282,15 +282,15 @@ end
     # slightly outside of -x face and entering and exiting
     testp = Point3{T}(-1., 0., 0.) - T(6e-15) * vx
     testv = normalize(Vector3{T}(0., 1., 1.) + T(4e-6) * vx)
-    dist = distanceToIn(bx, testp, testv)
+    dist = distance_to_in(bx, testp, testv)
     @test isapprox(dist, 0, atol=1e-6)
 
-    dist = distanceToOut(bx, testp, testv)
+    dist = distance_to_out(bx, testp, testv)
     norm = normal(bx, testp + dist*testv)
     @test dist ≈ 200*√2
     @test norm ≈ normalize(vy+vz)
 
-    dist = distanceToOut(bx, testp, -vx)
+    dist = distance_to_out(bx, testp, -vx)
     norm = normal(bx, testp - dist * vx)
     @test isapprox(dist, 0., atol=1e-6)
     @test norm ≈ -vx
@@ -298,15 +298,15 @@ end
     # slightly outside of +y face and entering and exiting
     testp = Point3{T}(0.,1.,0.) + T(6e-15) * vy
     testv = normalize(Vector3{T}(1.,0.,1.) - T(4e-6) * vy)
-    dist = distanceToIn(by, testp, testv)
+    dist = distance_to_in(by, testp, testv)
     @test isapprox(dist, 0, atol=1e-6)
 
-    dist = distanceToOut(by, testp, testv)
+    dist = distance_to_out(by, testp, testv)
     norm = normal(by, testp + dist*testv)
     @test dist ≈ 200*√2
     @test norm ≈ normalize(vx+vz)
 
-    dist = distanceToOut(by, testp, vy)
+    dist = distance_to_out(by, testp, vy)
     norm = normal(by, testp + dist * vy)
     @test isapprox(dist, 0., atol=1e-6)
     @test norm ≈ vy
@@ -314,15 +314,15 @@ end
     # slightly outside of -y face and entering and exiting
     testp = Point3{T}(0.,-1.,0.) - T(6e-15) * vy
     testv = normalize(Vector3{T}(1.,0.,1.) + T(4e-6) * vy)
-    dist = distanceToIn(by, testp, testv)
+    dist = distance_to_in(by, testp, testv)
     @test isapprox(dist, 0, atol=1e-6)
 
-    dist = distanceToOut(by, testp, testv)
+    dist = distance_to_out(by, testp, testv)
     norm = normal(by, testp + dist*testv)
     @test dist ≈ 200*√2
     @test norm ≈ normalize(vx+vz)
 
-    dist = distanceToOut(by, testp, -vy)
+    dist = distance_to_out(by, testp, -vy)
     norm = normal(by, testp - dist * vy)
     @test isapprox(dist, 0., atol=1e-6)
     @test norm ≈ -vy
@@ -330,15 +330,15 @@ end
     # slightly outside of +z face and entering and exiting
     testp = Point3{T}(0.,0.,1.) + T(6e-15) * vz
     testv = normalize(Vector3{T}(1.,1., 0.) - T(4e-6) * vz)
-    dist = distanceToIn(bz, testp, testv)
+    dist = distance_to_in(bz, testp, testv)
     @test isapprox(dist, 0, atol=1e-6)
 
-    dist = distanceToOut(bz, testp, testv)
+    dist = distance_to_out(bz, testp, testv)
     norm = normal(bz, testp + dist*testv)
     @test dist ≈ 200*√2
     @test norm ≈ normalize(vx+vy)
 
-    dist = distanceToOut(bz, testp, vz)
+    dist = distance_to_out(bz, testp, vz)
     norm = normal(bz, testp + dist * vz)
     @test isapprox(dist, 0., atol=1e-6)
     @test norm ≈ vz
@@ -346,15 +346,15 @@ end
     # slightly outside of -z face and entering and exiting
     testp = Point3{T}(0.,0.,-1.) - T(6e-15) * vz
     testv = normalize(Vector3{T}(1.,1.,0.) + T(4e-6) * vz)
-    dist = distanceToIn(bz, testp, testv)
+    dist = distance_to_in(bz, testp, testv)
     @test isapprox(dist, 0, atol=1e-6)
 
-    dist = distanceToOut(bz, testp, testv)
+    dist = distance_to_out(bz, testp, testv)
     norm = normal(bz, testp + dist*testv)
     @test dist ≈ 200*√2
     @test norm ≈ normalize(vx+vy)
 
-    dist = distanceToOut(bz, testp, -vz)
+    dist = distance_to_out(bz, testp, -vz)
     norm = normal(bz, testp - dist * vz)
     @test isapprox(dist, 0., atol=1e-6)
     @test norm ≈ -vz
@@ -362,23 +362,23 @@ end
     # slightly inside of +x face
     testp = Point3{T}(1.,0.,0.) - T(6e-15) * vx
     testv = normalize(Vector3{T}(0.,1.,1.) + T(4e-6) * vx)
-    dist = distanceToIn(bx, testp, testv)
+    dist = distance_to_in(bx, testp, testv)
     @test dist ≈  Inf
-    dist = distanceToOut(bx, testp, testv)
+    dist = distance_to_out(bx, testp, testv)
     @test isapprox(dist, 0., atol=1e-6)
 
     # slightly inside of -x face
     testp = Point3{T}(-1.,0.,0.) + T(6e-15) * vx
     testv = normalize(Vector3{T}(0.,1.,1.) - T(4e-6) * vx)
-    dist = distanceToIn(bx, testp, testv)
+    dist = distance_to_in(bx, testp, testv)
     @test dist ≈  Inf
-    dist = distanceToOut(bx, testp, testv)
+    dist = distance_to_out(bx, testp, testv)
     @test isapprox(dist, 0., atol=1e-6)
 
     # slightly outside of +x face and exiting
     cube = Box{T}(10., 10., 10.)
     testp = Point3{T}(10., 0., 0.) + T(4.e-10) * vx
-    dist = distanceToOut(cube, testp, vx)
+    dist = distance_to_out(cube, testp, vx)
     @test isapprox(dist, 0., atol=1e-6)
     norm = normal(cube, testp + dist * vz)
     @test norm ≈ vx

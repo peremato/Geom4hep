@@ -1,7 +1,7 @@
 using Test
 using Geom4hep, LinearAlgebra
 
-include("../src/Units.jl")
+using Geom4hep.Units
 
 @testset "Polycone{$T}" for T in (Float64, Float32)
     # Polycones
@@ -22,13 +22,13 @@ include("../src/Units.jl")
     section2 = Cone{T}(rmin[2], rmax[2], rmin[3], rmax[3], (z[3] - z[2]) / 2., 0, 2π)
     section3 = Cone{T}(rmin[3], rmax[3], rmin[4], rmax[4], (z[4] - z[3]) / 2., 0, 2π)
 
-    @test getNz(poly1) == 4
-    @test getNSections(poly1) == 3
-    @test getSectionIndex(poly1, T(-0.8)) == 1
-    @test getSectionIndex(poly1, T(0.51)) == 3
-    @test getSectionIndex(poly1, T(0)) == 2
-    @test getSectionIndex(poly1, T(-2)) == -1
-    @test getSectionIndex(poly1, T(3)) == -2
+    @test nz(poly1) == 4
+    @test nsections(poly1) == 3
+    @test section_index(poly1, T(-0.8)) == 1
+    @test section_index(poly1, T(0.51)) == 3
+    @test section_index(poly1, T(0)) == 2
+    @test section_index(poly1, T(-2)) == -1
+    @test section_index(poly1, T(3)) == -2
 
     @test capacity(poly1) > 0.
     @test capacity(poly1) ≈ capacity(section1) + capacity(section2) + capacity(section3)
@@ -42,35 +42,35 @@ include("../src/Units.jl")
     @test contains(poly1, Point3{T}(0., 0., 1.8)) == false
 
     # test DistanceToIn
-    @test distanceToIn(poly1, Point3{T}(0, 0, -3), Vector3{T}(0, 0, 1)) == 2.5
-    @test distanceToIn(poly1, Point3{T}(0, 0, -3), Vector3{T}(0, 0, -1)) == Inf
-    @test distanceToIn(poly1, Point3{T}(0, 0, 3), Vector3{T}(0, 0, -1)) == 2.5
-    @test distanceToIn(poly1, Point3{T}(0, 0, 3), Vector3{T}(0, 0, 1)) == Inf
-    @test distanceToIn(poly1, Point3{T}(3, 0, 0), Vector3{T}(-1, 0, 0)) == 1.
-    @test isapprox(distanceToIn(poly1, Point3{T}(0, 0, 2 - 10*kTolerance(T)), Vector3{T}(1, 0, 0)), 0.4, atol=10*kTolerance(T))
+    @test distance_to_in(poly1, Point3{T}(0, 0, -3), Vector3{T}(0, 0, 1)) == 2.5
+    @test distance_to_in(poly1, Point3{T}(0, 0, -3), Vector3{T}(0, 0, -1)) == Inf
+    @test distance_to_in(poly1, Point3{T}(0, 0, 3), Vector3{T}(0, 0, -1)) == 2.5
+    @test distance_to_in(poly1, Point3{T}(0, 0, 3), Vector3{T}(0, 0, 1)) == Inf
+    @test distance_to_in(poly1, Point3{T}(3, 0, 0), Vector3{T}(-1, 0, 0)) == 1.
+    @test isapprox(distance_to_in(poly1, Point3{T}(0, 0, 2 - 10*tolerance(T)), Vector3{T}(1, 0, 0)), 0.4, atol=10*tolerance(T))
 
     # test SafetyToIn
-    @test safetyToIn(poly1, Point3{T}(0, 0, -3)) == 2.
-    @test safetyToIn(poly1, Point3{T}(0.5, 0, -1)) == 0.
-    @test safetyToIn(poly1, Point3{T}(0, 0, 3)) == 1.
-    @test safetyToIn(poly1, Point3{T}(2, 0, 0.1)) == 0.
+    @test safety_to_in(poly1, Point3{T}(0, 0, -3)) == 2.
+    @test safety_to_in(poly1, Point3{T}(0.5, 0, -1)) == 0.
+    @test safety_to_in(poly1, Point3{T}(0, 0, 3)) == 1.
+    @test safety_to_in(poly1, Point3{T}(2, 0, 0.1)) == 0.
 
     # test SafetyToOut
-    @test safetyToOut(poly1, Point3{T}(0, 0, 0)) == 0.5
-    @test safetyToOut(poly1, Point3{T}(0, 0, 0.5)) == 0.
-    @test isapprox(safetyToOut(poly1, Point3{T}(1.9, 0, 0)), 0.1, atol=10*kTolerance(T))
-    @test safetyToOut(poly1, Point3{T}(0.2, 0, -1)) == 0.
-    @test safetyToOut(poly1, Point3{T}(1.4, 0, 2)) == 0.
+    @test safety_to_out(poly1, Point3{T}(0, 0, 0)) == 0.5
+    @test safety_to_out(poly1, Point3{T}(0, 0, 0.5)) == 0.
+    @test isapprox(safety_to_out(poly1, Point3{T}(1.9, 0, 0)), 0.1, atol=10*tolerance(T))
+    @test safety_to_out(poly1, Point3{T}(0.2, 0, -1)) == 0.
+    @test safety_to_out(poly1, Point3{T}(1.4, 0, 2)) == 0.
 
     # test DistanceToOut
-    @test distanceToOut(poly1, Point3{T}(0, 0, 0), Vector3{T}(0, 0, 1)) == 0.5
-    @test distanceToOut(poly1, Point3{T}(0, 0, 0), Vector3{T}(0, 0, -1)) == 0.5
-    @test distanceToOut(poly1, Point3{T}(2, 0, 0), Vector3{T}(1, 0, 0)) == 0.
-    @test distanceToOut(poly1, Point3{T}(2, 0, 0), Vector3{T}(-1, 0, 0)) == 4.
+    @test distance_to_out(poly1, Point3{T}(0, 0, 0), Vector3{T}(0, 0, 1)) == 0.5
+    @test distance_to_out(poly1, Point3{T}(0, 0, 0), Vector3{T}(0, 0, -1)) == 0.5
+    @test distance_to_out(poly1, Point3{T}(2, 0, 0), Vector3{T}(1, 0, 0)) == 0.
+    @test distance_to_out(poly1, Point3{T}(2, 0, 0), Vector3{T}(-1, 0, 0)) == 4.
 
-    @test distanceToOut(poly1, Point3{T}(1, 0, 2), Vector3{T}(0, 0, 1)) == 0.
-    @test distanceToOut(poly1, Point3{T}(0.5, 0, -1), Vector3{T}(0, 0, -1)) == 0.
-    @test distanceToOut(poly1, Point3{T}(0.5, 0, -1), Vector3{T}(0, 0, 1)) == 3.
+    @test distance_to_out(poly1, Point3{T}(1, 0, 2), Vector3{T}(0, 0, 1)) == 0.
+    @test distance_to_out(poly1, Point3{T}(0.5, 0, -1), Vector3{T}(0, 0, -1)) == 0.
+    @test distance_to_out(poly1, Point3{T}(0.5, 0, -1), Vector3{T}(0, 0, 1)) == 3.
 
     # Check Cubic volume
     @test capacity(simple) ≈ T(π) * (70 * 70 * 10 + 10 * (70 * 70 + 80 * 80 + 70 * 80) / 3.)
@@ -123,39 +123,39 @@ include("../src/Units.jl")
     @test inside(simple, ponmzsidey) == kInside
 
     # SafetyToOut(P)
-    @test safetyToOut(simple, Point3{T}(5, 5, -5)) ≈ 5.
-    @test safetyToOut(simple, Point3{T}(5, 5, 7)) ≈ 3.
-    @test safetyToOut(simple, Point3{T}(69, 0, -5)) ≈ 1.
-    @test safetyToOut(simple, Point3{T}(-3, -3, 8)) ≈ 2.
+    @test safety_to_out(simple, Point3{T}(5, 5, -5)) ≈ 5.
+    @test safety_to_out(simple, Point3{T}(5, 5, 7)) ≈ 3.
+    @test safety_to_out(simple, Point3{T}(69, 0, -5)) ≈ 1.
+    @test safety_to_out(simple, Point3{T}(-3, -3, 8)) ≈ 2.
 
     # DistanceToOut(P,V)
-    @test distanceToOut(simple, pzero, vx) ≈ 70.
-    @test distanceToOut(simple, pzero, vmx) ≈ 70.
-    @test distanceToOut(simple, pzero, vy) ≈ 70.
-    @test distanceToOut(simple, pzero, vmy) ≈ 70.
-    @test distanceToOut(simple, pzero, vz) ≈ 10.
-    @test distanceToOut(simple, Point3{T}(70, 0, -10), vx) ≈ 0.
-    @test distanceToOut(simple, Point3{T}(-70, 0, -1), vmx) ≈ 0.
-    @test distanceToOut(simple, Point3{T}(0, 70, -10), vy) ≈ 0.
-    @test distanceToOut(simple, Point3{T}(0, -70, -1), vmy) ≈ 0.
+    @test distance_to_out(simple, pzero, vx) ≈ 70.
+    @test distance_to_out(simple, pzero, vmx) ≈ 70.
+    @test distance_to_out(simple, pzero, vy) ≈ 70.
+    @test distance_to_out(simple, pzero, vmy) ≈ 70.
+    @test distance_to_out(simple, pzero, vz) ≈ 10.
+    @test distance_to_out(simple, Point3{T}(70, 0, -10), vx) ≈ 0.
+    @test distance_to_out(simple, Point3{T}(-70, 0, -1), vmx) ≈ 0.
+    @test distance_to_out(simple, Point3{T}(0, 70, -10), vy) ≈ 0.
+    @test distance_to_out(simple, Point3{T}(0, -70, -1), vmy) ≈ 0.
 
     # SafetyToIn(P)
-    @test safetyToIn(simple, pbigx) ≈ T(21.213203435596423)
-    @test safetyToIn(simple, pbigmx) ≈ T(21.213203435596423)
-    @test safetyToIn(simple, pbigy) ≈ T(21.213203435596423)
-    @test safetyToIn(simple, pbigmy) ≈ T(21.213203435596423)
-    @test safetyToIn(simple, pbigz) ≈ 90.
-    @test safetyToIn(simple, pbigmz) ≈ 90.
+    @test safety_to_in(simple, pbigx) ≈ T(21.213203435596423)
+    @test safety_to_in(simple, pbigmx) ≈ T(21.213203435596423)
+    @test safety_to_in(simple, pbigy) ≈ T(21.213203435596423)
+    @test safety_to_in(simple, pbigmy) ≈ T(21.213203435596423)
+    @test safety_to_in(simple, pbigz) ≈ 90.
+    @test safety_to_in(simple, pbigmz) ≈ 90.
 
     # DistanceToIn(P,V)
-    @test distanceToIn(simple, Point3{T}(100, 0, -1), vmx) ≈ 30.
-    @test distanceToIn(simple, Point3{T}(-100, 0, -1), vx) ≈ 30.
-    @test distanceToIn(simple, Point3{T}(0, 100, -5), vmy) ≈ 30.
-    @test distanceToIn(simple, Point3{T}(0, -100, -5), vy) ≈ 30.
-    @test distanceToIn(simple, pbigz, vmz) ≈ 90.
-    @test distanceToIn(simple, pbigmz, vz) ≈ 90.
-    @test distanceToIn(simple, pbigx, vxy) == Inf
-    @test distanceToIn(simple, pbigmx, vmxy) == Inf
+    @test distance_to_in(simple, Point3{T}(100, 0, -1), vmx) ≈ 30.
+    @test distance_to_in(simple, Point3{T}(-100, 0, -1), vx) ≈ 30.
+    @test distance_to_in(simple, Point3{T}(0, 100, -5), vmy) ≈ 30.
+    @test distance_to_in(simple, Point3{T}(0, -100, -5), vy) ≈ 30.
+    @test distance_to_in(simple, pbigz, vmz) ≈ 90.
+    @test distance_to_in(simple, pbigmz, vz) ≈ 90.
+    @test distance_to_in(simple, pbigx, vxy) == Inf
+    @test distance_to_in(simple, pbigmx, vmxy) == Inf
 
     # Extent
     low, high = extent(simple)

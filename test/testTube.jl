@@ -77,58 +77,58 @@
     @test normal(t6, Point3{T}(0,0,0)) ≈ Vector3{T}(1/√2, 1/√2, 0)
 
     # SafetyToOut(P)
-    @test safetyToOut(t1, pzero) ≈ 50
+    @test safety_to_out(t1, pzero) ≈ 50
 
     # DistanceToOut(P,V)
-    dist = distanceToOut(t1, pzero, vx)
+    dist = distance_to_out(t1, pzero, vx)
     @test dist ≈ 50 && normal(t1, pzero + dist * vx) ≈ vx
 
-    dist = distanceToOut(t1, pzero, vmx)
+    dist = distance_to_out(t1, pzero, vmx)
     @test dist ≈ 50 && normal(t1, pzero + dist * vmx) ≈ vmx
 
-    dist = distanceToOut(t1, pzero, vy)
+    dist = distance_to_out(t1, pzero, vy)
     @test dist ≈ 50 && normal(t1, pzero + dist * vy) ≈ vy
 
-    dist = distanceToOut(t1, pzero, vmy)
+    dist = distance_to_out(t1, pzero, vmy)
     @test dist ≈ 50 && normal(t1, pzero + dist * vmy) ≈ vmy
 
-    dist = distanceToOut(t1, pzero, vz)
+    dist = distance_to_out(t1, pzero, vz)
     @test dist ≈ 50 && normal(t1, pzero + dist * vz) ≈ vz
 
-    dist = distanceToOut(t1, pzero, vmz)
+    dist = distance_to_out(t1, pzero, vmz)
     @test dist ≈ 50 && normal(t1, pzero + dist * vmz) ≈ vmz
 
-    dist = distanceToOut(t1, pzero, vxy)
+    dist = distance_to_out(t1, pzero, vxy)
     @test dist ≈ 50 && normal(t1, pzero + dist * vxy) ≈ vxy
 
-    @test isapprox(distanceToOut(t3, Point3{T}(0, 10, 0), vx), 0., atol=10*eps(T))
-    @test distanceToOut(t3, Point3{T}(-0.5, 10, 0), vx) ≈ 0.5
-    @test distanceToOut(t3, Point3{T}(-0.5, 9, 0), vx) ≈ 0.5
-    @test distanceToOut(t3, Point3{T}(-5, 9.5, 0), vx) ≈ 5.
-    @test distanceToOut(t3, Point3{T}(-5, 9.5, 0), vmx) ≈ 44.089204515860
-    @test distanceToOut(t3, Point3{T}(-5, 9, 0), vxmy) ≈ 7.0710678
+    @test isapprox(distance_to_out(t3, Point3{T}(0, 10, 0), vx), 0., atol=10*eps(T))
+    @test distance_to_out(t3, Point3{T}(-0.5, 10, 0), vx) ≈ 0.5
+    @test distance_to_out(t3, Point3{T}(-0.5, 9, 0), vx) ≈ 0.5
+    @test distance_to_out(t3, Point3{T}(-5, 9.5, 0), vx) ≈ 5.
+    @test distance_to_out(t3, Point3{T}(-5, 9.5, 0), vmx) ≈ 44.089204515860
+    @test distance_to_out(t3, Point3{T}(-5, 9, 0), vxmy) ≈ 7.0710678
 
     # SafetyToIn(P)
-    @test safetyToIn(t1, pbigx) ≈ 50
-    @test safetyToIn(t1, pbigmx) ≈ 50
-    @test safetyToIn(t1, pbigy) ≈ 50
-    @test safetyToIn(t1, pbigmy) ≈ 50
-    @test safetyToIn(t1, pbigz) ≈ 50
-    @test safetyToIn(t1, pbigmz) ≈ 50
+    @test safety_to_in(t1, pbigx) ≈ 50
+    @test safety_to_in(t1, pbigmx) ≈ 50
+    @test safety_to_in(t1, pbigy) ≈ 50
+    @test safety_to_in(t1, pbigmy) ≈ 50
+    @test safety_to_in(t1, pbigz) ≈ 50
+    @test safety_to_in(t1, pbigmz) ≈ 50
 
     # DistanceToIn(P,V)
-    @test distanceToIn(t1, pbigx, vmx) ≈ 50
-    @test distanceToIn(t1, pbigmx, vx) ≈ 50
-    @test distanceToIn(t1, pbigy, vmy) ≈ 50
-    @test distanceToIn(t1, pbigmy, vy) ≈ 50
-    @test distanceToIn(t1, pbigz, vmz) ≈ 50
-    @test distanceToIn(t1, pbigmz, vz) ≈ 50
-    @test distanceToIn(t1, pbigx, vxy) == Inf
+    @test distance_to_in(t1, pbigx, vmx) ≈ 50
+    @test distance_to_in(t1, pbigmx, vx) ≈ 50
+    @test distance_to_in(t1, pbigy, vmy) ≈ 50
+    @test distance_to_in(t1, pbigmy, vy) ≈ 50
+    @test distance_to_in(t1, pbigz, vmz) ≈ 50
+    @test distance_to_in(t1, pbigmz, vz) ≈ 50
+    @test distance_to_in(t1, pbigx, vxy) == Inf
 
-    @test distanceToIn(t1a, pbigz, vmz) ≈ 50
-    @test distanceToOut(t2, Point3{T}(45.5, 0, 0), vx) ≈ 4.5
-    @test distanceToOut(t2, Point3{T}(45.5, 0, 0), vmx) ≈ 0.5
-    @test distanceToOut(t2, Point3{T}(49.5, 0, 0), vmx) ≈ 4.5
-    @test distanceToOut(t2, Point3{T}(49.5, 0, 0), vx) ≈ 0.5
+    @test distance_to_in(t1a, pbigz, vmz) ≈ 50
+    @test distance_to_out(t2, Point3{T}(45.5, 0, 0), vx) ≈ 4.5
+    @test distance_to_out(t2, Point3{T}(45.5, 0, 0), vmx) ≈ 0.5
+    @test distance_to_out(t2, Point3{T}(49.5, 0, 0), vmx) ≈ 4.5
+    @test distance_to_out(t2, Point3{T}(49.5, 0, 0), vx) ≈ 0.5
 
 end

@@ -71,20 +71,20 @@ function Base.show(io::IO, shape::BooleanIntersection{T}) where {T}
 end
 
 
-function GeometryBasics.mesh(shape::BooleanUnion{T}) where {T}
+function GeometryBasics.mesh(shape::BooleanUnion{T}; facets::Integer=64) where {T}
     (; left, right, transformation) = shape
-    rmesh = mesh(right)
-    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+    rmesh = mesh(right; facets)
+    merge([mesh(left; facets), Mesh(map(c -> _gbpoint(Point3{T}(c) * transformation), coordinates(rmesh)), faces(rmesh))])
 end
-function GeometryBasics.mesh(shape::BooleanSubtraction{T}) where {T}
+function GeometryBasics.mesh(shape::BooleanSubtraction{T}; facets::Integer=64) where {T}
     (; left, right, transformation) = shape
-    rmesh = mesh(right)
-    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+    rmesh = mesh(right; facets)
+    merge([mesh(left; facets), Mesh(map(c -> _gbpoint(Point3{T}(c) * transformation), coordinates(rmesh)), faces(rmesh))])
 end
-function GeometryBasics.mesh(shape::BooleanIntersection{T}) where {T}
+function GeometryBasics.mesh(shape::BooleanIntersection{T}; facets::Integer=64) where {T}
     (; left, right, transformation) = shape
-    rmesh = mesh(right)
-    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+    rmesh = mesh(right; facets)
+    merge([mesh(left; facets), Mesh(map(c -> _gbpoint(Point3{T}(c) * transformation), coordinates(rmesh)), faces(rmesh))])
 end
 
 #---Basic functions---------------------------------------------------------------------------------
@@ -191,27 +191,76 @@ function inside(shape::BooleanSubtraction{T}, point::Point3{T})::Int64  where {T
     end
 end
 
-function safetyToOut(shape::BooleanUnion{T}, point::Point3{T})::T where {T}
+#---Normals------------------------------------------------------------------------------------------
+_unit_or_zero(n::Vector3{T}) where T = n ⋅ n > 0 ? normalize(n) : zero(Vector3{T})
+
+function normal(shape::BooleanUnion{T}, point::Point3{T}) where {T}
+    (; left, right, transformation) = shape
+    lpoint = transformation * point
+    posA, posB = inside(left, point), inside(right, lpoint)
+    if posA == kSurface && posB == kOutside
+        return normal(left, point)
+    elseif posB == kSurface && posA == kOutside
+        return normal(right, lpoint) * transformation
+    elseif posA == kSurface && posB == kSurface      # overlapping faces (touching faces give zero)
+        return _unit_or_zero(normal(left, point) + normal(right, lpoint) * transformation)
+    end
+    return zero(Vector3{T})
+end
+
+function normal(shape::BooleanSubtraction{T}, point::Point3{T}) where {T}
+    (; left, right, transformation) = shape
+    lpoint = transformation * point
+    posA, posB = inside(left, point), inside(right, lpoint)
+    if posA == kSurface && posB == kOutside
+        return normal(left, point)
+    elseif posB == kSurface && posA == kInside
+        return -(normal(right, lpoint) * transformation)
+    elseif posA == kSurface && posB == kSurface      # edge where the cut meets the outer surface
+        return _unit_or_zero(normal(left, point) - normal(right, lpoint) * transformation)
+    end
+    return zero(Vector3{T})
+end
+
+function normal(shape::BooleanIntersection{T}, point::Point3{T}) where {T}
+    (; left, right, transformation) = shape
+    lpoint = transformation * point
+    posA, posB = inside(left, point), inside(right, lpoint)
+    if posA == kSurface && posB == kInside
+        return normal(left, point)
+    elseif posB == kSurface && posA == kInside
+        return normal(right, lpoint) * transformation
+    elseif posA == kSurface && posB == kSurface
+        return _unit_or_zero(normal(left, point) + normal(right, lpoint) * transformation)
+    end
+    return zero(Vector3{T})
+end
+
+#---Capacity and surface (no closed form: estimated by sampling, as in Geant4)------------------------
+capacity(shape::BooleanShape; npoints::Integer=1_000_000) = estimate_capacity(shape; npoints)
+surface(shape::BooleanShape; npoints::Integer=1_000_000) = estimate_surface(shape; npoints)
+
+function safety_to_out(shape::BooleanUnion{T}, point::Point3{T})::T where {T}
     return 0
 end
-function safetyToOut(shape::BooleanSubtraction{T}, point::Point3{T})::T where {T}
+function safety_to_out(shape::BooleanSubtraction{T}, point::Point3{T})::T where {T}
     return 0
 end
-function safetyToOut(shape::BooleanIntersection{T}, point::Point3{T})::T where {T}
+function safety_to_out(shape::BooleanIntersection{T}, point::Point3{T})::T where {T}
     return 0
 end
 
-function safetyToIn(shape::BooleanUnion{T}, point::Point3{T})::T where {T}
+function safety_to_in(shape::BooleanUnion{T}, point::Point3{T})::T where {T}
     return 0
 end
-function safetyToIn(shape::BooleanSubtraction{T}, point::Point3{T})::T where {T}
+function safety_to_in(shape::BooleanSubtraction{T}, point::Point3{T})::T where {T}
     return 0
 end
-function safetyToIn(shape::BooleanIntersection{T}, point::Point3{T})::T where {T}
+function safety_to_in(shape::BooleanIntersection{T}, point::Point3{T})::T where {T}
     return 0
 end
 
-function distanceToOut(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+function distance_to_out(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
 
     invdir=inv.(dir)
     course_intersects_left = intersect(shape.left_aabb, point, dir, invdir)
@@ -219,23 +268,23 @@ function distanceToOut(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T}
 
     (; left, right, transformation) = shape
     # If it intersects one BB but not the other just use that one 
-    course_intersects_left && !course_intersects_right && return distanceToOut(left, point, dir)
-    course_intersects_right && !course_intersects_left && return distanceToOut(right, transformation * point, transformation * dir)
+    course_intersects_left && !course_intersects_right && return distance_to_out(left, point, dir)
+    course_intersects_right && !course_intersects_left && return distance_to_out(right, transformation * point, transformation * dir)
 
     dist = T(0)
     positionA = inside(left, point)
     if positionA != kOutside  # point inside A
         while(true)
-            distA = distanceToOut(left, point, dir)
-            dist += (distA > 0 && distA < Inf) ? distA : 0
-            dist += kPushTolerance(T)
+            distA = distance_to_out(left, point, dir)
+            dist += (distA > 0 && distA < T(Inf)) ? distA : 0
+            dist += push_tolerance(T)
             npoint = point + dist * dir
             lpoint = transformation * npoint
             if inside(right, lpoint) != kOutside # B could be overlapping with A -- and/or connecting A to another part of A
                 ldir = transformation * dir
-                distB = distanceToOut(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0
-                dist += kPushTolerance(T)
+                distB = distance_to_out(right, lpoint, ldir)
+                dist += (distB > 0 && distB < T(Inf)) ? distB : 0
+                dist += push_tolerance(T)
                 npoint = point + dist * dir
                 if inside(left, npoint) == kOutside
                     break
@@ -244,22 +293,22 @@ function distanceToOut(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T}
                 break
             end
         end
-        return dist - kPushTolerance(T)
+        return dist - push_tolerance(T)
     else
         lpoint = transformation * point
         positionB = inside(right, lpoint)
         if positionB != kOutside  # point inside B
             ldir = transformation * dir
             while(true)
-                distB = distanceToOut(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0
-                dist += kPushTolerance(T) # Give a push
+                distB = distance_to_out(right, lpoint, ldir)
+                dist += (distB > 0 && distB < T(Inf)) ? distB : 0
+                dist += push_tolerance(T) # Give a push
                 npoint = point + dist * dir
                 if inside(left, npoint) != kOutside # A could be overlapping with B -- and/or connecting B to another part of B
                     ldir = transformation * dir
-                    distA = distanceToOut(left, npoint, dir)
-                    dist += (distA > 0 && distA < Inf) ? distA : 0
-                    dist += kPushTolerance(T)
+                    distA = distance_to_out(left, npoint, dir)
+                    dist += (distA > 0 && distA < T(Inf)) ? distA : 0
+                    dist += push_tolerance(T)
                     npoint = point + dist * dir
                     lpoint = transformation * npoint
                     if inside(right, lpoint) == kOutside
@@ -269,28 +318,28 @@ function distanceToOut(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T}
                     break
                 end
             end
-            return dist - kPushTolerance(T)
+            return dist - push_tolerance(T)
         else
             return T(-1)
         end
     end 
 end
 
-function distanceToOut(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+function distance_to_out(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
     (; left, right, transformation) = shape
-    distA = distanceToOut(left, point, dir)
-    distB = distanceToOut(right, transformation * point, transformation * dir)
+    distA = distance_to_out(left, point, dir)
+    distB = distance_to_out(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToOut(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+function distance_to_out(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
     (; left, right, transformation) = shape
-    distA = distanceToOut(left, point, dir)
-    distB = distanceToIn(right, transformation * point, transformation * dir)
+    distA = distance_to_out(left, point, dir)
+    distB = distance_to_in(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToIn(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+function distance_to_in(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
     invdir=inv.(dir)
     course_intersects_left = intersect(shape.left_aabb, point, dir, invdir)
     course_intersects_right = intersect(shape.right_aabb, point, dir, invdir)
@@ -301,16 +350,16 @@ function distanceToIn(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T})
     (; left, right, transformation) = shape
     
     # If it intersects one BB but not the other just use that one 
-    course_intersects_left && !course_intersects_right && return distanceToIn(left, point, dir)
-    course_intersects_right && !course_intersects_left && return distanceToIn(right, transformation * point, transformation * dir)
+    course_intersects_left && !course_intersects_right && return distance_to_in(left, point, dir)
+    course_intersects_right && !course_intersects_left && return distance_to_in(right, transformation * point, transformation * dir)
     
     # If it gets here we have to calculate the distance the complicated way
-    distA = distanceToIn(left, point, dir)
-    distB = distanceToIn(right, transformation * point, transformation * dir)
+    distA = distance_to_in(left, point, dir)
+    distB = distance_to_in(right, transformation * point, transformation * dir)
     return min(distA, distB)
 end
 
-function distanceToIn(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+function distance_to_in(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
     invdir=inv.(dir)
     course_intersects_left = intersect(shape.left_aabb, point, dir, invdir)
     course_intersects_right = intersect(shape.right_aabb, point, dir, invdir)
@@ -337,13 +386,13 @@ function distanceToIn(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vect
     while true
         d1 = d2 = 0
         if !inLeft
-            d1 = distanceToIn(left, npoint, dir)
-            d1 = max(d1, kTolerance(T))
+            d1 = distance_to_in(left, npoint, dir)
+            d1 = max(d1, tolerance(T))
             d1 == T(Inf) && return T(Inf)
         end
         if !inRight
-            d2 = distanceToIn(right, lpoint, ldir)
-            d2 = max(d2, kTolerance(T))
+            d2 = distance_to_in(right, lpoint, ldir)
+            d2 = max(d2, tolerance(T))
             d2 == T(Inf) && return T(Inf)
         end
         if d1 > d2
@@ -353,7 +402,7 @@ function distanceToIn(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vect
             npoint += d1 * dir
             lpoint = transformation * npoint
             # check if propagated point is inside right shape, check is done with a little push
-            inRight = inside(right, lpoint + kTolerance(T) * ldir) == kInside
+            inRight = inside(right, lpoint + tolerance(T) * ldir) == kInside
             inRight && return dist
             # here inleft=true, inright=false
         else
@@ -363,14 +412,14 @@ function distanceToIn(shape::BooleanIntersection{T}, point::Point3{T}, dir::Vect
             # check if propagated point is inside left shape, check is done with a little push
             npoint += d2 * dir
             lpoint = transformation * npoint
-            inLeft = inside(left, npoint + kTolerance(T) * dir) == kInside
+            inLeft = inside(left, npoint + tolerance(T) * dir) == kInside
             inLeft && return dist
         end
     end
     return dist
 end
 
-function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
+function distance_to_in(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T})::T where {T}
     
 
     invdir=inv.(dir)
@@ -383,7 +432,7 @@ function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vecto
     (; left, right, transformation) = shape
 
     # If it doesn't intersect the right we can us just the left distance function 
-    !course_intersects_right && return distanceToIn(left, point, dir)
+    !course_intersects_right && return distance_to_in(left, point, dir)
 
     # If it gets here we have to calculate the distance the complicated way
     lpoint = transformation * point
@@ -392,33 +441,35 @@ function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vecto
     inRight = positionB == kInside
 
     npoint = point
+    offset = T(0)   # distance from point to the current probe point npoint
     dist = T(0)
 
     while true
         if inRight
             # propagate to outside of '- / RightShape'
-            d1 = distanceToOut(right, lpoint, ldir)
-            dist += (d1 >= 0 && d1 < Inf) ? d1 + kPushTolerance(T) : 0
-            npoint = point + (dist + kPushTolerance(T)) * dir
+            d1 = distance_to_out(right, lpoint, ldir)
+            dist += (d1 >= 0 && d1 < T(Inf)) ? d1 + push_tolerance(T) : 0
+            offset = dist + push_tolerance(T)
+            npoint = point + offset * dir
             lpoint = transformation * npoint
             # now master outside 'B'; check if inside 'A'
-            inside(left, npoint) == kInside && distanceToOut(left, npoint, dir) > kPushTolerance(T) && return dist
+            inside(left, npoint) == kInside && distance_to_out(left, npoint, dir) > push_tolerance(T) && return dist
         end
 
         # if outside of both we do a max operation master outside '-' and outside '+' ;  find distances to both
-        d2 = distanceToIn(left, npoint, dir)
+        d2 = distance_to_in(left, npoint, dir)
         d2 = max(d2, 0)
         d2 == T(Inf) && return T(Inf)
 
-        d1 = distanceToIn(right, lpoint, ldir)
-        if d2 < d1 - kTolerance(T)
-          dist += d2 + kPushTolerance(T)
-          return dist
+        d1 = distance_to_in(right, lpoint, ldir)
+        if d2 < d1 - tolerance(T)
+          return offset + d2   # d2 is measured from the probe point, not from the original point
         end
 
         #   propagate to '-'
-        dist += (d1 >= 0 && d1 < Inf) ? d1 : 0
-        npoint = point + (dist + kPushTolerance(T)) * dir
+        dist += (d1 >= 0 && d1 < T(Inf)) ? d1 : 0
+        offset = dist + push_tolerance(T)
+        npoint = point + offset * dir
         lpoint = transformation * npoint
         inRight = true
     end

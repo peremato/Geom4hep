@@ -1,5 +1,5 @@
 using CUDA, Adapt
-export fillCuGeometry, CuNavigatorState, CuGeoModel
+export fill_cu_geometry, CuNavigatorState, CuGeoModel
 
 struct CuVolume{T<:AbstractFloat}
     shapeIdx::UInt32
@@ -46,10 +46,10 @@ function Base.empty!(model::CuGeoModel) where T<:AbstractFloat
     end
 end
 
-getShape(model::CuGeoModel, vol::CuVolume{T}) where T<:AbstractFloat = model.shapes[vol.shapeIdx]
-contains(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T}) where T<:AbstractFloat = inside(getShape(model, vol), point) == kInside
-contains(model::CuGeoModel, pvol::CuPlacedVolume, point::Point3{T}) where T<:AbstractFloat = inside(getShape(model, model.volumes[pvol.volume]), pvol.transformation * point) == kInside
-distanceToIn(model::CuGeoModel, pvol::CuPlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distanceToIn(getShape(model, model.volumes[pvol.volume]), pvol.transformation * p, pvol.transformation * d)
+get_shape(model::CuGeoModel, vol::CuVolume{T}) where T<:AbstractFloat = model.shapes[vol.shapeIdx]
+contains(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T}) where T<:AbstractFloat = inside(get_shape(model, vol), point) == kInside
+contains(model::CuGeoModel, pvol::CuPlacedVolume, point::Point3{T}) where T<:AbstractFloat = inside(get_shape(model, model.volumes[pvol.volume]), pvol.transformation * point) == kInside
+distance_to_in(model::CuGeoModel, pvol::CuPlacedVolume{T}, p::Point3{T}, d::Vector3{T}) where T<:AbstractFloat = distance_to_in(get_shape(model, model.volumes[pvol.volume]), pvol.transformation * p, pvol.transformation * d)
 
 mutable struct CuNavigatorState{T<:AbstractFloat}
     topVolume::UInt32
@@ -71,7 +71,7 @@ end
     state.tolocal = one(Transformation3D{T})
 end
 
-@inline function pushIn!(state::CuNavigatorState{T}, pvol::CuPlacedVolume{T}) where T<:AbstractFloat
+@inline function push_in!(state::CuNavigatorState{T}, pvol::CuPlacedVolume{T}) where T<:AbstractFloat
     state.currentVol = pvol.volume
     state.currentDepth += 1
     state.volstack = setindex(state.volstack, pvol.idx, state.currentDepth)
@@ -79,7 +79,7 @@ end
     nothing
 end
 
-@inline function popOut!(state::CuNavigatorState{T}, model::CuGeoModel) where T<:AbstractFloat
+@inline function pop_out!(state::CuNavigatorState{T}, model::CuGeoModel) where T<:AbstractFloat
     if state.currentDepth > 0
         state.currentDepth -= 1
         #---Start from the begining to get the current volume (mother) and transformation
@@ -95,16 +95,16 @@ end
     nothing
 end
 
-@inline function collectDaughters!(model::CuGeoModel, state::CuNavigatorState{T}, vol::CuVolume, point::Point3{T}) where T<:AbstractFloat
+@inline function collect_daughters!(model::CuGeoModel, state::CuNavigatorState{T}, vol::CuVolume, point::Point3{T}) where T<:AbstractFloat
     isinside = true
     while isinside
         isinside = false
         for d in 1:vol.daughterLen
             pvol = model.placedvolumes[vol.daughterOff + d]
             if contains(model, pvol, point)
-                pushIn!(state, pvol)
+                push_in!(state, pvol)
                 # emulation of recursion
-                # collectDaughters!(model, state, model.volumes[pvol.volume], pvol.transformation * point)
+                # collect_daughters!(model, state, model.volumes[pvol.volume], pvol.transformation * point)
                 isinside = true
                 vol   = model.volumes[pvol.volume]
                 point = pvol.transformation * point
@@ -114,26 +114,26 @@ end
     end
 end
 
-@inline function locateGlobalPoint!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}) where T<:AbstractFloat
+@inline function locate_global_point!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}) where T<:AbstractFloat
     state.currentVol = state.topVolume
     state.currentDepth = 0
     state.tolocal = one(Transformation3D{T})
     vol = model.volumes[state.currentVol]
     if contains(model, vol, gpoint)
-        collectDaughters!(model, state, vol, gpoint)
+        collect_daughters!(model, state, vol, gpoint)
         return true
     end
     return false
 end
 
-function getClosestDaughter(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T}, dir::Vector3{T}, step_limit::T ) where T<:AbstractFloat
+function closest_daughter(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T}, dir::Vector3{T}, step_limit::T ) where T<:AbstractFloat
     step = step_limit
     candidate = 0
     #---Linear loop over all daughters
     for d in 1:vol.daughterLen
         pvol = model.placedvolumes[vol.daughterOff + d]
         #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
-        dist = distanceToIn(model, pvol, point, dir)
+        dist = distance_to_in(model, pvol, point, dir)
         if dist > 0. &&dist != Inf && dist < step 
             step = dist
             candidate = d
@@ -143,20 +143,20 @@ function getClosestDaughter(model::CuGeoModel, vol::CuVolume{T}, point::Point3{T
 end
 
 
-@inline function computeStep!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T)::T where T<:AbstractFloat
+@inline function compute_step!(model::CuGeoModel, state::CuNavigatorState{T}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T)::T where T<:AbstractFloat
     lpoint, ldir = state.tolocal * gpoint, state.tolocal * gdir
     volume = model.volumes[state.currentVol]
 
-    step, idx = getClosestDaughter(model, volume, lpoint, ldir, step_limit)
+    step, idx = closest_daughter(model, volume, lpoint, ldir, step_limit)
 
     #---If didn't hit any daughter return distance to out
     if idx == 0
-        step = distanceToOut(getShape(model, volume), lpoint, ldir)
+        step = distance_to_out(get_shape(model, volume), lpoint, ldir)
         if step > 0
-            popOut!(state, model)
+            pop_out!(state, model)
         elseif step == 0
             if state.currentDepth > 0
-                popOut!(state, model)
+                pop_out!(state, model)
             else
                 step = T(-1)
             end
@@ -164,9 +164,9 @@ end
     end
     #---We hit a daughter, push it into the stack
     if idx != 0
-        step += kTolerance(T) # to ensure that do not stay in the surface of the daughter
+        step += tolerance(T) # to ensure that do not stay in the surface of the daughter
         pvol = model.placedvolumes[volume.daughterOff + idx]
-        pushIn!(state, pvol)
+        push_in!(state, pvol)
     end
     return step
 end
@@ -174,7 +174,7 @@ end
 #-----------------------------------------------------------------------------------------------------------------------
 #---Transform the geometry model to Cuda model
 #-----------------------------------------------------------------------------------------------------------------------
-function pushObject(indexes::Dict{UInt64, UInt32}, vector::Vector{CUOBJ}, obj::OBJ)::UInt32 where {CUOBJ,OBJ}
+function push_object(indexes::Dict{UInt64, UInt32}, vector::Vector{CUOBJ}, obj::OBJ)::UInt32 where {CUOBJ,OBJ}
     id = objectid(obj)
     if !haskey(indexes, id)
         push!(vector, CUOBJ == OBJ || typeof(CUOBJ) == Union ? obj : CUOBJ(obj))
@@ -183,19 +183,19 @@ function pushObject(indexes::Dict{UInt64, UInt32}, vector::Vector{CUOBJ}, obj::O
     indexes[id]
 end
 
-function pushVolume!(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volume{T}) where T <: AbstractFloat
+function push_volume!(indexes::Dict{UInt64, UInt32}, model::CuGeoModel, vol::Volume{T}) where T <: AbstractFloat
     (; volumes, materials, placedvolumes, shapes ) = model
     id = objectid(vol)
     if !haskey(indexes, id)
         volIdx = lastindex(model.volumes) + 1
         resize!(model.volumes, volIdx) 
-        shapeIdx = pushObject(indexes, shapes, vol.shape)
-        materialIdx = pushObject(indexes, materials, vol.material)
+        shapeIdx = push_object(indexes, shapes, vol.shape)
+        materialIdx = push_object(indexes, materials, vol.material)
         daughterOff = lastindex(placedvolumes)
         daughterLen = length(vol.daughters)
         resize!(model.placedvolumes, daughterOff + daughterLen)
         for d in 1:daughterLen
-            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(d, vol.daughters[d].transformation, pushVolume!(indexes, model, vol.daughters[d].volume ))
+            model.placedvolumes[d + daughterOff] = CuPlacedVolume{T}(d, vol.daughters[d].transformation, push_volume!(indexes, model, vol.daughters[d].volume ))
         end
         model.volumes[volIdx] = CuVolume{T}(shapeIdx, materialIdx, daughterOff, daughterLen)    
         indexes[id] = volIdx
@@ -209,9 +209,9 @@ else
     to_gpu(x::AbstractArray) = x
 end
 
-function fillCuGeometry(vol::Volume{T}) where T<:AbstractFloat
+function fill_cu_geometry(vol::Volume{T}) where T<:AbstractFloat
     indexes = Dict{UInt64, UInt32}()
     model = CuGeoModel{T}()
-    pushVolume!(indexes, model, vol)
+    push_volume!(indexes, model, vol)
     return model
 end

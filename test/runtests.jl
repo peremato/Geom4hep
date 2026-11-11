@@ -9,5 +9,10 @@ using Geom4hep, LinearAlgebra
     include("testCone.jl")
     include("testPolycone.jl")
     include("testTrap.jl")
+    include("testCutTube.jl")
+    include("testBoolean.jl")
+    include("testVolume.jl")
+    include("testNormals.jl")
+    include("testNavigation.jl")
+    include("testGDML.jl")
 end
-

@@ -1,3 +1,5 @@
+# NOTE: CUDA-only prototype based on src/CuGeom.jl, which is no longer loaded by the package.
+#       It will be replaced by a backend-agnostic KernelAbstractions implementation.
 using Geom4hep
 using CUDA
 using BenchmarkTools, Test, Printf
@@ -9,7 +11,7 @@ const N = 1024*10
 function cpu_d2out!(dist, shape, points, dirs)
     N = length(points)
     for i in 1:N
-        @inbounds dist[i] = distanceToOut(shape, points[i], dirs[i])
+        @inbounds dist[i] = distance_to_out(shape, points[i], dirs[i])
     end
     return
 end
@@ -20,7 +22,7 @@ function gpu_d2out!(dist, shape, points, dirs)
     index = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     stride = blockDim().x * gridDim().x
     for i = index:stride:N
-        @inbounds dist[i] = distanceToOut(shape, points[i], dirs[i])
+        @inbounds dist[i] = distance_to_out(shape, points[i], dirs[i])
     end
     return
 end
@@ -41,8 +43,8 @@ for T in (Float32, Float64)
     dirs = Vector{Vector3{T}}(undef, N)
 
     for shape in (box, tube, cone)
-        fillPoints!(points, shape, kInside)
-        fillDirections!(dirs, shape, points)
+        fill_points!(points, shape, kInside)
+        fill_directions!(dirs, shape, points)
         dist = fill(zero(T), N)
         cpu_d2out!(dist, shape, points, dirs)
 

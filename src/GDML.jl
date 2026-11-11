@@ -1,7 +1,31 @@
 using LightXML, Printf
-name = LightXML.name
+const name = LightXML.name
 
-include("Units.jl")
+#--- Unit lookup used when reading GDML (avoids eval of attribute strings)
+using .Units: mm, cm, m, km, um, nm, rad, radian, mrad, deg, degree
+const _length_units = Dict{String,Float64}("mm" => mm, "cm" => cm, "m" => m, "km" => km,
+                                           "um" => um, "micrometer" => um, "nm" => nm)
+const _angle_units  = Dict{String,Float64}("rad" => rad, "radian" => radian, "mrad" => mrad,
+                                           "deg" => deg, "degree" => degree)
+
+function _parse_unit(table::Dict{String,Float64}, unit::AbstractString)
+    haskey(table, unit) || throw(ArgumentError("Unknown or unsupported unit \"$unit\""))
+    table[unit]
+end
+
+"""
+    _unit(attrs, key, default)
+
+Unit factor for the GDML attribute `key` (e.g. "lunit", "aunit", "unit"). Missing attributes take
+the GDML defaults (mm for lengths, rad for angles).
+"""
+function _unit(attrs::AbstractDict, key::AbstractString, default::AbstractString)
+    u = get(attrs, key, default)
+    haskey(_length_units, u) && return _length_units[u]
+    _parse_unit(_angle_units, u)
+end
+_lunit(attrs) = _unit(attrs, "lunit", "mm")
+_aunit(attrs) = _unit(attrs, "aunit", "rad")
 
 struct GDMLDicts{T<:AbstractFloat}
     materials::Dict{String,AbstractMaterial{T}}
@@ -20,7 +44,7 @@ struct GDMLDicts{T<:AbstractFloat}
 end
 
 # process <define/>
-function fillDefine!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_define!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; positions, rotations) = dicts
     for c in child_nodes(element)
         if is_elementnode(c)
@@ -28,24 +52,24 @@ function fillDefine!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
             elemname = name(e)
             attrs = attributes_dict(e)
             if elemname == "position"
-                unit = eval(Meta.parse(attrs["unit"]))
+                unit = _unit(attrs, "unit", "mm")
                 positions[attrs["name"]] = Vector3{T}(parse(T, attrs["x"]) * unit, 
                                                       parse(T, attrs["y"]) * unit, 
                                                       parse(T, attrs["z"]) * unit)
             elseif elemname == "rotation"
-                unit = eval(Meta.parse(attrs["unit"]))
+                unit = _unit(attrs, "unit", "rad")
                 rotations[attrs["name"]] = RotZYX{T}(parse(T, attrs["z"]) * unit, 
                                                      parse(T, attrs["y"]) * unit, 
                                                      parse(T, attrs["x"]) * unit)
             else
-                @printf "define %s not yet suported\n" elemname
+                @warn "GDML: define $elemname not yet supported" maxlog=1
             end
         end
     end
 end
 
 # process <materials/>
-function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_materials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; materials) = dicts
     for c in child_nodes(element)
         if is_elementnode(c)
@@ -107,28 +131,29 @@ function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstr
 end
 
 # process <solids/>
-function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_solids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; solids) = dicts
+    unsupported = Dict{String,Int}()
     for c in child_nodes(element)
         if is_elementnode(c)
             e = XMLElement(c)
             elemname = name(e)
             attrs = attributes_dict(e)
             if elemname == "box"
-                lunit = eval(Meta.parse(attrs["lunit"]))
+                lunit = _lunit(attrs)
                 solids[attrs["name"]] = Box{T}(parse(T, attrs["x"]) * lunit / 2, 
                                                parse(T, attrs["y"]) * lunit / 2, 
                                                parse(T, attrs["z"]) * lunit / 2)
             elseif elemname == "trd"
-                lunit = eval(Meta.parse(attrs["lunit"]))
+                lunit = _lunit(attrs)
                 solids[attrs["name"]] = Trd{T}(parse(T, attrs["x1"]) * lunit / 2, 
                                                parse(T, attrs["x2"]) * lunit / 2, 
                                                parse(T, attrs["y1"]) * lunit / 2,
                                                parse(T, attrs["y2"]) * lunit / 2,
                                                parse(T, attrs["z"])  * lunit / 2)
             elseif elemname == "trap"
-                lunit = eval(Meta.parse(attrs["lunit"]))
-                aunit = eval(Meta.parse(attrs["aunit"]))
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
                 solids[attrs["name"]] = Trap{T}(parse(T, attrs["z"]) * lunit / 2, 
                                                 parse(T, attrs["theta"]) * aunit, 
                                                 parse(T, attrs["phi"]) * aunit,
@@ -141,16 +166,16 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                 parse(T, attrs["x4"])  * lunit / 2,
                                                 parse(T, attrs["alpha2"])  * aunit)
             elseif elemname == "tube"
-                lunit = eval(Meta.parse(attrs["lunit"]))
-                aunit = eval(Meta.parse(attrs["aunit"]))
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
                 solids[attrs["name"]] = Tube{T}(parse(T, attrs["rmin"]) * lunit, 
                                                 parse(T, attrs["rmax"]) * lunit, 
                                                 parse(T, attrs["z"]) * lunit / 2,
                                                 parse(T, attrs["startphi"]) * aunit,
                                                 parse(T, attrs["deltaphi"]) * aunit)
             elseif elemname == "cone"
-                lunit = eval(Meta.parse(attrs["lunit"]))
-                aunit = eval(Meta.parse(attrs["aunit"]))
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
                 solids[attrs["name"]] = Cone{T}(parse(T, attrs["rmin1"]) * lunit, 
                                                 parse(T, attrs["rmax1"]) * lunit,
                                                 parse(T, attrs["rmin2"]) * lunit,
@@ -159,8 +184,8 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                 parse(T, attrs["startphi"]) * aunit,
                                                 parse(T, attrs["deltaphi"]) * aunit)
             elseif elemname == "polycone"
-                lunit = eval(Meta.parse(attrs["lunit"]))
-                aunit = eval(Meta.parse(attrs["aunit"]))
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
                 rmax, rmin, z = Vector{T}(), Vector{T}(), Vector{T}()
                 for cc in child_nodes(e)
                     if name(cc) == "zplane"
@@ -175,11 +200,11 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                                                     parse(T, attrs["startphi"]) * aunit,
                                                     parse(T, attrs["deltaphi"]) * aunit)
             elseif elemname == "cutTube"
-                lunit = eval(Meta.parse(attrs["lunit"]))
-                aunit = eval(Meta.parse(attrs["aunit"]))
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
                 solids[attrs["name"]] = CutTube{T}(parse(T, attrs["rmin"]) * lunit,
                                                    parse(T, attrs["rmax"]) * lunit,
-                                                   parse(T, attrs["z"]) * lunit,
+                                                   parse(T, attrs["z"]) * lunit / 2,   # GDML gives the full length
                                                    parse(T, attrs["startphi"]) * aunit,
                                                    parse(T, attrs["deltaphi"]) * aunit,
                                                    Vector3{T}(parse(T, attrs["lowX"]), parse(T, attrs["lowY"]), parse(T, attrs["lowZ"])),
@@ -187,18 +212,21 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
             elseif elemname in ("union", "subtraction", "intersection") 
                 first = nothing
                 second = nothing
-                transformation = getTransformation(dicts, e)
+                transformation = read_transformation(dicts, e)
                 for cc in child_nodes(e)
                     if is_elementnode(cc)
                         aa = attributes_dict(XMLElement(cc))
                         if name(cc) == "first"
-                            first = solids[aa["ref"]]
+                            first = _get_solid(solids, aa["ref"], attrs["name"])
                         elseif name(cc) == "second"
-                            second = solids[aa["ref"]]
+                            second = _get_solid(solids, aa["ref"], attrs["name"])
                         end
                     end
                 end
-                if elemname == "union"
+                if isnothing(first) || isnothing(second)
+                    # Broken GDML: keep whatever operand is valid (or nothing at all for intersections)
+                    solids[attrs["name"]] = elemname == "intersection" || isnothing(first) ? NoShape{T}() : first
+                elseif elemname == "union"
                     solids[attrs["name"]] = BooleanUnion(first, second, transformation)
                 elseif elemname == "subtraction"
                     solids[attrs["name"]] = BooleanSubtraction(first, second, transformation)
@@ -206,15 +234,22 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
                     solids[attrs["name"]] = BooleanIntersection(first, second, transformation)
                 end
             else
-                @printf "Shape %s not yet suported. Using NoShape\n" elemname
+                unsupported[elemname] = get(unsupported, elemname, 0) + 1
                 solids[attrs["name"]] = NoShape{T}()
             end
         end
     end
+    isempty(unsupported) || @warn "GDML: unsupported shapes replaced by NoShape" unsupported
+end
+
+function _get_solid(solids::Dict, ref::AbstractString, owner::AbstractString)
+    haskey(solids, ref) && return solids[ref]
+    @warn "GDML: solid \"$ref\" referenced by boolean \"$owner\" is not defined; ignoring this operand"
+    return nothing
 end
 
 # process <structure/>
-function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_volumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; materials, solids, volumes, positions, rotations) = dicts
     for c in child_nodes(element) #--- loop over volumes
         if is_elementnode(c)
@@ -235,7 +270,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                             material = materials[aa["ref"]]
                         elseif name(cc) == "physvol"
                             daughter = nothing
-                            transformation = getTransformation(dicts, XMLElement(cc))
+                            transformation = read_transformation(dicts, XMLElement(cc))
                             for ccc in child_nodes(XMLElement(cc))
                                 if is_elementnode(ccc)
                                     aa = attributes_dict(XMLElement(ccc))
@@ -250,7 +285,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                 end
                 volume = elemname == "volume" ? Volume{T}(volname, shape, material) : Assembly{T}(volname)
                 for pvol in pvols
-                    placeDaughter!(volume, pvol.transformation, pvol.volume)
+                    place_daughter!(volume, pvol.transformation, pvol.volume)
                 end
                 volumes[volname] = volume
             end
@@ -259,7 +294,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
 end
 
 # fill Transformation3D
-function getTransformation(dicts::GDMLDicts{T}, element::XMLElement) where T
+function read_transformation(dicts::GDMLDicts{T}, element::XMLElement) where T
     (; positions, rotations) = dicts
     position = Vector3{T}(0,0,0)
     rotation = RotZYX{T}(0,0,0)
@@ -267,12 +302,12 @@ function getTransformation(dicts::GDMLDicts{T}, element::XMLElement) where T
         if is_elementnode(c)
             aa = attributes_dict(XMLElement(c))
             if name(c) == "position"
-                unit = eval(Meta.parse(aa["unit"]))
+                unit = _unit(aa, "unit", "mm")
                 position = Vector3{T}(parse(T, aa["x"]) * unit, 
                                       parse(T, aa["y"]) * unit,
                                       parse(T, aa["z"]) * unit)
             elseif name(c) == "rotation"
-                unit = eval(Meta.parse(aa["unit"]))
+                unit = _unit(aa, "unit", "rad")
                 rotation = RotZYX{T}(parse(T, aa["z"]) * unit, 
                                      parse(T, aa["y"]) * unit, 
                                      parse(T, aa["x"]) * unit)
@@ -288,25 +323,25 @@ end
 
 
 # process the full file
-function processGDML(fname::String, ::Type{T}=Float64) where T
+function read_gdml(fname::String, ::Type{T}=Float64) where T
     dicts = GDMLDicts{T}()
     world = nothing
     xdoc = parse_file(fname)
     xroot = root(xdoc) 
     if name(xroot) != "gdml"
-        throw(ErrorException("File @fname is not a GDML file"))
+        throw(ArgumentError("File $fname is not a GDML file"))
     end
     for c in child_nodes(xroot)  # c is an instance of XMLNode
         if is_elementnode(c)
             e = XMLElement(c)    # this makes an XMLElement instance
             if name(e) == "materials"
-                fillMaterials!(dicts, e)
+                fill_materials!(dicts, e)
             elseif name(e) == "solids"
-                fillSolids!(dicts, e)
+                fill_solids!(dicts, e)
             elseif name(e) == "structure"
-                fillVolumes!(dicts, e)
+                fill_volumes!(dicts, e)
             elseif name(e) == "define"
-                fillDefine!(dicts, e)
+                fill_define!(dicts, e)
             elseif name(e) == "setup"
                 for cc in child_nodes(e)
                     if is_elementnode(cc)

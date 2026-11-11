@@ -13,12 +13,11 @@ struct VolumeP{T<:AbstractFloat,PV}
     daughters::Vector{PV}
 end
 
-_last_volume_id = 1
+const _last_volume_id = Threads.Atomic{Int64}(1)
 
 function VolumeP{T, PV}(label::String, shape::Shape{T}, material::Material{T}, daughters::Vector{PV}) where {T<:AbstractFloat, PV}
-    global _last_volume_id
-    _last_volume_id += 1
-    VolumeP(_last_volume_id, label, shape, material, daughters)
+    id = Threads.atomic_add!(_last_volume_id, 1) + 1
+    VolumeP(id, label, shape, material, daughters)
 end
 
 
@@ -73,12 +72,12 @@ function contains(vol::Volume{T}, p::Point3{T})::Bool where T<:AbstractFloat
     inside(vol.shape, p) == kInside
 end
 
-@inline function distanceToIn(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}, rcp_d::Vector3{T}=inv.(d))::T where T<:AbstractFloat
+@inline function distance_to_in(pvol::PlacedVolume{T}, p::Point3{T}, d::Vector3{T}, rcp_d::Vector3{T}=inv.(d))::T where T<:AbstractFloat
     !intersect(pvol.aabb, p, d, rcp_d) && return T(Inf)
-    distanceToIn(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
+    distance_to_in(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 end
 
-function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
+function place_daughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
     if subvol.shape isa NoShape
         for d in subvol.daughters
             push!(volume.daughters, PlacedVolume(length(volume.daughters)+1, d.transformation * placement, d.volume))
@@ -89,16 +88,16 @@ function placeDaughter!(volume::Volume{T}, placement::Transformation3D{T}, subvo
     volume
 end
 
-function getWorld(vol::Volume{T}) where T<:AbstractFloat
+function world_volume(vol::Volume{T}) where T<:AbstractFloat
     if vol.label == "world"
         return vol
     else
         low, high = extent(vol.shape)
-        box = Box{T}((high - low)/2. * 1.05)  # increase the bounding box
-        tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
+        box = Box{T}((high - low)/2 * T(1.05))  # increase the bounding box
+        tra = Transformation3D{T}(one(RotMatrix3{T}), Vector3{T}(-(high + low)/2))
         mat = Material{T}("vacuum"; density=0)
         world = Volume{T}("world", box, mat)
-        placeDaughter!(world, tra, vol)
+        place_daughter!(world, tra, vol)
         return world
     end
 end
@@ -160,7 +159,7 @@ function extent(agg::Aggregate{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
         pmin = pvol.aabb.min
         pmax = pvol.aabb.max
         mmin = min.(mmin,pmin)
-        mmax = min.(max,pmax)
+        mmax = max.(mmax,pmax)
     end
 
     return (mmin,mmax)
@@ -174,23 +173,31 @@ function inside(agg::Aggregate{T}, point::Point3{T})::Int64  where T<:AbstractFl
     return kOutside
 end
 
-function safetyToOut(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+function normal(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+    for pvol in agg.pvolumes
+        lpoint = pvol.transformation * point
+        inside(pvol.volume.shape, lpoint) == kSurface && return normal(pvol.volume.shape, lpoint) * pvol.transformation
+    end
+    return zero(Vector3{T})
 end
 
-function safetyToIn(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+function safety_to_out(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
 end
 
-function distanceToOut(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function safety_to_in(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+end
+
+function distance_to_out(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     for pvol in agg.pvolumes
         lpoint = pvol.transformation * point
         inout = inside(pvol.volume.shape, lpoint)
         inout == kSurface && return T(0)
-        inout == kInside && return distanceToOut(pvol.volume.shape, lpoint, pvol.transformation * dir)
+        inout == kInside && return distance_to_out(pvol.volume.shape, lpoint, pvol.transformation * dir)
     end
     return T(-1)
 end
 
-function distanceToIn(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distance_to_in(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     distance = T(Inf)
     for i in eachindex(agg.pvolumes)
         pvol = agg.pvolumes[i]
@@ -199,7 +206,7 @@ function distanceToIn(agg::Aggregate{T}, point::Point3{T}, dir::Vector3{T})::T w
         inout == kInside && return T(-1)
         ldir = pvol.transformation * dir
         inout == kSurface && normal(pvol.volume.shape, lpoint) ⋅ ldir < 0 && return T(0)
-        dist = distanceToIn(pvol.volume.shape, lpoint, ldir)
+        dist = distance_to_in(pvol.volume.shape, lpoint, ldir)
         dist < distance && (distance = dist)
     end
     return distance

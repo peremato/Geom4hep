@@ -28,28 +28,28 @@ function safety(plane::Plane{T}, point::Point3{T})::T where T<:AbstractFloat
     return dot(plane.normal, point) + plane.distance
 end
 
-function distanceToIn(plane::Plane{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distance_to_in(plane::Plane{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     # The function returns a negative distance for points already inside or
     # direction going outwards (along the normal)
     d = T(-Inf)
     ndd = dot(normalize(dir), plane.normal)
     saf = safety(plane, point)
-    ndd < 0 && saf > -kTolerance(T) && (d = -saf/ndd)
+    ndd < 0 && saf > -tolerance(T) && (d = -saf/ndd)
     return d
 end
 
-function distanceToOut(plane::Plane{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distance_to_out(plane::Plane{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     # The function returns infinity if the plane is not hit from inside, negative
     # if the point is outside
     d = T(Inf)
     ndd = dot(normalize(dir), plane.normal)
     saf = safety(plane, point)
-    saf > kTolerance(T) && (d = -T(Inf))
-    ndd > 0 && saf < kTolerance(T) && (d = -saf/ndd)
+    saf > tolerance(T) && (d = -T(Inf))
+    ndd > 0 && saf < tolerance(T) && (d = -saf/ndd)
     return d
 end
 
-function zLimit(plane::Plane{T}, r::T, ϕ::T)::T where T<:AbstractFloat
+function z_limit(plane::Plane{T}, r::T, ϕ::T)::T where T<:AbstractFloat
     (; normal, distance) = plane
     return -(r * (cos(ϕ)*normal[1] + sin(ϕ)*normal[2]) + distance)/normal[3]
 end
