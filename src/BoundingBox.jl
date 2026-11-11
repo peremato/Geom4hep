@@ -20,10 +20,7 @@ end
 GeometryBasics.faces(::AABB{T}) where T = QuadFace{Int64}[(1,3,7,2), (1,2,6,4), (1,4,5,3), (8,6,2,7), (8,7,3,5), (8,5,4,6)]
 GeometryBasics.normals(::AABB{T}) where T = Point3{T}[(0,0,-1), (0,-1,0), (-1,0,0), (1,0,0), (0,1,0), (0,0,1)]
 
-inside(bb::AABB{T}, point::Point3{T}) where T =  all(bb.min .< point .< bb.max)
 function intersect(bb::AABB{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
-
-    distsurf = Inf
     (distance, distout) =  intersectAABoxRay(bb.min, bb.max, point, dir, rcp_dir)
     (distance >= distout  || distout <= kTolerance(T) / 2 ) ? false : true
 end

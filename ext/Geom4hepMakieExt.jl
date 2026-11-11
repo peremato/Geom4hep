@@ -1,55 +1,52 @@
+module Geom4hepMakieExt
+
+using Geom4hep
+using Geom4hep: AbstractShape, Volume, Transformation3D, AABB, BVH, buildBVH, extent, inside,
+                kInside, kOutside, distanceToIn, distanceToOut, Point3, Vector3
+import Geom4hep: draw, draw!, drawDistanceToIn, drawDistanceToOut
+using GeometryBasics: GeometryBasics, Mesh, coordinates, faces
+using LinearAlgebra: normalize
 using Makie
-using Colors
-using Printf
 
-import GeometryBasics: coordinates, faces, mesh, Mesh
-
-colors = colormap("Grays", 16)
-
-global drawn = 0
-
-GeometryBasics.mesh(shape::AbstractShape{T}) where T = GeometryBasics.mesh(Tesselation(shape, 64), facetype=typeof(first(GeometryBasics.faces(shape))))
+# Grey levels from light (outer volumes) to dark (deep daughters)
+const colors = [Makie.RGBf(g, g, g) for g in range(0.95f0, 0.05f0, length=16)]
 
 #---Draw a Volume---------------------------------------------------------------
 function draw!(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, wireframe::Bool, bvh::Bool, maxlevel::Int64) where T
     m = GeometryBasics.mesh(vol.shape)
     if ! isone(t)
-        points = GeometryBasics.coordinates(m)
-        faces  = GeometryBasics.faces(m)
-        map!(c -> c * t, points, points)
-        m = GeometryBasics.Mesh(points, faces)
+        points = coordinates(m)
+        m = Mesh(map(c -> Point3{T}(c * t), points), faces(m))
     end
+    icolor = clamp(level, 1, length(colors))
     if wireframe
-        wireframe!(s, m, color=colors[16-level], visible = level == 1 ? false : true)
+        wireframe!(s, m, color=colors[end+1-icolor], visible = level != 1)
     else
-        mesh!(s, m, color=colors[level], transparency=true, ambient=0.7, visible = level == 1 ? false : true)
+        mesh!(s, m, color=colors[icolor], transparency=true, visible = level != 1)
     end
-    global drawn
-    drawn += 1
-    if drawn % 100 == 0; @show drawn; end
     if level < maxlevel
         for daughter in vol.daughters
             if level == 1 && bvh
-                draw!(s, AABB(daughter))
+                draw!(s, Geom4hep.AABB(daughter))
             end
-            draw!(s, daughter.volume, daughter.transformation * t, level+1, wireframe, bvh, maxlevel) 
+            draw!(s, daughter.volume, daughter.transformation * t, level+1, wireframe, bvh, maxlevel)
         end
-        if level == 1 && bvh
+        if level == 1 && bvh && !isempty(vol.daughters)
             draw!(s, buildBVH(vol.daughters))
         end
     end
+    return s
 end
 
-function draw!(s::LScene, vol::Volume{T}; wireframe::Bool=false,  maxlevel::Int64=999) where T
-    draw!(s, vol, one(Transformation3D{T}), 1, wireframe, false, maxlevel)
-    display(s)
+function draw!(s::LScene, vol::Volume{T}; wireframe::Bool=false, bvh::Bool=false, maxlevel::Int64=999) where T
+    draw!(s, vol, one(Transformation3D{T}), 1, wireframe, bvh, maxlevel)
 end
 
-function draw(vol::Volume; wireframe::Bool=false, bvh::Bool=false, maxlevel::Int64=999)
-    fig = Figure(resolution=(1280, 720))
+function draw(vol::Volume{T}; wireframe::Bool=false, bvh::Bool=false, maxlevel::Int64=999) where T
+    fig = Figure(size=(1280, 720))
     s = LScene(fig[1,1])
-    draw!(s, vol, one(Transformation3D{Float64}), 1, wireframe, bvh, maxlevel)
-    display(fig)
+    draw!(s, vol, one(Transformation3D{T}), 1, wireframe, bvh, maxlevel)
+    return fig
 end
 
 #---Draw a Shape---------------------------------------------------------------
@@ -58,7 +55,7 @@ function draw!(s::LScene, shape::AbstractShape; wireframe::Bool=false)
     if wireframe
         wireframe!(s, m)
     else
-        mesh!(s, m, color=colors[2], transparency=true, ambient=0.7)
+        mesh!(s, m, color=colors[2], transparency=true)
     end
     return s
 end
@@ -67,12 +64,13 @@ function draw(shape::AbstractShape; wireframe::Bool=false)
     fig = Figure()
     s = LScene(fig[1,1])
     draw!(s, shape; wireframe)
-    display(fig)
+    return fig
 end
 
 #---Draw a AABB------------------------------------------------------------------
 function draw!(s::LScene, aabb::AABB; color::Symbol=:blue)
     wireframe!(s, Mesh(coordinates(aabb), faces(aabb)), color=color)
+    return s
 end
 
 function draw!(s::LScene, bvh::BVH; color::Symbol=:green)
@@ -83,25 +81,25 @@ function draw!(s::LScene, bvh::BVH; color::Symbol=:green)
             draw!(s, c, color=color)
         end
     end
+    return s
 end
 
 function draw(bvh::BVH; color::Symbol=:green)
     fig = Figure()
     s = LScene(fig[1,1])
     draw!(s, bvh; color=color)
-    display(fig)
+    return fig
 end
 
 #---Testing functions------------------------------------------------------------
-
 function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:AbstractFloat
     low, hi = extent(shape)
     dim = hi - low
-    points = (low + rp * dim for rp in rand(Vector3{Float64}, N))
-    result = Vector{Point3{Float64}}()
+    points = (low + rp * dim for rp in rand(Vector3{T}, N))
+    result = Vector{Point3{T}}()
     for point in points
         if inside(shape, point) == kInside
-            dir = normalize(rand(Vector3) + Vector3(-.5,-.5,-.5))
+            dir = normalize(rand(Vector3{T}) + Vector3{T}(-.5,-.5,-.5))
             push!(result, point + dir * distanceToOut(shape, point, dir))
         end
     end
@@ -109,19 +107,18 @@ function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:Abstrac
     s = LScene(fig[1, 1])
     scatter!(s, result, color=:black, markersize=1)
     scatter!(s, [low, hi], color=:blue, markersize=10)
-    display(fig)
-    return s
+    return fig
 end
 
 function drawDistanceToIn(shape::AbstractShape{T}, N::Integer) where T<:AbstractFloat
     low, hi = extent(shape)
     dim = hi - low
-    low -= dim/10.
-    hi  += dim/10.
+    low -= dim/10
+    hi  += dim/10
     dim = hi - low
-    points = (low + rp * dim for rp in rand(Vector3{Float64}, N))
-    dirs = normalize.(rand(Vector3{Float64}, N) .+ Ref(Vector3(-.5,-.5,-.5)))
-    result = Vector{Point3{Float64}}()
+    points = (low + rp * dim for rp in rand(Vector3{T}, N))
+    dirs = normalize.(rand(Vector3{T}, N) .+ Ref(Vector3{T}(-.5,-.5,-.5)))
+    result = Vector{Point3{T}}()
     for (point, dir) in zip(points, dirs)
         if inside(shape, point) == kOutside
             dist = distanceToIn(shape, point, dir)
@@ -134,7 +131,7 @@ function drawDistanceToIn(shape::AbstractShape{T}, N::Integer) where T<:Abstract
     s = LScene(fig[1, 1])
     scatter!(s, result, color=:black, markersize=1)
     scatter!(s, [low, hi], color=:blue, markersize=10)
-    display(fig)
-    return s
+    return fig
 end
 
+end # module

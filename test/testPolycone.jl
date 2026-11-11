@@ -1,7 +1,7 @@
 using Test
 using Geom4hep, LinearAlgebra
 
-include("../src/Units.jl")
+using Geom4hep.Units
 
 @testset "Polycone{$T}" for T in (Float64, Float32)
     # Polycones

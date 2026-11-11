@@ -1,3 +1,5 @@
+# NOTE: CUDA-only prototype based on src/CuGeom.jl, which is no longer loaded by the package.
+#       It will be replaced by a backend-agnostic KernelAbstractions implementation.
 using Geom4hep
 using StaticArrays
 using BenchmarkTools, Test, Printf
@@ -112,7 +114,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     rz = generateXRay(model, 1e6, 3)
     limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
     #----Plot the results--------------------------------------
-    fig = Figure(resolution = (1000, 1000))
+    fig = Figure(size = (1000, 1000))
     @printf "ploting the results\n"
     heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
     heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)

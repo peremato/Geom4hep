@@ -1,4 +1,3 @@
-using Revise
 using Geom4hep
 
 const T = Float64
@@ -12,10 +11,10 @@ benchmarkShape(trd, Npoints=10240, Repetitions=1000)
 trap = Trap{T}(3, 4, 5, 6, 7)
 benchmarkShape(trap, Npoints=10240, Repetitions=1000)
 
-cone1 = Cone{T}(5, 10, 7, 15, 10, 0, 2π)
+cone1 = Geom4hep.Cone{T}(5, 10, 7, 15, 10, 0, 2π)
 benchmarkShape(cone1, Npoints=10240, Repetitions=1000)
 
-cone2 = Cone{T}(5, 10, 7, 15, 10, π, π/2)
+cone2 = Geom4hep.Cone{T}(5, 10, 7, 15, 10, π, π/2)
 benchmarkShape(cone2, Npoints=10240, Repetitions=1000)
 
 tube1 = Tube{T}(0, 5, 10, 0,2π)

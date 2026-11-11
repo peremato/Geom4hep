@@ -1,4 +1,3 @@
-using Revise
 using Geom4hep
 using StaticArrays
 
@@ -39,7 +38,7 @@ ry = generateImage(volume, 1e6, 2)
 rz = generateImage(volume, 1e6, 3)
 limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
 using GLMakie
-fig = Figure(resolution = (1000, 1000))
+fig = Figure(size = (1000, 1000))
 heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
 heatmap!(Axis(fig[1, 2], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
 heatmap!(Axis(fig[2, 1], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)

@@ -1,4 +1,3 @@
-include("Plane.jl")
 
 #---CutTube----------------------------------------------------------------------------------------
 struct CutTube{T<:AbstractFloat} <: AbstractShape{T}

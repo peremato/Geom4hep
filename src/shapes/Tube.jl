@@ -67,11 +67,11 @@ function extent(tub::Tube{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
         return (Point3{T}(aMin), Point3{T}(aMax))
     end
     # check how many of phi=90, 180, 270, 360deg are outside this tube
-    rin  = 0.5 * (tub.rmax + tub.rmin)
-    ϕ0out   = isOutside(tub.ϕWedge, rin, 0.)
-    ϕ90out  = isOutside(tub.ϕWedge, 0., rin)
-    ϕ180out = isOutside(tub.ϕWedge, -rin, 0.)
-    ϕ270out = isOutside(tub.ϕWedge, 0., -rin)
+    rin  = (tub.rmax + tub.rmin) / 2
+    ϕ0out   = isOutside(tub.ϕWedge, rin, zero(T))
+    ϕ90out  = isOutside(tub.ϕWedge, zero(T), rin)
+    ϕ180out = isOutside(tub.ϕWedge, -rin, zero(T))
+    ϕ270out = isOutside(tub.ϕWedge, zero(T), -rin)
     
     # if none of those 4 phis is outside, largest box still required
     if !(ϕ0out || ϕ90out || ϕ180out || ϕ270out)

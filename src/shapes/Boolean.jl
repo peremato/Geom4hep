@@ -392,6 +392,7 @@ function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vecto
     inRight = positionB == kInside
 
     npoint = point
+    offset = T(0)   # distance from point to the current probe point npoint
     dist = T(0)
 
     while true
@@ -399,7 +400,8 @@ function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vecto
             # propagate to outside of '- / RightShape'
             d1 = distanceToOut(right, lpoint, ldir)
             dist += (d1 >= 0 && d1 < Inf) ? d1 + kPushTolerance(T) : 0
-            npoint = point + (dist + kPushTolerance(T)) * dir
+            offset = dist + kPushTolerance(T)
+            npoint = point + offset * dir
             lpoint = transformation * npoint
             # now master outside 'B'; check if inside 'A'
             inside(left, npoint) == kInside && distanceToOut(left, npoint, dir) > kPushTolerance(T) && return dist
@@ -412,13 +414,13 @@ function distanceToIn(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vecto
 
         d1 = distanceToIn(right, lpoint, ldir)
         if d2 < d1 - kTolerance(T)
-          dist += d2 + kPushTolerance(T)
-          return dist
+          return offset + d2   # d2 is measured from the probe point, not from the original point
         end
 
         #   propagate to '-'
         dist += (d1 >= 0 && d1 < Inf) ? d1 : 0
-        npoint = point + (dist + kPushTolerance(T)) * dir
+        offset = dist + kPushTolerance(T)
+        npoint = point + offset * dir
         lpoint = transformation * npoint
         inRight = true
     end

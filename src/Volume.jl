@@ -13,12 +13,11 @@ struct VolumeP{T<:AbstractFloat,PV}
     daughters::Vector{PV}
 end
 
-_last_volume_id = 1
+const _last_volume_id = Threads.Atomic{Int64}(1)
 
 function VolumeP{T, PV}(label::String, shape::Shape{T}, material::Material{T}, daughters::Vector{PV}) where {T<:AbstractFloat, PV}
-    global _last_volume_id
-    _last_volume_id += 1
-    VolumeP(_last_volume_id, label, shape, material, daughters)
+    id = Threads.atomic_add!(_last_volume_id, 1) + 1
+    VolumeP(id, label, shape, material, daughters)
 end
 
 
@@ -94,8 +93,8 @@ function getWorld(vol::Volume{T}) where T<:AbstractFloat
         return vol
     else
         low, high = extent(vol.shape)
-        box = Box{T}((high - low)/2. * 1.05)  # increase the bounding box
-        tra = Transformation3D{T}(one(RotMatrix3{T}), -(high + low)/2.)
+        box = Box{T}((high - low)/2 * T(1.05))  # increase the bounding box
+        tra = Transformation3D{T}(one(RotMatrix3{T}), Vector3{T}(-(high + low)/2))
         mat = Material{T}("vacuum"; density=0)
         world = Volume{T}("world", box, mat)
         placeDaughter!(world, tra, vol)
@@ -160,7 +159,7 @@ function extent(agg::Aggregate{T})::Tuple{Point3{T},Point3{T}} where T<:Abstract
         pmin = pvol.aabb.min
         pmax = pvol.aabb.max
         mmin = min.(mmin,pmin)
-        mmax = min.(max,pmax)
+        mmax = max.(mmax,pmax)
     end
 
     return (mmin,mmax)

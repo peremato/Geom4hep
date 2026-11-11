@@ -1,3 +1,5 @@
+# NOTE: CUDA-only prototype based on src/CuGeom.jl, which is no longer loaded by the package.
+#       It will be replaced by a backend-agnostic KernelAbstractions implementation.
 using Geom4hep
 using CUDA
 using CUDAKernels

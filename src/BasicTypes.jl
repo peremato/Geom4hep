@@ -2,9 +2,16 @@
 abstract type AbstractShape{T<:AbstractFloat} end
 abstract type AbstractMaterial{T<:AbstractFloat} end
 
-function GeometryBasics.Tesselation(shape::AbstractShape{T}, nvertices::NTuple{N,<:Integer}) where {T,N}
-    return Tesselation{3,T,typeof(shape),N}(shape, Int.(nvertices))
+function GeometryBasics.Tessellation(shape::AbstractShape{T}, nvertices::NTuple{N,<:Integer}) where {T,N}
+    return Tessellation{3,T,typeof(shape),N}(shape, Int.(nvertices))
 end
+
+"""
+    mesh(shape::AbstractShape)
+
+Triangulated/quad surface mesh of a shape (`GeometryBasics.Mesh`), e.g. for visualization.
+"""
+GeometryBasics.mesh(shape::AbstractShape{T}) where T = GeometryBasics.mesh(Tessellation(shape, 64), facetype=typeof(first(GeometryBasics.faces(shape))))
   
 const Vector3 = SVector{3}
 const Vector2 = SVector{2}
@@ -32,6 +39,6 @@ kTolerance() = kTolerance(Float64)
 
 kPushTolerance(::Type{Float32}) = 1f-3
 kPushTolerance(::Type{Float64}) = 1e-6
-kPushTolerance() = kTolerance(Float64)
+kPushTolerance() = kPushTolerance(Float64)
 
 nonzero(x::T) where T<:AbstractFloat = x == zero(T) ? eps(T) : x
