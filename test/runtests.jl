@@ -11,8 +11,10 @@ using Geom4hep, LinearAlgebra
     include("testTrap.jl")
     include("testCutTube.jl")
     include("testBoolean.jl")
+    include("testMultiUnion.jl")
     include("testVolume.jl")
     include("testNormals.jl")
     include("testNavigation.jl")
+    include("testModel.jl")
     include("testGDML.jl")
 end

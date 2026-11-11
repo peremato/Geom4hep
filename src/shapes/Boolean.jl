@@ -9,9 +9,11 @@ const BaseShape{T<:AbstractFloat} = Union{NoShape{T},
                                           CutTube{T}}
 
 #---Boolean Shapes----------------------------------------------------------------------------------
-struct BooleanShape{T<:AbstractFloat, OP} <: AbstractShape{T}
-    left::Union{BaseShape{T}, BooleanShape{T}}   # the mother (or left) volume A in unplaced form
-    right::Union{BaseShape{T}, BooleanShape{T}}  # (or right) volume B in placed form, acting on A with a boolean operation
+#   The types of the operands are parameters (L, R). Shapes built by the user use a small Union of
+#   shape types (see TreeOperand), while a flat GeometryModel uses references into its shape arrays.
+struct BooleanShape{T<:AbstractFloat, OP, L, R} <: AbstractShape{T}
+    left::L                                      # the mother (or left) volume A in unplaced form
+    right::R                                     # (or right) volume B in placed form, acting on A with a boolean operation
     transformation::Transformation3D{T}          # placement of "right" with respect of "left" 
     left_aabb::AABB{T}
     right_aabb::AABB{T}
@@ -22,10 +24,10 @@ const BooleanSubtraction{T} =  BooleanShape{T, :subtraction}
 const BooleanIntersection{T} = BooleanShape{T, :intersection}
 
 # Since all the other constructors only use 3 arguments we can sneak the AABB calc in here
-function BooleanShape{T,OP}(left,right,place) where {T, OP}
-    left_aabb=AABB(extent(left)...)
-    right_aabb=AABB(transform_extent(extent(right),place)...)
-    BooleanShape{T,OP}(left,right,place,left_aabb,right_aabb)
+function BooleanShape{T,OP}(left, right, place) where {T, OP}
+    left_aabb = AABB(extent(left)...)
+    right_aabb = AABB(transform_extent(extent(right), place)...)
+    BooleanShape{T,OP,TreeOperand{T},TreeOperand{T}}(left, right, place, left_aabb, right_aabb)
 end
 
 #---Constructor------------------------------------------------------------------------------------
@@ -194,7 +196,7 @@ end
 #---Normals------------------------------------------------------------------------------------------
 _unit_or_zero(n::Vector3{T}) where T = n ⋅ n > 0 ? normalize(n) : zero(Vector3{T})
 
-function normal(shape::BooleanUnion{T}, point::Point3{T}) where {T}
+function normal(shape::BooleanUnion{T}, point::Point3{T})::Vector3{T} where {T}
     (; left, right, transformation) = shape
     lpoint = transformation * point
     posA, posB = inside(left, point), inside(right, lpoint)
@@ -208,7 +210,7 @@ function normal(shape::BooleanUnion{T}, point::Point3{T}) where {T}
     return zero(Vector3{T})
 end
 
-function normal(shape::BooleanSubtraction{T}, point::Point3{T}) where {T}
+function normal(shape::BooleanSubtraction{T}, point::Point3{T})::Vector3{T} where {T}
     (; left, right, transformation) = shape
     lpoint = transformation * point
     posA, posB = inside(left, point), inside(right, lpoint)
@@ -222,7 +224,7 @@ function normal(shape::BooleanSubtraction{T}, point::Point3{T}) where {T}
     return zero(Vector3{T})
 end
 
-function normal(shape::BooleanIntersection{T}, point::Point3{T}) where {T}
+function normal(shape::BooleanIntersection{T}, point::Point3{T})::Vector3{T} where {T}
     (; left, right, transformation) = shape
     lpoint = transformation * point
     posA, posB = inside(left, point), inside(right, lpoint)
@@ -384,7 +386,7 @@ function distance_to_in(shape::BooleanIntersection{T}, point::Point3{T}, dir::Ve
     ldir = transformation * dir
     #  main loop
     while true
-        d1 = d2 = 0
+        d1 = d2 = zero(T)
         if !inLeft
             d1 = distance_to_in(left, npoint, dir)
             d1 = max(d1, tolerance(T))
@@ -398,7 +400,7 @@ function distance_to_in(shape::BooleanIntersection{T}, point::Point3{T}, dir::Ve
         if d1 > d2
             # propagate to left shape
             dist += d1
-            inleft = true
+            inLeft = true
             npoint += d1 * dir
             lpoint = transformation * npoint
             # check if propagated point is inside right shape, check is done with a little push
@@ -408,7 +410,7 @@ function distance_to_in(shape::BooleanIntersection{T}, point::Point3{T}, dir::Ve
         else
             # propagate to right shape
             dist += d2
-            inright = true
+            inRight = true
             # check if propagated point is inside left shape, check is done with a little push
             npoint += d2 * dir
             lpoint = transformation * npoint
@@ -437,23 +439,24 @@ function distance_to_in(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vec
     # If it gets here we have to calculate the distance the complicated way
     lpoint = transformation * point
     ldir = transformation * dir
-    positionB = inside(left, lpoint)
+    positionB = inside(right, lpoint)
     inRight = positionB == kInside
 
+    # `offset` is the distance from `point` to the probe point `npoint`; distances computed at the
+    # probe point are measured from there. Probe points are pushed beyond the boundaries crossed.
     npoint = point
-    offset = T(0)   # distance from point to the current probe point npoint
-    dist = T(0)
+    offset = T(0)
 
     while true
         if inRight
             # propagate to outside of '- / RightShape'
             d1 = distance_to_out(right, lpoint, ldir)
-            dist += (d1 >= 0 && d1 < T(Inf)) ? d1 + push_tolerance(T) : 0
-            offset = dist + push_tolerance(T)
+            exit = offset + ((d1 >= 0 && d1 < T(Inf)) ? d1 : zero(T))
+            offset = exit + push_tolerance(T)
             npoint = point + offset * dir
             lpoint = transformation * npoint
             # now master outside 'B'; check if inside 'A'
-            inside(left, npoint) == kInside && distance_to_out(left, npoint, dir) > push_tolerance(T) && return dist
+            inside(left, npoint) == kInside && distance_to_out(left, npoint, dir) > push_tolerance(T) && return exit
         end
 
         # if outside of both we do a max operation master outside '-' and outside '+' ;  find distances to both
@@ -463,12 +466,11 @@ function distance_to_in(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vec
 
         d1 = distance_to_in(right, lpoint, ldir)
         if d2 < d1 - tolerance(T)
-          return offset + d2   # d2 is measured from the probe point, not from the original point
+          return offset + d2
         end
 
         #   propagate to '-'
-        dist += (d1 >= 0 && d1 < T(Inf)) ? d1 : 0
-        offset = dist + push_tolerance(T)
+        offset += (d1 >= 0 && d1 < T(Inf)) ? d1 + push_tolerance(T) : push_tolerance(T)
         npoint = point + offset * dir
         lpoint = transformation * npoint
         inRight = true

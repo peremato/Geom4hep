@@ -5,8 +5,10 @@ version = "0.1.0"
 
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
@@ -21,9 +23,11 @@ Geom4hepMakieExt = "Makie"
 
 [compat]
 AbstractTrees = "0.4"
+Adapt = "4"
 DataStructures = "0.18, 0.19"
 GeometryBasics = "0.5"
 InteractiveUtils = "1"
+KernelAbstractions = "0.9, 0.10"
 LightXML = "0.9"
 LinearAlgebra = "1"
 Makie = "0.21, 0.22, 0.23, 0.24"

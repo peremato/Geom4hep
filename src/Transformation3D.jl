@@ -54,6 +54,7 @@ Base.isapprox(t1::Transformation3D{T}, t2::Transformation3D{T}; atol::Real=0, rt
 
 # Utilities
 Base.one(::Type{Transformation3D{T}}) where T<:AbstractFloat = Transformation3D{T}(one(RotMatrix3{T}), Vector3{T}(0,0,0))
+Base.one(::Transformation3D{T}) where T<:AbstractFloat = one(Transformation3D{T})
 Base.isone(t::Transformation3D{T}) where T<:AbstractFloat = isone(t.rotation) && iszero(t.translation)
 hasrotation(t::Transformation3D{T}) where T<:AbstractFloat = !isone(t.rotation)
 hastranslation(t::Transformation3D{T}) where T<:AbstractFloat = !iszero(t.translation)

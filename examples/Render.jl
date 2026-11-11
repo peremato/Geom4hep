@@ -1,45 +1,38 @@
-using Geom4hep
-using StaticArrays
+#  Density maps of slices of a detector: each pixel shows the density of the material at a point of
+#  a plane, found with `locate` on a flat GeometryModel.
+#
+#  Usage (from the repository root):
+#     julia --project=examples -t auto examples/Render.jl
 
-const idx = [2 3 1; 1 3 2; 1 2 3]
-const rdx = [3 1 2; 1 3 2; 1 2 3]
+using Geom4hep, GLMakie
+using Geom4hep: Point3        # Makie also exports a Point3
 
-# Generate a X-Ray of a geometry----------------------------------------------
-function generate_image(vol::Volume{T}, npoints::Number, view::Int=1, d::T=T(0)) where T<:AbstractFloat
-    world = world_volume(vol)
-    lower, upper = extent(world.shape)
-    ix, iy, iz = idx[view, :]
-    xi, yi, zi = rdx[view, :]
-
-    nx = ny = round(Int, sqrt(npoints))
-    xrange = range(lower[ix], upper[ix], length = nx)
-    yrange = range(lower[iy], upper[iy], length = ny)
-
-    result = zeros(T, nx,ny)
-    state = NavigatorState{T}(world)
-
-    for (i,x) in enumerate(xrange), (j,y) in enumerate(yrange)
-        _point = (x, y, d)
-        point = Point3{T}(_point[xi], _point[yi], _point[zi])
-        locate_global_point!(state, point)
-        result[i,j] = current_volume(state).material.density
+function density_slice(model::GeometryModel{T}, axis::Integer, position::Real, npixels::Integer; halfsize=Inf) where T
+    lower, upper = shape_call(extent, model, model.volumes[1].shape)
+    lower, upper = max.(lower, -T(halfsize)), min.(upper, T(halfsize))    # window of interest
+    iu, iv = axis == 1 ? (2, 3) : axis == 2 ? (1, 3) : (1, 2)
+    u = range(lower[iu], upper[iu], length = npixels)
+    v = range(lower[iv], upper[iv], length = npixels)
+    image = zeros(T, npixels, npixels)
+    Threads.@threads for j in 1:npixels
+        for i in 1:npixels
+            c = zeros(T, 3); c[axis] = position; c[iu] = u[i]; c[iv] = v[j]
+            state = locate(model, Point3{T}(c...))
+            image[i, j] = in_world(state) ? model.materials[material_index(model, state)].density : 0
+        end
     end
-    return xrange, yrange, result
+    return u, v, image
 end
 
-world = read_gdml("examples/trackML.gdml", Float64)
-volume = world.daughters[2].volume.daughters[1].volume
-#world = read_gdml("examples/polycones.gdml", Float64)
-world = read_gdml("examples/cms2018.gdml", Float64)
-volume = world
+world = read_gdml(joinpath(@__DIR__, "cms2018.gdml"), Float64)
+model = close_geometry(world)
+println(model)
 
-rx = generate_image(volume, 1e6, 1)
-ry = generate_image(volume, 1e6, 2)
-rz = generate_image(volume, 1e6, 3)
-limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
-using GLMakie
-fig = Figure(size = (1000, 1000))
-heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
-heatmap!(Axis(fig[1, 2], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
-heatmap!(Axis(fig[2, 1], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
-display(fig)
+fig = Figure(size = (1500, 500))
+for (axis, title) in ((1, "x = 0"), (2, "y = 0"), (3, "z = 0"))
+    t = @elapsed u, v, img = density_slice(model, axis, 0, 1000; halfsize=10_000)   # ±10 m
+    println("slice $title: $(round(t, digits=2)) s")
+    heatmap!(Axis(fig[1, axis], title = title, aspect = DataAspect()), u, v, img, colormap = :grayC)
+end
+save("cms2018-slices.png", fig)
+println("image saved in cms2018-slices.png")
