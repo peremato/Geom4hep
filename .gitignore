@@ -5,3 +5,5 @@ Manifest-v*.toml
 *.jl.mem
 lcov.info
 .ipynb_checkpoints/
+.vscode/
+*.png

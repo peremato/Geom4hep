@@ -21,15 +21,16 @@
     return mass, n
 end
 
-@kernel function _xray_kernel!(image, nsteps, model, origin, du, dv, dir, maxsteps)
-    i, j = @index(Global, NTuple)
+@kernel function _xray_kernel!(image, nsteps, model, origin, du, dv, dir, maxsteps, j0)
+    i, jj = @index(Global, NTuple)
+    j = jj + j0                       # columns are processed in batches (see `batch` in `xray`)
     mass, n = _xray_pixel(model, origin, du, dv, dir, maxsteps, i, j)
     @inbounds image[i, j] = mass
     @inbounds nsteps[i, j] = n
 end
 
 """
-    xray(model::GeometryModel, axis, npixels; backend=CPU(), maxsteps=10_000)
+    xray(model::GeometryModel, axis, npixels; backend=CPU(), maxsteps=10_000, launch_time=0.5)
 
 X-ray image of the world volume of `model` with rays parallel to `axis` (1, 2 or 3 for x, y, z):
 the mass thickness (density × length) integrated along each ray. `npixels` is the number of pixels
@@ -37,9 +38,13 @@ along the first transverse axis. Returns `(u, v, image, nsteps)` with the pixel 
 transverse axes, the image and the number of navigation steps per pixel.
 
 `backend` is a KernelAbstractions backend: `CPU()` (Julia threads), or a GPU backend such as
-`MetalBackend()` or `CUDABackend()` (the model is copied to the device).
+`MetalBackend()` or `CUDABackend()` (the model is copied to the device). On GPUs the image is
+computed in several kernel launches, each one taking about `launch_time` seconds: a long-running
+kernel on a GPU that also drives a display is aborted by the operating system (e.g. macOS error
+"Impacting Interactivity").
 """
-function xray(model::GeometryModel{T}, axis::Integer, npixels::Integer; backend=CPU(), maxsteps::Integer=10_000) where T
+function xray(model::GeometryModel{T}, axis::Integer, npixels::Integer; backend=CPU(), maxsteps::Integer=10_000,
+              launch_time::Real=0.5) where T
     lower, upper = shape_call(extent, model, model.volumes[1].shape)
     iu, iv = axis == 1 ? (2, 3) : axis == 2 ? (1, 3) : (1, 2)
     nu = npixels
@@ -59,8 +64,19 @@ function xray(model::GeometryModel{T}, axis::Integer, npixels::Integer; backend=
     else
         dimage = KernelAbstractions.zeros(backend, T, nu, nv)
         dnsteps = KernelAbstractions.zeros(backend, Int32, nu, nv)
-        _xray_kernel!(backend)(dimage, dnsteps, adapt(backend, model), origin, du, dv, dir, Int32(maxsteps); ndrange=(nu, nv))
-        KernelAbstractions.synchronize(backend)
+        dmodel = adapt(backend, model)
+        kernel! = _xray_kernel!(backend)
+        # Columns are processed in batches; the size of the batches adapts to take ~launch_time each
+        ncols, j0 = max(1, 4096 ÷ nu), 0
+        while j0 < nv
+            nj = min(ncols, nv - j0)
+            t = @elapsed begin
+                kernel!(dimage, dnsteps, dmodel, origin, du, dv, dir, Int32(maxsteps), j0; ndrange=(nu, nj))
+                KernelAbstractions.synchronize(backend)
+            end
+            j0 += nj
+            ncols = clamp(round(Int, nj * launch_time / max(t, 1e-3)), 1, 2nj)   # grow at most ×2
+        end
         image, nsteps = Array(dimage), Array(dnsteps)
     end
     u = range(lower[iu] + δu / 2, step=δu, length=nu)

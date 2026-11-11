@@ -3,8 +3,8 @@
 #
 #  Usage (from the repository root):
 #     julia --project=examples -t auto examples/XRay.jl [cpu|metal|cuda] [Float32|Float64]
-#  The GPU packages are not part of the examples environment: add Metal (Apple) or CUDA (NVIDIA)
-#  to it first, e.g. `julia --project=examples -e 'using Pkg; Pkg.add("Metal")'`.
+#  Metal (Apple GPUs) is part of the examples environment; for NVIDIA GPUs add CUDA to it first:
+#  `julia --project=examples -e 'using Pkg; Pkg.add("CUDA")'`.
 
 using Geom4hep, Printf, GLMakie
 
@@ -43,5 +43,5 @@ for (axis, (u, v, img)) in enumerate(images)
     heatmap!(Axis(fig[pos...], title = "rays along $("xyz"[axis])", aspect = DataAspect()), u, v, img,
              colormap = :grayC, colorrange = limits)
 end
-save("cms2018-xray.png", fig)
-println("image saved in cms2018-xray.png")
+save("cms2018-xray-$device.png", fig)
+println("image saved in cms2018-xray-$device.png")
