@@ -20,7 +20,6 @@ All types are parametric on the floating point type (`Float64` or `Float32`).
 The package is being revived and re-organized. Planned steps: package hygiene and tests (in progress), source re-layout with own point/vector types and a `snake_case` API, a flat index-based geometry model shared by CPU and GPU navigation (via KernelAbstractions.jl), and more solids and material properties.
 
 Known limitations:
-- Plotting with recent Makie versions (including 2D plots such as the X-ray heatmaps) fails while Geom4hep is loaded: Geom4hep redefines arithmetic on `GeometryBasics.Point3` (type piracy), which interferes with Makie internals. This will be fixed by introducing Geom4hep's own point/vector types.
 - `polyhedra`, `torus` and other GDML solids are not yet supported; they are replaced by `NoShape` with a warning.
 - The CUDA prototype (`src/CuGeom.jl` and the `CUDA*` examples) is not loaded and will be replaced by a KernelAbstractions implementation.
 

@@ -71,20 +71,20 @@ function Base.show(io::IO, shape::BooleanIntersection{T}) where {T}
 end
 
 
-function GeometryBasics.mesh(shape::BooleanUnion{T}) where {T}
+function GeometryBasics.mesh(shape::BooleanUnion{T}; facets::Integer=64) where {T}
     (; left, right, transformation) = shape
-    rmesh = mesh(right)
-    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+    rmesh = mesh(right; facets)
+    merge([mesh(left; facets), Mesh(map(c -> _gbpoint(Point3{T}(c) * transformation), coordinates(rmesh)), faces(rmesh))])
 end
-function GeometryBasics.mesh(shape::BooleanSubtraction{T}) where {T}
+function GeometryBasics.mesh(shape::BooleanSubtraction{T}; facets::Integer=64) where {T}
     (; left, right, transformation) = shape
-    rmesh = mesh(right)
-    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+    rmesh = mesh(right; facets)
+    merge([mesh(left; facets), Mesh(map(c -> _gbpoint(Point3{T}(c) * transformation), coordinates(rmesh)), faces(rmesh))])
 end
-function GeometryBasics.mesh(shape::BooleanIntersection{T}) where {T}
+function GeometryBasics.mesh(shape::BooleanIntersection{T}; facets::Integer=64) where {T}
     (; left, right, transformation) = shape
-    rmesh = mesh(right)
-    merge([mesh(left), Mesh(map(c -> Point3{T}(c * transformation), coordinates(rmesh)), faces(rmesh))])
+    rmesh = mesh(right; facets)
+    merge([mesh(left; facets), Mesh(map(c -> _gbpoint(Point3{T}(c) * transformation), coordinates(rmesh)), faces(rmesh))])
 end
 
 #---Basic functions---------------------------------------------------------------------------------

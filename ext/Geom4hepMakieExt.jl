@@ -2,7 +2,7 @@ module Geom4hepMakieExt
 
 using Geom4hep
 using Geom4hep: AbstractShape, Volume, Transformation3D, AABB, BVH, buildBVH, extent, inside,
-                kInside, kOutside, distanceToIn, distanceToOut, Point3, Vector3
+                kInside, kOutside, distanceToIn, distanceToOut, Point3, Vector3, _gbpoint
 import Geom4hep: draw, draw!, drawDistanceToIn, drawDistanceToOut
 using GeometryBasics: GeometryBasics, Mesh, coordinates, faces
 using LinearAlgebra: normalize
@@ -16,7 +16,7 @@ function draw!(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, 
     m = GeometryBasics.mesh(vol.shape)
     if ! isone(t)
         points = coordinates(m)
-        m = Mesh(map(c -> Point3{T}(c * t), points), faces(m))
+        m = Mesh(map(c -> _gbpoint(Point3{T}(c) * t), points), faces(m))
     end
     icolor = clamp(level, 1, length(colors))
     if wireframe
@@ -69,7 +69,7 @@ end
 
 #---Draw a AABB------------------------------------------------------------------
 function draw!(s::LScene, aabb::AABB; color::Symbol=:blue)
-    wireframe!(s, Mesh(coordinates(aabb), faces(aabb)), color=color)
+    wireframe!(s, Mesh(_gbpoint.(coordinates(aabb)), faces(aabb)), color=color)
     return s
 end
 
@@ -105,8 +105,8 @@ function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:Abstrac
     end
     fig = Figure()
     s = LScene(fig[1, 1])
-    scatter!(s, result, color=:black, markersize=1)
-    scatter!(s, [low, hi], color=:blue, markersize=10)
+    scatter!(s, _gbpoint.(result), color=:black, markersize=1)
+    scatter!(s, _gbpoint.([low, hi]), color=:blue, markersize=10)
     return fig
 end
 
@@ -129,8 +129,8 @@ function drawDistanceToIn(shape::AbstractShape{T}, N::Integer) where T<:Abstract
     end
     fig = Figure()
     s = LScene(fig[1, 1])
-    scatter!(s, result, color=:black, markersize=1)
-    scatter!(s, [low, hi], color=:blue, markersize=10)
+    scatter!(s, _gbpoint.(result), color=:black, markersize=1)
+    scatter!(s, _gbpoint.([low, hi]), color=:blue, markersize=10)
     return fig
 end
 

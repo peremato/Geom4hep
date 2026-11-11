@@ -478,15 +478,15 @@ function GeometryBasics.coordinates(tub::Tube{T}, facets=36) where {T<:AbstractF
         return if i <= 2*nbv
             ϕ = T(tub.ϕ₀ + (tub.Δϕ * (((i + 1) ÷ 2) - 1)) / nbf)
             up = ifelse(isodd(i), z, -z)
-            Point(tub.rmax * cos(ϕ), tub.rmax * sin(ϕ), up)
+            Point3(tub.rmax * cos(ϕ), tub.rmax * sin(ϕ), up)
         elseif ishollow
             ϕ = T(tub.ϕ₀ + (tub.Δϕ * (((i - 2 * nbv + 1) ÷ 2) - 1)) / nbf)
             up = ifelse(isodd(i), z, -z)
-            Point(tub.rmin * cos(ϕ), tub.rmin * sin(ϕ), up)
+            Point3(tub.rmin * cos(ϕ), tub.rmin * sin(ϕ), up)
         elseif i == length(range)
-            Point(T(0), T(0), -z)
+            Point3(T(0), T(0), -z)
         elseif i == length(range) - 1
-            Point(T(0), T(0), z)
+            Point3(T(0), T(0), z)
         end
     end
     return (inner(i) for i in range)

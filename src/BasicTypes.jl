@@ -2,29 +2,16 @@
 abstract type AbstractShape{T<:AbstractFloat} end
 abstract type AbstractMaterial{T<:AbstractFloat} end
 
-function GeometryBasics.Tessellation(shape::AbstractShape{T}, nvertices::NTuple{N,<:Integer}) where {T,N}
-    return Tessellation{3,T,typeof(shape),N}(shape, Int.(nvertices))
+"""
+    mesh(shape::AbstractShape; facets=64)
+
+Surface mesh of a shape (`GeometryBasics.Mesh`), e.g. for visualization. `facets` controls the
+number of segments used to approximate curved surfaces.
+"""
+function GeometryBasics.mesh(shape::AbstractShape{T}; facets::Integer=64) where T
+    points = [_gbpoint(p) for p in GeometryBasics.coordinates(shape, facets)]
+    GeometryBasics.Mesh(points, collect(GeometryBasics.faces(shape, facets)))
 end
-
-"""
-    mesh(shape::AbstractShape)
-
-Triangulated/quad surface mesh of a shape (`GeometryBasics.Mesh`), e.g. for visualization.
-"""
-GeometryBasics.mesh(shape::AbstractShape{T}) where T = GeometryBasics.mesh(Tessellation(shape, 64), facetype=typeof(first(GeometryBasics.faces(shape))))
-  
-const Vector3 = SVector{3}
-const Vector2 = SVector{2}
-Base.:*(x::Vector3, y::Vector3) = Vector3(x[1]*y[1], x[2]*y[2], x[3]*y[3])
-Base.:*(x::Point3, y::Vector3) = Point3(x[1]*y[1], x[2]*y[2], x[3]*y[3])
-Base.:*(x::Vector3, n::Number) = Vector3(x[1]*n, x[2]*n, x[3]*n)
-Base.:*(n::Number, x::Vector3) = x * n
-Base.:/(p::Point3, n::Number) = Point3(p[1]/n, p[2]/n, p[3]/n)
-LinearAlgebra.:⋅(x::Vector3, y::Vector3) = x[1]*y[1] + x[2]*y[2] + x[3]*y[3]
-Base.:-(p1::Point3, p2::Point3) = Vector3(p1[1]-p2[1], p1[2]-p2[2], p1[3]-p2[3])
-Base.:+(p1::Point3, p2::Point3) = Vector3(p1[1]+p2[1], p1[2]+p2[2], p1[3]+p2[3])
-LinearAlgebra.:×(x::Vector3, y::Vector3) = Vector3(x[2]*y[3]-x[3]*y[2], -x[1]*y[3]+x[3]*y[1], x[1]*y[2]-x[2]*y[1])
-unitize(v::Vector3) = v/sqrt(v⋅v)
 
 #---constants
 #const kTolerance = 1e-9

@@ -39,14 +39,14 @@ function GeometryBasics.coordinates(ctube::CutTube{T}, facets=36) where {T<:Abst
     function inner(i)
         return if i <= 2*nbv
             ϕ = T(tub.ϕ₀ + (tub.Δϕ * (((i + 1) ÷ 2) - 1)) / nbf)
-            Point(tub.rmax * cos(ϕ), tub.rmax * sin(ϕ), zLimit(ctube.planes[i%2+1], tub.rmax, ϕ))
+            Point3(tub.rmax * cos(ϕ), tub.rmax * sin(ϕ), zLimit(ctube.planes[i%2+1], tub.rmax, ϕ))
         elseif ishollow
             ϕ = T(tub.ϕ₀ + (tub.Δϕ * (((i - 2 * nbv + 1) ÷ 2) - 1)) / nbf)
-            Point(tub.rmin * cos(ϕ), tub.rmin * sin(ϕ), zLimit(ctube.planes[i%2+1], tub.rmin, ϕ))
+            Point3(tub.rmin * cos(ϕ), tub.rmin * sin(ϕ), zLimit(ctube.planes[i%2+1], tub.rmin, ϕ))
         elseif i == length(range)
-            Point(T(0), T(0), -z)
+            Point3(T(0), T(0), -z)
         elseif i == length(range) - 1
-            Point(T(0), T(0), z)
+            Point3(T(0), T(0), z)
         end
     end
     return (inner(i) for i in range)

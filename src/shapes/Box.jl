@@ -21,7 +21,7 @@ function normal(box::Box{T}, point::Point3{T}) where T
     safety = abs.(abs.(point) - box.fDimensions)
     safmin = minimum(safety)
     if safmin < kTolerance(T)/2
-        n = Vec3{T}(map( t -> t[1] - safmin < kTolerance(T)/2 ? sign(t[2]) : 0.0, zip(safety, point)))
+        n = Vector3{T}(map( t -> t[1] - safmin < kTolerance(T)/2 ? sign(t[2]) : 0.0, zip(safety, point)))
         normalize(n)
     else
         nothing    

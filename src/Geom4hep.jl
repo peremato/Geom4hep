@@ -12,11 +12,12 @@ export AABB, area, volume, BVHParam, buildBVH, BVH, pvolindices
 export AbstractNavigator, TrivialNavigator, BVHNavigator, NavigatorState, computeStep!, locateGlobalPoint!, reset!, isInVolume, currentVolume, getClosestDaughter, containedDaughters
 export kTolerance, kPushTolerance
 export processGDML
-export Tessellation, coordinates, faces, normals, mesh
+export coordinates, faces, normals, mesh
 
-using StaticArrays, GeometryBasics, LinearAlgebra, Rotations, AbstractTrees, DataStructures
-using GeometryBasics: mesh, Mesh
+using StaticArrays, LinearAlgebra, Rotations, AbstractTrees, DataStructures
+using GeometryBasics: GeometryBasics, Mesh, mesh, coordinates, faces, normals, TriangleFace, QuadFace
 include("Units.jl")
+include("Vectors.jl")
 include("BasicTypes.jl")
 include("Transformation3D.jl")
 include("BoundingBox.jl")

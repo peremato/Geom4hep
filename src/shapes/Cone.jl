@@ -478,14 +478,14 @@ function GeometryBasics.coordinates(cone::Cone{T}, facets=36) where {T<:Abstract
     function inner(i)
         return if i <= 2*nbv
             ϕ = T(ϕ₀ + (Δϕ * (((i + 1) ÷ 2) - 1)) / nbf)
-            isodd(i) ? Point(rmax2 * cos(ϕ), rmax2 * sin(ϕ), z) : Point(rmax1 * cos(ϕ), rmax1 * sin(ϕ), -z)
+            isodd(i) ? Point3(rmax2 * cos(ϕ), rmax2 * sin(ϕ), z) : Point3(rmax1 * cos(ϕ), rmax1 * sin(ϕ), -z)
         elseif ishollow
             ϕ = T(ϕ₀ + (Δϕ * (((i - 2 * nbv + 1) ÷ 2) - 1)) / nbf)
-            isodd(i) ? Point(rmin2 * cos(ϕ), rmin2 * sin(ϕ), z) : Point(rmin1 * cos(ϕ), rmin1 * sin(ϕ), -z)
+            isodd(i) ? Point3(rmin2 * cos(ϕ), rmin2 * sin(ϕ), z) : Point3(rmin1 * cos(ϕ), rmin1 * sin(ϕ), -z)
         elseif i == length(range)
-            Point(T(0), T(0), -z)
+            Point3(T(0), T(0), -z)
         elseif i == length(range) - 1
-            Point(T(0), T(0), z)
+            Point3(T(0), T(0), z)
         end
     end
     return (inner(i) for i in range)

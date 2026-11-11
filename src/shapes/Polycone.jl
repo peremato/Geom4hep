@@ -25,8 +25,8 @@ function Base.show(io::IO, pcone::Polycone{T,N}) where {T,N}
 end
 
 
-function GeometryBasics.mesh(pcone::Polycone{T,N,L}) where {T,N,L}
-    merge([Mesh(map(x-> x + Vector3{T}(0,0,pcone.zᵢ[i]),coordinates(pcone.sections[i])), faces(pcone.sections[i])) for i in 1:N])
+function GeometryBasics.mesh(pcone::Polycone{T,N,L}; facets::Integer=64) where {T,N,L}
+    merge([Mesh(map(x-> _gbpoint(x + Vector3{T}(0,0,pcone.zᵢ[i])), coordinates(pcone.sections[i], facets)), collect(faces(pcone.sections[i], facets))) for i in 1:N])
 end
 
 #---Basic functionality-----------------------------------------------------------------------------
