@@ -38,7 +38,7 @@ struct Cone{T<:AbstractFloat} <: AbstractShape{T}
         innerTolerance = tolerance(T) * secRMin
         outerTolerance = tolerance(T) * secRMax
 
-        if rmin1 == 0. || rmin2 == 0.
+        if rmin1 == 0 || rmin2 == 0
             innerConeApex = 0.
             tanInnerApexAngle = rmin1 == 0 ? rmin2 / 2z : rmin1 / 2z
         elseif rmin2 > rmin1
@@ -48,7 +48,7 @@ struct Cone{T<:AbstractFloat} <: AbstractShape{T}
             innerConeApex     = 2z * rmin2 / (rmin1 - rmin2)
             tanInnerApexAngle = rmin1 / (2z + innerConeApex)
         end
-        if rmax1 == 0. || rmax2 == 0.
+        if rmax1 == 0 || rmax2 == 0
             outerConeApex = 0.
             tanOuterApexAngle = rmax1 == 0 ? rmax2 / 2z : rmax1 / 2z
         elseif rmax2 > rmax1
@@ -73,19 +73,22 @@ end
 #---Basic functions-------------------------------------------------------------
 function capacity(cone::Cone{T}) where T<:AbstractFloat
     (; rmin1, rmax1, rmin2, rmax2, z, Δϕ) = cone 
-    z * Δϕ / 3. * (rmax1*rmax1 + rmax2*rmax2 + rmax1*rmax2
+    z * Δϕ / 3 * (rmax1*rmax1 + rmax2*rmax2 + rmax1*rmax2
                  - rmin1*rmin1 - rmin2*rmin2 - rmin1*rmin2)
 end
 
 function surface(cone::Cone{T}) where T<:AbstractFloat
     (; rmin1, rmax1, rmin2, rmax2, z, Δϕ) = cone 
-    mmin = (rmin1 + rmin2) * 0.5
-    mmax = (rmax1 + rmax2) * 0.5
+    mmin = (rmin1 + rmin2) / 2
+    mmax = (rmax1 + rmax2) / 2
     dmin = (rmin2 - rmin1)
     dmax = (rmax2 - rmax1)
-    Δϕ * (mmin * √(dmin * dmin + 4 * z * z) +
-          mmax * √(dmax * dmax + 4 * z * z) +
-          0.5 * (rmax1 * rmax1 - rmin1 * rmin1 + rmax2 * rmax2 - rmin2 * rmin2))
+    area = Δϕ * (mmin * √(dmin * dmin + 4 * z * z) +
+                 mmax * √(dmax * dmax + 4 * z * z) +
+                 (rmax1 * rmax1 - rmin1 * rmin1 + rmax2 * rmax2 - rmin2 * rmin2) / 2)
+    # the two phi faces are trapezoids of height 2z
+    Δϕ < T(2π) && (area += 2 * z * ((rmax1 - rmin1) + (rmax2 - rmin2)))
+    return area
 end
 
 function extent(cone::Cone{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
@@ -111,7 +114,7 @@ function inside(cone::Cone{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     cinside &= r2 < rmax * rmax - tolerance(T) * rmax
 
     # Check on RMin
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         rmin = rmin1 == rmin2 ? rmin1 : innerOffset + innerSlope * z
         outside |= r2 <= rmin * rmin - tolerance(T) * rmin
         outside && return kOutside
@@ -119,7 +122,7 @@ function inside(cone::Cone{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     end
     
     # Check on Phi
-    if Δϕ < 2π
+    if Δϕ < T(2π)
         outside |= is_outside(ϕWedge, x, y)
         cinside &= is_inside(ϕWedge, x, y)
     end
@@ -137,19 +140,19 @@ function safety_to_in(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     safermax = (r - rmax)/secRMax
     safermax > safety && ( safety = safermax )
     
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         rmin = rmin1 == rmin2 ? rmin1 : innerOffset + innerSlope * z
         safermin = (rmin - r)/secRMin
         safermin > safety && ( safety = safermin )
     end
     
-    if Δϕ < 2π
-        safephi = Δϕ > π ? r : Inf
+    if Δϕ < T(2π)
+        safephi = Δϕ > π ? r : T(Inf)
         dist =  x * ϕWedge.along1[2] - y * ϕWedge.along1[1]
         dist > tolerance(T)/2 && (safephi = dist)
         dist =  x * ϕWedge.along2[2] - y * ϕWedge.along2[1]
         dist > -tolerance(T)/2 && dist > safephi && (safephi = dist)
-        safephi < Inf && safephi > safety && (safety = safephi)
+        safephi < T(Inf) && safephi > safety && (safety = safephi)
     end
 
     return safety
@@ -166,13 +169,13 @@ function safety_to_out(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
     safermax = (rmax - r)/secRMax
     safermax < safety && ( safety = safermax ) 
     
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         rmin = rmin1 == rmin2 ? rmin1 : innerOffset + innerSlope * z
         safermin = (r - rmin)/secRMin
         safermin < safety && ( safety = safermin )
     end
     
-    if Δϕ < 2π
+    if Δϕ < T(2π)
         safephi = safety_to_out(ϕWedge, x, y)
         safephi < safety && (safety = safephi)
     end
@@ -188,15 +191,50 @@ function is_on_conical_surface(cone::Cone{T}, point::Point3{T}; inner_surface::B
     (r2 >= rad2 - tol * rad) && (r2 <= rad2 + tol * rad) && (abs(z) < cone.z + tolerance(T)/2)
 end
 
-function normal(cone::Cone{T}, point::Point3{T}; inner_surface::Bool=false) where T<:AbstractFloat
+# Outward (not normalized) normal of the outer or inner conical surface at a point on it
+function _conical_normal(cone::Cone{T}, point::Point3{T}, inner_surface::Bool) where T<:AbstractFloat
     x, y, z = point
     (; rmin1, rmax1, rmin2, rmax2, tanRMin, tanRMax) = cone
     r = √(x^2 + y^2)
     if inner_surface
-        rmin1 == rmin2 && rmin1 != 0. ? Vector3{T}(-x, -y, 0.) :  Vector3{T}(-x, -y, r * tanRMin)
+        rmin1 == rmin2 && rmin1 != 0 ? Vector3{T}(-x, -y, 0) :  Vector3{T}(-x, -y, r * tanRMin)
     else
-        rmax1 == rmax2 && rmax1 != 0. ? Vector3{T}( x,  y, 0.) :  Vector3{T}( x,  y, -r * tanRMax)
+        rmax1 == rmax2 && rmax1 != 0 ? Vector3{T}( x,  y, 0) :  Vector3{T}( x,  y, -r * tanRMax)
     end
+end
+
+# Sum of the unit outward normals of the lateral surfaces (conical and phi planes) the point lies on.
+# Assumes the point is on the surface of the cone.
+function _lateral_normal(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
+    x, y, z = point
+    n = zero(Vector3{T})
+    count = 0
+    if is_on_conical_surface(cone, point; inner_surface=false)
+        c = _conical_normal(cone, point, false)
+        c2 = c ⋅ c
+        c2 > 0 && (n += c / sqrt(c2); count += 1)
+    end
+    if (cone.rmin1 > 0 || cone.rmin2 > 0) && is_on_conical_surface(cone, point; inner_surface=true)
+        c = _conical_normal(cone, point, true)
+        c2 = c ⋅ c
+        c2 > 0 && (n += c / sqrt(c2); count += 1)
+    end
+    if cone.Δϕ < T(2π)
+        w = cone.ϕWedge
+        is_on_surface(w.along1, w.normal1, x, y) && (n += Vector3{T}(-w.normal1[1], -w.normal1[2], 0); count += 1)
+        is_on_surface(w.along2, w.normal2, x, y) && (n += Vector3{T}(-w.normal2[1], -w.normal2[2], 0); count += 1)
+    end
+    return n, count
+end
+
+function normal(cone::Cone{T}, point::Point3{T}) where T<:AbstractFloat
+    inside(cone, point) != kSurface && return zero(Vector3{T})
+    n, count = _lateral_normal(cone, point)
+    z = point[3]
+    abs(z - cone.z) <= tolerance(T)/2 && (n += Vector3{T}(0, 0, 1); count += 1)
+    abs(z + cone.z) <= tolerance(T)/2 && (n += Vector3{T}(0, 0, -1); count += 1)
+    count == 0 && return zero(Vector3{T})
+    return normalize(n)
 end
 
 function distance_to_conical_surface(cone::Cone{T}, point::Point3{T}, dir::Vector3{T}; dist_to_in::Bool=false, inner_surface::Bool=false)::T where T<:AbstractFloat
@@ -208,22 +246,22 @@ function distance_to_conical_surface(cone::Cone{T}, point::Point3{T}, dir::Vecto
     distance = T(Inf)
     onConicalSurface = is_on_conical_surface(cone, point, inner_surface=inner_surface)
     if onConicalSurface
-        norm = normal(cone, point, inner_surface=inner_surface)
+        norm = _conical_normal(cone, point, inner_surface)
         vdot = dir ⋅ norm
-        vdot ≈ 0. && return distance
+        abs(vdot) <= 8eps(T) * sqrt(norm ⋅ norm) && return distance   # moving parallel to the surface
         if dist_to_in
-            isOnSurfaceAndMovingInside = vdot < 0.
-            if Δϕ < 2π
-                isOnSurfaceAndMovingInside && is_inside(ϕWedge, x, y) && return 0.
+            isOnSurfaceAndMovingInside = vdot < 0
+            if Δϕ < T(2π)
+                isOnSurfaceAndMovingInside && is_inside(ϕWedge, x, y) && return zero(T)
             else
-                isOnSurfaceAndMovingInside && return 0.
+                isOnSurfaceAndMovingInside && return zero(T)
             end
         else
-            isOnSurfaceAndMovingOutside = vdot > 0.
+            isOnSurfaceAndMovingOutside = vdot > 0
             if Δϕ < T(2π)
-                isOnSurfaceAndMovingOutside && is_inside(ϕWedge, x, y) && return 0.
+                isOnSurfaceAndMovingOutside && is_inside(ϕWedge, x, y) && return zero(T)
             else
-                isOnSurfaceAndMovingOutside && return 0.
+                isOnSurfaceAndMovingOutside && return zero(T)
             end
         end
     end
@@ -245,17 +283,17 @@ function distance_to_conical_surface(cone::Cone{T}, point::Point3{T}, dir::Vecto
         end
         b2 = b * b
         ac = a * c
-        b2 < ac && return NaN
+        b2 < ac && return T(NaN)
         d2 = b2 - ac
         Δ = √(d2)
         if dist_to_in
-            d2 >= 0. && b >= 0. && (distance = c/(-b - Δ))
-            d2 >= 0. && b < 0.  && (distance = (-b + Δ)/a)
+            d2 >= 0 && b >= 0 && (distance = c/(-b - Δ))
+            d2 >= 0 && b < 0  && (distance = (-b + Δ)/a)
         else
-            d2 >= 0. && b >= 0. && (distance = (-b - Δ)/a)
-            d2 >= 0. && b < 0.  && (distance = c/(-b + Δ))
+            d2 >= 0 && b >= 0 && (distance = (-b - Δ)/a)
+            d2 >= 0 && b < 0  && (distance = c/(-b + Δ))
         end
-        distance < 0. && return NaN
+        distance < 0 && return T(NaN)
         newZ = z + dz * distance
         ok = abs(newZ) < cone.z
     else
@@ -272,21 +310,21 @@ function distance_to_conical_surface(cone::Cone{T}, point::Point3{T}, dir::Vecto
         end
         b2 = b * b
         ac = a * c
-        b2 < ac && return NaN
+        b2 < ac && return T(NaN)
         d2 = b2 - ac
         Δ = √(abs(d2))
         if dist_to_in
-            d2 >= 0. && b >= 0. && (distance = (-b - Δ)/a)
-            d2 >= 0. && b < 0.  && (distance = c/(-b + Δ))
+            d2 >= 0 && b >= 0 && (distance = (-b - Δ)/a)
+            d2 >= 0 && b < 0  && (distance = c/(-b + Δ))
         else
-            d2 >= 0. && b >= 0. && (distance = c/(-b - Δ))
-            d2 >= 0. && b < 0.  && (distance = (-b + Δ)/a)
+            d2 >= 0 && b >= 0 && (distance = c/(-b - Δ))
+            d2 >= 0 && b < 0  && (distance = (-b + Δ)/a)
         end
-        distance < 0. && return NaN
+        distance < 0 && return T(NaN)
         newZ = z + dz * distance
         ok = abs(newZ) < cone.z + tolerance(T)/2
     end
-    distance < 0.0 && (distance = T(Inf))
+    distance < 0 && (distance = T(Inf))
     if Δϕ < T(2π)
         hitx = x + distance * dx
         hity = y + distance * dy
@@ -301,7 +339,7 @@ function distance_to_out(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T wh
     (; rmin1, rmax1, rmin2, rmax2, Δϕ, ϕWedge, secRMax, secRMin, 
     outerSlope, outerOffset, innerSlope, innerOffset) = cone
 
-    distance::T =  -1.
+    distance = T(-1)
     done = false
 
     #---First we check all dimensions of the cone, whether points are outside (return -1)
@@ -316,42 +354,42 @@ function distance_to_out(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T wh
     done |= crmax > tolerance(T) * rmax
     done && return distance
 
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         rmin = rmin1 == rmin2 ? rmin1 : innerOffset + innerSlope * z
         crmin = r2 - rmin * rmin
         done |= crmin < -tolerance(T) * rmin
         done && return distance
     end
 
-    if Δϕ < 2π
+    if Δϕ < T(2π)
         done |= is_outside(ϕWedge, x, y)
         done && return distance
     end
 
     # OK, since we're here, then distance must be non-negative, and the
     # smallest of possible intersections
-    !done && (distance = Inf)
+    !done && (distance = T(Inf))
 
-    invdirz = 1. / nonzero(dz)
+    invdirz = one(T) / nonzero(dz)
     distz   = dz >= 0 ? (cone.z - z) * invdirz : (-cone.z - z) * invdirz
     dz != 0 && distz < distance && (distance = distz)
 
     # Find the intersection of the trajectories with the conical surfaces
     distOuter = distance_to_conical_surface(cone, point, dir; dist_to_in=false, inner_surface=false)
     distOuter < distance && (distance = distOuter)
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         distInner = distance_to_conical_surface(cone, point, dir; dist_to_in=false, inner_surface=true)
         distInner < distance && (distance = distInner)
     end
 
     # Find the intersection of trajectories with Phi planes
-    if Δϕ < 2π
+    if Δϕ < T(2π)
         p = Point2{T}(x,y)
         d = Vector2{T}(dx,dy)
         isOnStartPhi = is_on_surface(ϕWedge.along1, ϕWedge.normal1, x, y)
         isOnEndPhi = is_on_surface(ϕWedge.along2, ϕWedge.normal2, x, y)
-        cond = (isOnStartPhi && d ⋅ ϕWedge.normal1 < 0.) || (isOnEndPhi && d ⋅ ϕWedge.normal2 < 0.)
-        cond && (distance = 0.)
+        cond = (isOnStartPhi && d ⋅ ϕWedge.normal1 < 0) || (isOnEndPhi && d ⋅ ϕWedge.normal2 < 0)
+        cond && (distance = zero(T))
         if Δϕ < π
             dist_phi = phi_plane_intersection(p, d, ϕWedge.along1, ϕWedge.normal1)
             dist_phi < distance && (distance = dist_phi)
@@ -399,7 +437,7 @@ function distance_to_in(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T whe
     rmax = rmax1 == rmax2 ? rmax1 : outerOffset + outerSlope * z
     crmax = rsq - rmax * rmax
     rdotn = dx * x + dy * y
-    done |= crmax > tolerance(T) * rmax && rdotn >= 0.
+    done |= crmax > tolerance(T) * rmax && rdotn >= 0
     done && return distance
     
     # Next, check all dimensions of the tube, whether points are inside --> return -1
@@ -408,12 +446,12 @@ function distance_to_in(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T whe
     # For points inside z-range, return -1
     inside = distz < -tolerance(T)/2
     inside &= crmax < -tolerance(T) * rmax
-    if rmin1 > 0. || rmin2 > 0.
+    if rmin1 > 0 || rmin2 > 0
         rmin = rmin1 == rmin2 ? rmin1 : innerOffset + innerSlope * z
         crmin = rsq - rmin * rmin
         inside &= crmin > tolerance(T) * rmin
     end
-    if Δϕ < 2π
+    if Δϕ < T(2π)
         inside &= is_inside(ϕWedge, x, y)
     end
     done |= inside
@@ -434,7 +472,7 @@ function distance_to_in(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T whe
         isHittingBottomPlane &= r2 >= rmin1 * rmin1 - tolerance(T)/2
         okz &= isHittingTopPlane || isHittingBottomPlane
     end
-    if Δϕ < 2π
+    if Δϕ < T(2π)
         okz &= is_inside(ϕWedge, hitx, hity)
     end
 
@@ -449,7 +487,7 @@ function distance_to_in(cone::Cone{T}, point::Point3{T}, dir::Vector3{T})::T whe
         distInner < distance && (distance = distInner)
     end
     # Find the intersection of trajectories with Phi planes
-    if Δϕ < 2π
+    if Δϕ < T(2π)
         p = Point2{T}(x,y)
         d = Vector2{T}(dx,dy)
         distPhi = phi_plane_intersection(p, d, ϕWedge.along1, ϕWedge.normal1, to_in=true)
@@ -466,9 +504,9 @@ end
 #---Drawing functions------------------------------------------------------------
 function GeometryBasics.coordinates(cone::Cone{T}, facets=36) where {T<:AbstractFloat}
     (; rmin1, rmax1, rmin2, rmax2, z, ϕ₀, Δϕ) = cone 
-    issector = Δϕ < 2π
+    issector = Δϕ < T(2π)
     ishollow = rmin1 > 0 || rmin2 > 0
-    issector ?  facets =  round(Int64, (facets/2π) * Δϕ) : nothing
+    issector ?  facets =  round(Int64, (facets/T(2π)) * Δϕ) : nothing
     isodd(facets) ? facets = 2 * div(facets, 2) : nothing
     facets < 8 ? facets = 8 : nothing
     nbf = Int(facets / 2)            # Number of faces
@@ -493,9 +531,9 @@ function GeometryBasics.coordinates(cone::Cone{T}, facets=36) where {T<:Abstract
 
   function GeometryBasics.faces(cone::Cone{T}, facets=36) where T<:AbstractFloat
     (; rmin1, rmax1, rmin2, rmax2, z, ϕ₀, Δϕ) = cone 
-    issector = Δϕ < 2π
+    issector = Δϕ < T(2π)
     ishollow = rmin1 > 0 || rmin2 > 0
-    issector ?  facets =  round(Int64, (facets/2π) * Δϕ) : nothing
+    issector ?  facets =  round(Int64, (facets/T(2π)) * Δϕ) : nothing
     isodd(facets) ? facets = 2 * div(facets, 2) : nothing
     facets < 8 ? facets = 8 : nothing
     nbf = Int(facets / 2)            # Number of faces

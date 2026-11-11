@@ -57,18 +57,16 @@ function intersect_aabox_ray(bbmin::Point3{T}, bbmax::Point3{T}, point::Point3{T
     return (tmin,tmax)
 end
 
-function transform_extent(extent::Tuple{Point3{T},Point3}, transformation) where {T}
+function transform_extent(extent::Tuple{Point3{T},Point3{T}}, transformation) where {T}
     a, b = extent
-    min_ = [ Inf,  Inf,  Inf]
-    max_ = [ -Inf,  -Inf,  -Inf] 
-    coords =  Point3{T}[a, (b[1], a[2], a[3]), (a[1], b[2], a[3]), (a[1], a[2], b[3]),
-                           (a[1], b[2], b[3]), (b[1], a[2], b[3]), (b[1], b[2], a[3]), b]
-    for c in coords
+    corners = (a, Point3{T}(b[1], a[2], a[3]), Point3{T}(a[1], b[2], a[3]), Point3{T}(a[1], a[2], b[3]),
+                  Point3{T}(a[1], b[2], b[3]), Point3{T}(b[1], a[2], b[3]), Point3{T}(b[1], b[2], a[3]), b)
+    pmin = Point3{T}(typemax(T), typemax(T), typemax(T))
+    pmax = Point3{T}(typemin(T), typemin(T), typemin(T))
+    for c in corners
         p = c * transformation
-        for i in 1:3 
-            p[i] > max_[i] && (max_[i] = p[i])
-            p[i] < min_[i] && (min_[i] = p[i])
-        end
+        pmin = min.(pmin, p)
+        pmax = max.(pmax, p)
     end
-    return (Point3{T}(min_), Point3{T}(max_))
+    return (pmin, pmax)
 end

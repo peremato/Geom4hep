@@ -173,6 +173,14 @@ function inside(agg::Aggregate{T}, point::Point3{T})::Int64  where T<:AbstractFl
     return kOutside
 end
 
+function normal(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
+    for pvol in agg.pvolumes
+        lpoint = pvol.transformation * point
+        inside(pvol.volume.shape, lpoint) == kSurface && return normal(pvol.volume.shape, lpoint) * pvol.transformation
+    end
+    return zero(Vector3{T})
+end
+
 function safety_to_out(agg::Aggregate{T}, point::Point3{T}) where T<:AbstractFloat
 end
 

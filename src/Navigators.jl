@@ -184,8 +184,8 @@ function closest_daughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::Ve
         pvol = volume.daughters[i]
         #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
         dist = distance_to_in(pvol, point, dir)
-        dist < 0. && return (zero(T), pvol.idx ) 
-        if dist > 0. && dist != Inf && dist < step
+        dist < 0 && return (zero(T), pvol.idx ) 
+        if dist > 0 && dist != T(Inf) && dist < step
             step = dist
             candidate = pvol.idx
         end

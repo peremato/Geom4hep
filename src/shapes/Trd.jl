@@ -42,16 +42,16 @@ function capacity(trd::Trd{T}) where T<:AbstractFloat
     T(8) * trd.halfx1plusx2 * trd.halfy1plusy2 * trd.z + (T(2)/3) * trd.x2minusx1 * trd.y2minusy1 * trd.z
 end
 function surface(trd::Trd{T}) where T<:AbstractFloat
-    s =  2. * 2. * trd.halfy1plusy2 * sqrt(trd.x2minusx1^2 + (2*trd.z)^2)
-    s += 2. * 2. * trd.halfx1plusx2 * sqrt(trd.y2minusy1^2 + (2*trd.z)^2)
-    s += 4. * trd.x1 * trd.y1 + 4. * trd.x2 * trd.y2
+    s =  4 * trd.halfy1plusy2 * sqrt(trd.x2minusx1^2 + (2*trd.z)^2)
+    s += 4 * trd.halfx1plusx2 * sqrt(trd.y2minusy1^2 + (2*trd.z)^2)
+    s += 4 * trd.x1 * trd.y1 + 4 * trd.x2 * trd.y2
 end
 function extent(trd::Trd{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
     p = Point3{T}( max(trd.x1, trd.x2), max(trd.y1, trd.y2), trd.z)
     ( -p, p )
 end
 
-cross(px, py, vx, vy) = vx * py - vy * px
+_cross2d(px, py, vx, vy) = vx * py - vy * px
 
 function inside(trd::Trd{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     x, y, z = point
@@ -61,12 +61,12 @@ function inside(trd::Trd{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     inside = abs(z) < (trd.z - tolerance(T)/2)
 
     # inside x?
-    c = cross(abs(x)-trd.x1, z+trd.z, trd.x2-trd.x1, 2*trd.z)
+    c = _cross2d(abs(x)-trd.x1, z+trd.z, trd.x2-trd.x1, 2*trd.z)
     outside |= (c < -tolerance(T)/2)
     inside &= (c > tolerance(T)/2)
 
     # inside y?
-    c = cross(abs(y)-trd.y1, z+trd.z, trd.y2-trd.y1, 2*trd.z)
+    c = _cross2d(abs(y)-trd.y1, z+trd.z, trd.y2-trd.y1, 2*trd.z)
     outside |= (c < -tolerance(T)/2)
     inside &= (c > tolerance(T)/2)
 
@@ -87,30 +87,26 @@ function normal(trd::Trd{T}, point::Point3{T}) where T<:AbstractFloat
     distpy = ( 2 * trd.z * y - (trd.y2 - trd.y1) * z - trd.z * (trd.y1 + trd.y2)) * ynorm
     if abs(distmx) <= tolerance(T)/2
         surfaces += 1
-        snormal += [ -2 * trd.z, 0., -(trd.x2 - trd.x1)] * xnorm
+        snormal += Vector3{T}(-2 * trd.z, 0, -(trd.x2 - trd.x1)) * xnorm
     end
     if abs(distpx) <= tolerance(T)/2
         surfaces += 1
-        snormal += [  2 * trd.z, 0., -(trd.x2 - trd.x1)] * xnorm
+        snormal += Vector3{T}( 2 * trd.z, 0, -(trd.x2 - trd.x1)) * xnorm
     end
     if abs(distmy) <= tolerance(T)/2
         surfaces += 1
-        snormal += [ 0., -2 * trd.z, -(trd.y2 - trd.y1)] * ynorm
+        snormal += Vector3{T}(0, -2 * trd.z, -(trd.y2 - trd.y1)) * ynorm
     end
     if abs(distpy) <= tolerance(T)/2
         surfaces += 1
-        snormal += [ 0., 2 * trd.z, -(trd.y2 - trd.y1)] * ynorm
+        snormal += Vector3{T}(0,  2 * trd.z, -(trd.y2 - trd.y1)) * ynorm
     end
     if abs(distz) <= tolerance(T)/2
         surfaces += 1
-        if z > 0.
-            snormal += [ 0., 0., 1.]
-        else
-            snormal += [ 0., 0., -1.]
-        end
+        snormal += Vector3{T}(0, 0, z > 0 ? 1 : -1)
     end
     if surfaces == 0
-        return nothing
+        return zero(Vector3{T})
     elseif surfaces == 1
         return snormal
     else
@@ -124,12 +120,12 @@ function safety(trd::Trd{T}, point::Point3{T}) where T
     dist = safz
     distx = trd.halfx1plusx2 - trd.fx * z
     safx = (distx - abs(x)) * trd.calfx
-    if distx >= 0. && safx < dist
+    if distx >= 0 && safx < dist
         dist = safx
     end
     disty = trd.halfy1plusy2 - trd.fy * z
     safy = (disty - abs(y)) * trd.calfy
-    if disty >= 0. && safy < dist
+    if disty >= 0 && safy < dist
         dist = safy
     end
     dist
@@ -164,19 +160,19 @@ function face_intersection(trd::Trd{T}, pos::Point3{T}, dir::Vector3{T},
         halfKplus = trd.halfy1plusy2
     end
     if mirroredPoint
-        posV *= -1.
-        dirV *= -1.
+        posV = -posV
+        dirV = -dirV
     end
     ndotv = dirV + fV * dz
     if toInside
-        ok = ndotv < 0.
+        ok = ndotv < 0
     else
-        ok = ndotv > 0.
+        ok = ndotv > 0
     end
     if !ok
-        return ok, 0.0
+        return ok, zero(T)
     end
-    alongZ = 2.0 * trd.z
+    alongZ = 2 * trd.z
     # distance from trajectory to face
     dist = (alongZ * (posV - v1) - alongV * (z + trd.z)) / (dz * alongV - dirV * alongZ)
     ok &= dist > tolerance(T)
@@ -189,7 +185,7 @@ function face_intersection(trd::Trd{T}, pos::Point3{T}, dir::Vector3{T},
         dK   = halfKplus - fK * hitz; # calculate the width of the varying dimension at hitz
         ok &= abs(hitk) <= dK
         if ok && abs(dist) < tolerance(T)/2
-            dist = 0.
+            dist = zero(T)
         end
     end
     return ok, dist
@@ -199,35 +195,33 @@ function distance_to_out(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T wher
 
     x, y, z = point
     dx, dy, dz = dir
-    distance = 0.0
+    distance = zero(T)
 
     # hit top Z face?
-    trd.calfx 
-    trd.calfy 
     safz = trd.z - abs(z)
     out = safz < -tolerance(T)/2
     distx = trd.halfx1plusx2 - trd.fx * z
     out |= (distx - abs(x)) * trd.calfx < -tolerance(T)/2
     disty = trd.halfy1plusy2 - trd.fy * z
     out |= (disty - abs(y)) * trd.calfy < -tolerance(T)/2
-    out && return -1.
-    if dz > 0.
+    out && return T(-1)
+    if dz > 0
         distz = (trd.z - z)/abs(dz)
         hitx = abs(x + distz * dx)
         hity = abs(y + distz * dy)
         if hitx <= trd.x2 && hity <= trd.y2
             distance = distz
-            abs(distance) < -tolerance(T)/2 && return 0. 
+            abs(distance) < -tolerance(T)/2 && return zero(T)
         end
     end
     # hit bottom Z face?
-    if dz < 0.
+    if dz < 0
         distz = (trd.z + z)/abs(dz)
         hitx = abs(x + distz * dx)
         hity = abs(y + distz * dy)
         if hitx <= trd.x1 && hity <= trd.y1
             distance = distz
-            abs(distance) < -tolerance(T)/2 && return 0. 
+            abs(distance) < -tolerance(T)/2 && return zero(T)
         end
     end
 
@@ -235,24 +229,24 @@ function distance_to_out(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T wher
     okx, distx = face_intersection(trd, point, dir, false, false, false)
     if okx
         distance = distx
-        return distx < tolerance(T)/2 ? 0.0 : distx 
+        return distx < tolerance(T)/2 ? zero(T) : distx
     end
     okx, distx = face_intersection(trd, point, dir, false, true, false)
     if okx
         distance = distx
-        return distx < tolerance(T)/2 ? 0.0 : distx 
+        return distx < tolerance(T)/2 ? zero(T) : distx
     end
 
     # hitting Y faces?
     oky, disty = face_intersection(trd, point, dir, true, false, false)
     if oky
         distance = disty
-        return disty < tolerance(T)/2 ? 0.0 : disty 
+        return disty < tolerance(T)/2 ? zero(T) : disty
     end
     oky, disty = face_intersection(trd, point, dir, true, true, false)
     if oky
         distance = disty
-        return disty < tolerance(T)/2 ? 0.0 : disty 
+        return disty < tolerance(T)/2 ? zero(T) : disty
     end
     return distance 
 end
@@ -260,7 +254,7 @@ end
 function distance_to_in(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     x, y, z = point
     dx, dy, dz = dir
-    distance::T = Inf
+    distance = T(Inf)
 
     inz = abs(z) < (trd.z - tolerance(T)/2)
     distx = trd.halfx1plusx2 - trd.fx * z
@@ -269,7 +263,7 @@ function distance_to_in(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where
     iny = (disty - abs(y)) * trd.calfy > tolerance(T)/2
     inside = inx && iny && inz
     if inside
-        distance = -1.
+        distance = T(-1)
     end
     done = inside
     done && return distance
@@ -289,7 +283,7 @@ function distance_to_in(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where
     end
     done |= okz
     if done
-        return abs(distance) < tolerance(T)/2 ? 0. : distance
+        return abs(distance) < tolerance(T)/2 ? zero(T) : distance
     end
 
     # hitting X faces?
@@ -302,7 +296,7 @@ function distance_to_in(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where
     end
     done |= okx
     if done
-        return abs(distance) < tolerance(T)/2 ? 0. : distance
+        return abs(distance) < tolerance(T)/2 ? zero(T) : distance
     end
     if !iny
         oky, disty = face_intersection(trd, point, dir, true, false, true)
@@ -310,7 +304,7 @@ function distance_to_in(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where
         oky, disty = face_intersection(trd, point, dir, true, true, true)
         if oky distance = disty end
     end
-    return abs(distance) < tolerance(T)/2 ? 0. : distance
+    return abs(distance) < tolerance(T)/2 ? zero(T) : distance
 end
 
 function Base.show(io::IO, trd::Trd{T}) where T

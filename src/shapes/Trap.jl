@@ -71,8 +71,9 @@ function surface(trap::Trap{T}) where T<:AbstractFloat
 end
 
 function extent(trap::Trap{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
-    p = Point3{T}( max(trap.x1, trap.x2, trap.x3, trap.x4), max(trap.y1, trap.y2), trap.z)
-    ( -p, p )
+    # from the vertices: the faces can be shifted (θ, ϕ) and skewed (α1, α2)
+    pts = trap.coordinates
+    (reduce((a, b) -> min.(a, b), pts), reduce((a, b) -> max.(a, b), pts))
 end
 
 function inside(trap::Trap{T}, point::Point3{T})::Int64  where T<:AbstractFloat
@@ -88,6 +89,20 @@ function inside(trap::Trap{T}, point::Point3{T})::Int64  where T<:AbstractFloat
         cinside &= s < -tolerance(T)/2
     end
     cinside ? kInside : outside ? kOutside : kSurface
+end
+
+function normal(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
+    inside(trap, point) != kSurface && return zero(Vector3{T})
+    n = zero(Vector3{T})
+    count = 0
+    z = point[3]
+    abs(z - trap.z) <= tolerance(T)/2 && (n += Vector3{T}(0, 0, 1); count += 1)
+    abs(z + trap.z) <= tolerance(T)/2 && (n += Vector3{T}(0, 0, -1); count += 1)
+    for plane in trap.planes
+        abs(safety(plane, point)) <= tolerance(T)/2 && (n += plane.normal; count += 1)
+    end
+    count == 0 && return zero(Vector3{T})
+    return normalize(n)
 end
 
 function safety_to_out(trap::Trap{T}, point::Point3{T}) where T<:AbstractFloat
@@ -143,7 +158,7 @@ function distance_to_in(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T whe
     # step 1.a: input particle is moving away --> return infinity
     signZdir = copysign(1,dz)
     max = signZdir * trap.z - z
-    signZdir * max < tolerance(T)/2 && return Inf
+    signZdir * max < tolerance(T)/2 && return T(Inf)
 
     # step 1.b General case:
     smax = max/dz
@@ -164,7 +179,7 @@ function distance_to_in(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T whe
         posPoint && !posDir && dist > smin && (smin = dist)
     end
     done && return T(Inf)
-    distance = smin <= smax ? smin : Inf
+    distance = smin <= smax ? smin : T(Inf)
     distance < -tolerance(T)/2 && return T(-1)
     return distance
 end 

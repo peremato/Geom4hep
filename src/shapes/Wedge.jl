@@ -20,7 +20,7 @@ function Base.show(io::IO, wed::Wedge{T}) where T
 end
 
 function is_on_surface(along::Vector2{T}, normal::Vector2{T}, x::T, y::T) where T<:AbstractFloat  
-    along[1]*x + along[2]*y >= 0. && abs(normal[1]*x + normal[2]*y) < tolerance(T)
+    along[1]*x + along[2]*y >= 0 && abs(normal[1]*x + normal[2]*y) < tolerance(T)
 end
 
 function is_inside(w::Wedge{T}, x::T, y::T; tol::T=T(0), include_surface::Bool=false) where T<:AbstractFloat

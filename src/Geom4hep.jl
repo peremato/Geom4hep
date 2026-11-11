@@ -4,7 +4,7 @@ export Point3, Point2, Vector3, Vector2, nonzero
 export AbstractShape, AbstractMaterial
 export Shape, NoShape, Box, Trd, Tube, Wedge, is_inside, is_outside, Cone, Polycone, nz, nsections, section_index
 export CutTube, Plane, Trap, BooleanUnion, BooleanIntersection, BooleanSubtraction
-export getindex, capacity, surface, extent, normal, distance_to_out,  distance_to_in, inside, safety_to_out, safety_to_in
+export getindex, capacity, surface, estimate_capacity, estimate_surface, extent, normal, distance_to_out,  distance_to_in, inside, safety_to_out, safety_to_in
 export Material, Isotope, Element
 export Transformation3D, RotMatrix3, RotXYZ, one, isone, transform, hasrotation, hastranslation, inv, lmul!
 export PlacedVolume, Volume, Assembly, place_daughter!, draw, draw!, draw_distance_to_in, draw_distance_to_out, world_volume, children

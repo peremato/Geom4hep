@@ -191,6 +191,55 @@ function inside(shape::BooleanSubtraction{T}, point::Point3{T})::Int64  where {T
     end
 end
 
+#---Normals------------------------------------------------------------------------------------------
+_unit_or_zero(n::Vector3{T}) where T = n ⋅ n > 0 ? normalize(n) : zero(Vector3{T})
+
+function normal(shape::BooleanUnion{T}, point::Point3{T}) where {T}
+    (; left, right, transformation) = shape
+    lpoint = transformation * point
+    posA, posB = inside(left, point), inside(right, lpoint)
+    if posA == kSurface && posB == kOutside
+        return normal(left, point)
+    elseif posB == kSurface && posA == kOutside
+        return normal(right, lpoint) * transformation
+    elseif posA == kSurface && posB == kSurface      # overlapping faces (touching faces give zero)
+        return _unit_or_zero(normal(left, point) + normal(right, lpoint) * transformation)
+    end
+    return zero(Vector3{T})
+end
+
+function normal(shape::BooleanSubtraction{T}, point::Point3{T}) where {T}
+    (; left, right, transformation) = shape
+    lpoint = transformation * point
+    posA, posB = inside(left, point), inside(right, lpoint)
+    if posA == kSurface && posB == kOutside
+        return normal(left, point)
+    elseif posB == kSurface && posA == kInside
+        return -(normal(right, lpoint) * transformation)
+    elseif posA == kSurface && posB == kSurface      # edge where the cut meets the outer surface
+        return _unit_or_zero(normal(left, point) - normal(right, lpoint) * transformation)
+    end
+    return zero(Vector3{T})
+end
+
+function normal(shape::BooleanIntersection{T}, point::Point3{T}) where {T}
+    (; left, right, transformation) = shape
+    lpoint = transformation * point
+    posA, posB = inside(left, point), inside(right, lpoint)
+    if posA == kSurface && posB == kInside
+        return normal(left, point)
+    elseif posB == kSurface && posA == kInside
+        return normal(right, lpoint) * transformation
+    elseif posA == kSurface && posB == kSurface
+        return _unit_or_zero(normal(left, point) + normal(right, lpoint) * transformation)
+    end
+    return zero(Vector3{T})
+end
+
+#---Capacity and surface (no closed form: estimated by sampling, as in Geant4)------------------------
+capacity(shape::BooleanShape; npoints::Integer=1_000_000) = estimate_capacity(shape; npoints)
+surface(shape::BooleanShape; npoints::Integer=1_000_000) = estimate_surface(shape; npoints)
+
 function safety_to_out(shape::BooleanUnion{T}, point::Point3{T})::T where {T}
     return 0
 end
@@ -227,14 +276,14 @@ function distance_to_out(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{
     if positionA != kOutside  # point inside A
         while(true)
             distA = distance_to_out(left, point, dir)
-            dist += (distA > 0 && distA < Inf) ? distA : 0
+            dist += (distA > 0 && distA < T(Inf)) ? distA : 0
             dist += push_tolerance(T)
             npoint = point + dist * dir
             lpoint = transformation * npoint
             if inside(right, lpoint) != kOutside # B could be overlapping with A -- and/or connecting A to another part of A
                 ldir = transformation * dir
                 distB = distance_to_out(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0
+                dist += (distB > 0 && distB < T(Inf)) ? distB : 0
                 dist += push_tolerance(T)
                 npoint = point + dist * dir
                 if inside(left, npoint) == kOutside
@@ -252,13 +301,13 @@ function distance_to_out(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{
             ldir = transformation * dir
             while(true)
                 distB = distance_to_out(right, lpoint, ldir)
-                dist += (distB > 0 && distB < Inf) ? distB : 0
+                dist += (distB > 0 && distB < T(Inf)) ? distB : 0
                 dist += push_tolerance(T) # Give a push
                 npoint = point + dist * dir
                 if inside(left, npoint) != kOutside # A could be overlapping with B -- and/or connecting B to another part of B
                     ldir = transformation * dir
                     distA = distance_to_out(left, npoint, dir)
-                    dist += (distA > 0 && distA < Inf) ? distA : 0
+                    dist += (distA > 0 && distA < T(Inf)) ? distA : 0
                     dist += push_tolerance(T)
                     npoint = point + dist * dir
                     lpoint = transformation * npoint
@@ -399,7 +448,7 @@ function distance_to_in(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vec
         if inRight
             # propagate to outside of '- / RightShape'
             d1 = distance_to_out(right, lpoint, ldir)
-            dist += (d1 >= 0 && d1 < Inf) ? d1 + push_tolerance(T) : 0
+            dist += (d1 >= 0 && d1 < T(Inf)) ? d1 + push_tolerance(T) : 0
             offset = dist + push_tolerance(T)
             npoint = point + offset * dir
             lpoint = transformation * npoint
@@ -418,7 +467,7 @@ function distance_to_in(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vec
         end
 
         #   propagate to '-'
-        dist += (d1 >= 0 && d1 < Inf) ? d1 : 0
+        dist += (d1 >= 0 && d1 < T(Inf)) ? d1 : 0
         offset = dist + push_tolerance(T)
         npoint = point + offset * dir
         lpoint = transformation * npoint
