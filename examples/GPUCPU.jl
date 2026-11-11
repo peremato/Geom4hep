@@ -53,7 +53,7 @@ end
    function cpu_d2out!(dist, shape, points, dirs, device = nothing)
 	   n = length(points)
 	   for i in 1:n
-		   @inbounds dist[i] = distanceToOut(shape, points[i], dirs[i])
+		   @inbounds dist[i] = distance_to_out(shape, points[i], dirs[i])
 	   end
 	   return dist
    end
@@ -61,7 +61,7 @@ end
    #---CPU parallel implementation----------------------------------------------
    function cpu_d2out_p!(dist, shape, points, dirs, device = nothing, from=1, to=length(points))
 	   Threads.@threads for n in from:to
-		 @inbounds dist[n] = distanceToOut(shape, points[n], dirs[n])
+		 @inbounds dist[n] = distance_to_out(shape, points[n], dirs[n])
 	   end
 	   return dist[from:to]
    end
@@ -89,7 +89,7 @@ end
 	 index = (blockIdx().x - 1) * blockDim().x + threadIdx().x
 	 stride = blockDim().x * gridDim().x
 	 for i = index:stride:n
-		 @inbounds dist[i] = distanceToOut(shape, points[i], dirs[i])
+		 @inbounds dist[i] = distance_to_out(shape, points[i], dirs[i])
 	 end
 	 return
  end
@@ -109,7 +109,7 @@ end
  @kernel function d2out_kernel!(dist, shape, points, dirs)
 	 N = length(points)
 	 i = @index(Global)
-	 @inbounds dist[i] = distanceToOut(shape, points[i], dirs[i])
+	 @inbounds dist[i] = distance_to_out(shape, points[i], dirs[i])
  end
 
  function d2out!(dist,shape,points,dirs, device = "CPU")
@@ -174,7 +174,7 @@ function cpugpu!(n,dist,shape,points,dirs)
 	
 end
  
-function runBenchmarks(compare,cpugpu,options)
+function run_benchmarks(compare,cpugpu,options)
 
    d = Dict("cpu"  => (cpu_d2out!,"CPU"),
 			"mt"   => (cpu_d2out_p!,"CPU"),
@@ -198,8 +198,8 @@ function runBenchmarks(compare,cpugpu,options)
     for shape in (box, tube, cone)
 
         @printf "* Using shape: %s with %d points *\n" typeof(shape) N
-        fillPoints!(points, shape, kInside)
-        fillDirections!(dirs, shape, points)
+        fill_points!(points, shape, kInside)
+        fill_directions!(dirs, shape, points)
         dist = fill(zero(T), N)
 
         if (compare)
@@ -237,10 +237,10 @@ function runBenchmarks(compare,cpugpu,options)
 		@printf "\n"
     end
   end
-  printTable(results)
+  print_table(results)
 end  
 
-function printTable(data)
+function print_table(data)
    pretty_table(permutedims(hvcat(size(data,1), data...));
    header = (["Type","Device","Shape","Min","Max","Median","Mean","Elapsed","Allocs","Mem"]))
 end
@@ -248,7 +248,7 @@ end
 const idxs =  [2 3 1; 1 3 2; 1 2 3]
 const rdxs =  [3 1 2; 1 3 2; 1 2 3]
 
-function generateXRay(model::CuGeoModel{Vector{Geom4hep.CuVolume{T}}}, npoints::Number, view::Int=1; cuda::Bool=true) where T<:AbstractFloat
+function generate_xray(model::CuGeoModel{Vector{Geom4hep.CuVolume{T}}}, npoints::Number, view::Int=1; cuda::Bool=true) where T<:AbstractFloat
     world = model.volumes[1]
     lower, upper = extent(model.shapes[world.shapeIdx])
     idx = (idxs[view,1], idxs[view,2], idxs[view,3])
@@ -266,13 +266,13 @@ function generateXRay(model::CuGeoModel{Vector{Geom4hep.CuVolume{T}}}, npoints::
         CUDA.@sync @cuda threads=threads blocks=blocks k_generateXRay(cu_result, cu_model, lower, upper, idx, rdx)
         return xrange, yrange, Array(cu_result)
     else
-        generateXRay(result, model, lower, upper, idx, rdx)
+        generate_xray(result, model, lower, upper, idx, rdx)
         return xrange, yrange, result
     end
 end
 
 
-function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, upper::Point3{T}, idx::Tuple, rdx::Tuple) where T<:AbstractFloat
+function  generate_xray(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, upper::Point3{T}, idx::Tuple, rdx::Tuple) where T<:AbstractFloat
     nx, ny = size(result)
     ix, iy, iz = idx
     xi, yi, zi = rdx
@@ -283,15 +283,15 @@ function  generateXRay(result::Matrix{T}, model::CuGeoModel, lower::Point3{T}, u
     Threads.@threads  for i in 1:nx
         for j in 1:ny
         state = CuNavigatorState{T}(1)
-        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ kTolerance(T))
+        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ tolerance(T))
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
-        locateGlobalPoint!( model, state, point)
+        locate_global_point!( model, state, point)
         mass::T =  T(0)
         step::T =  T(0)
         while step >= 0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
-            step = computeStep!(model, state, point, dir, T(1000.))
+            step = compute_step!(model, state, point, dir, T(1000.))
             point = point + dir * step
             mass += step * density
         end
@@ -316,17 +316,17 @@ function k_generateXRay(result, model, lower::Point3{T}, upper::Point3{T}, idx::
         _dir = (0, 0, 1)
         dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi])
 
-        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ kTolerance(T))
+        _point = (lower[ix]+ i*px, lower[iy]+ j*py, lower[iz]+ tolerance(T))
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
 
         state = CuNavigatorState{T}(1)
-        locateGlobalPoint!(model, state, point)
+        locate_global_point!(model, state, point)
         mass::T =  T(0)
         step::T =  T(0)
         while step >= 0
             vol = model.volumes[state.currentVol]
             density = model.materials[vol.materialIdx].density
-            step = computeStep!(model, state, point, dir, T(1000))
+            step = compute_step!(model, state, point, dir, T(1000))
             point = point + dir * step
             mass += step * density
         end
@@ -337,16 +337,16 @@ end
 
 function XRay(isCuda)
     T = Float32
-    world = processGDML("examples/trackML.gdml",T)
+    world = read_gdml("examples/trackML.gdml",T)
     volume = world.daughters[2].volume.daughters[1].volume
-    model = fillCuGeometry(getWorld(volume))
+    model = fill_cu_geometry(world_volume(volume))
     #-----Generate maps----------------------------------------    
     @printf "generating x-projection\n"
-    rx = generateXRay(model, 1e6, 1, cuda=isCuda)
+    rx = generate_xray(model, 1e6, 1, cuda=isCuda)
     @printf "generating y-projection\n"
-    ry = generateXRay(model, 1e6, 2, cuda=isCuda)
+    ry = generate_xray(model, 1e6, 2, cuda=isCuda)
     @printf "generating z-projection\n"
-    rz = generateXRay(model, 1e6, 3, cuda=isCuda)
+    rz = generate_xray(model, 1e6, 3, cuda=isCuda)
 end
 
 function XRay()
@@ -369,7 +369,7 @@ function main()
 	  for i in 1:length(options) 
 		 options[i] = lowercase(options[i])
 	  end
-	  runBenchmarks(compare,cpugpu,options)
+	  run_benchmarks(compare,cpugpu,options)
    end
    
    if (xray)

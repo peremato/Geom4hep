@@ -1,9 +1,9 @@
 module Geom4hepMakieExt
 
 using Geom4hep
-using Geom4hep: AbstractShape, Volume, Transformation3D, AABB, BVH, buildBVH, extent, inside,
-                kInside, kOutside, distanceToIn, distanceToOut, Point3, Vector3, _gbpoint
-import Geom4hep: draw, draw!, drawDistanceToIn, drawDistanceToOut
+using Geom4hep: AbstractShape, Volume, Transformation3D, AABB, BVH, build_bvh, extent, inside,
+                kInside, kOutside, distance_to_in, distance_to_out, Point3, Vector3, _gbpoint
+import Geom4hep: draw, draw!, draw_distance_to_in, draw_distance_to_out
 using GeometryBasics: GeometryBasics, Mesh, coordinates, faces
 using LinearAlgebra: normalize
 using Makie
@@ -32,7 +32,7 @@ function draw!(s::LScene, vol::Volume{T}, t::Transformation3D{T}, level::Int64, 
             draw!(s, daughter.volume, daughter.transformation * t, level+1, wireframe, bvh, maxlevel)
         end
         if level == 1 && bvh && !isempty(vol.daughters)
-            draw!(s, buildBVH(vol.daughters))
+            draw!(s, build_bvh(vol.daughters))
         end
     end
     return s
@@ -92,7 +92,7 @@ function draw(bvh::BVH; color::Symbol=:green)
 end
 
 #---Testing functions------------------------------------------------------------
-function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:AbstractFloat
+function draw_distance_to_out(shape::AbstractShape{T}, N::Integer) where T<:AbstractFloat
     low, hi = extent(shape)
     dim = hi - low
     points = (low + rp * dim for rp in rand(Vector3{T}, N))
@@ -100,7 +100,7 @@ function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:Abstrac
     for point in points
         if inside(shape, point) == kInside
             dir = normalize(rand(Vector3{T}) + Vector3{T}(-.5,-.5,-.5))
-            push!(result, point + dir * distanceToOut(shape, point, dir))
+            push!(result, point + dir * distance_to_out(shape, point, dir))
         end
     end
     fig = Figure()
@@ -110,7 +110,7 @@ function drawDistanceToOut(shape::AbstractShape{T}, N::Integer) where T<:Abstrac
     return fig
 end
 
-function drawDistanceToIn(shape::AbstractShape{T}, N::Integer) where T<:AbstractFloat
+function draw_distance_to_in(shape::AbstractShape{T}, N::Integer) where T<:AbstractFloat
     low, hi = extent(shape)
     dim = hi - low
     low -= dim/10
@@ -121,7 +121,7 @@ function drawDistanceToIn(shape::AbstractShape{T}, N::Integer) where T<:Abstract
     result = Vector{Point3{T}}()
     for (point, dir) in zip(points, dirs)
         if inside(shape, point) == kOutside
-            dist = distanceToIn(shape, point, dir)
+            dist = distance_to_in(shape, point, dir)
             if dist != Inf
                 push!(result, point + dir * dist)
             end

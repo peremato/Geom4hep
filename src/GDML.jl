@@ -44,7 +44,7 @@ struct GDMLDicts{T<:AbstractFloat}
 end
 
 # process <define/>
-function fillDefine!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_define!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; positions, rotations) = dicts
     for c in child_nodes(element)
         if is_elementnode(c)
@@ -69,7 +69,7 @@ function fillDefine!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
 end
 
 # process <materials/>
-function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_materials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; materials) = dicts
     for c in child_nodes(element)
         if is_elementnode(c)
@@ -131,7 +131,7 @@ function fillMaterials!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstr
 end
 
 # process <solids/>
-function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_solids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; solids) = dicts
     unsupported = Dict{String,Int}()
     for c in child_nodes(element)
@@ -212,7 +212,7 @@ function fillSolids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstract
             elseif elemname in ("union", "subtraction", "intersection") 
                 first = nothing
                 second = nothing
-                transformation = getTransformation(dicts, e)
+                transformation = read_transformation(dicts, e)
                 for cc in child_nodes(e)
                     if is_elementnode(cc)
                         aa = attributes_dict(XMLElement(cc))
@@ -249,7 +249,7 @@ function _get_solid(solids::Dict, ref::AbstractString, owner::AbstractString)
 end
 
 # process <structure/>
-function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
+function fill_volumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:AbstractFloat
     (; materials, solids, volumes, positions, rotations) = dicts
     for c in child_nodes(element) #--- loop over volumes
         if is_elementnode(c)
@@ -270,7 +270,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                             material = materials[aa["ref"]]
                         elseif name(cc) == "physvol"
                             daughter = nothing
-                            transformation = getTransformation(dicts, XMLElement(cc))
+                            transformation = read_transformation(dicts, XMLElement(cc))
                             for ccc in child_nodes(XMLElement(cc))
                                 if is_elementnode(ccc)
                                     aa = attributes_dict(XMLElement(ccc))
@@ -285,7 +285,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                 end
                 volume = elemname == "volume" ? Volume{T}(volname, shape, material) : Assembly{T}(volname)
                 for pvol in pvols
-                    placeDaughter!(volume, pvol.transformation, pvol.volume)
+                    place_daughter!(volume, pvol.transformation, pvol.volume)
                 end
                 volumes[volname] = volume
             end
@@ -294,7 +294,7 @@ function fillVolumes!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
 end
 
 # fill Transformation3D
-function getTransformation(dicts::GDMLDicts{T}, element::XMLElement) where T
+function read_transformation(dicts::GDMLDicts{T}, element::XMLElement) where T
     (; positions, rotations) = dicts
     position = Vector3{T}(0,0,0)
     rotation = RotZYX{T}(0,0,0)
@@ -323,7 +323,7 @@ end
 
 
 # process the full file
-function processGDML(fname::String, ::Type{T}=Float64) where T
+function read_gdml(fname::String, ::Type{T}=Float64) where T
     dicts = GDMLDicts{T}()
     world = nothing
     xdoc = parse_file(fname)
@@ -335,13 +335,13 @@ function processGDML(fname::String, ::Type{T}=Float64) where T
         if is_elementnode(c)
             e = XMLElement(c)    # this makes an XMLElement instance
             if name(e) == "materials"
-                fillMaterials!(dicts, e)
+                fill_materials!(dicts, e)
             elseif name(e) == "solids"
-                fillSolids!(dicts, e)
+                fill_solids!(dicts, e)
             elseif name(e) == "structure"
-                fillVolumes!(dicts, e)
+                fill_volumes!(dicts, e)
             elseif name(e) == "define"
-                fillDefine!(dicts, e)
+                fill_define!(dicts, e)
             elseif name(e) == "setup"
                 for cc in child_nodes(e)
                     if is_elementnode(cc)

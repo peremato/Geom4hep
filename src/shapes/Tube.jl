@@ -24,23 +24,23 @@ struct Tube{T<:AbstractFloat} <: AbstractShape{T}
     function Tube{T}(rmin, rmax, z, ϕ₀, Δϕ) where T<:AbstractFloat
         rmin2 = rmin * rmin
         rmax2 = rmax * rmax
-        tolOrmin  = rmin - kTolerance(T)/2
-        tolIrmin  = rmin + kTolerance(T)/2
+        tolOrmin  = rmin - tolerance(T)/2
+        tolIrmin  = rmin + tolerance(T)/2
         tolOrmin2 = tolOrmin * tolOrmin
         tolIrmin2 = tolIrmin * tolIrmin
-        tolOrmax  = rmax + kTolerance(T)/2
-        tolIrmax  = rmax - kTolerance(T)/2
+        tolOrmax  = rmax + tolerance(T)/2
+        tolIrmax  = rmax - tolerance(T)/2
         tolOrmax2 = tolOrmax * tolOrmax
         tolIrmax2 = tolIrmax * tolIrmax
-        tolIz  = z - kTolerance(T)/2
-        tolOz  = z + kTolerance(T)/2
+        tolIz  = z - tolerance(T)/2
+        tolOz  = z + tolerance(T)/2
         maxVal = max(rmax, z)
         new(rmin, rmax, z, ϕ₀, Δϕ, rmin2, rmax2,
             tolIrmin2, tolOrmin2, tolIrmax2, tolOrmax2, tolIz, tolOz, 
             tolIrmin, tolOrmin, tolIrmax, tolOrmax, maxVal, Wedge{T}(ϕ₀,Δϕ))
     end
 end
-function isInsideR(t::Tube{T}, p::Point2{T}) where T<:AbstractFloat
+function is_inside_r(t::Tube{T}, p::Point2{T}) where T<:AbstractFloat
     r2   = p[1] * p[1] + p[2] * p[2]
     r2 >= t.tolOrmin2 && r2 <= t.tolOrmax2
 end
@@ -68,10 +68,10 @@ function extent(tub::Tube{T})::Tuple{Point3{T},Point3{T}} where T<:AbstractFloat
     end
     # check how many of phi=90, 180, 270, 360deg are outside this tube
     rin  = (tub.rmax + tub.rmin) / 2
-    ϕ0out   = isOutside(tub.ϕWedge, rin, zero(T))
-    ϕ90out  = isOutside(tub.ϕWedge, zero(T), rin)
-    ϕ180out = isOutside(tub.ϕWedge, -rin, zero(T))
-    ϕ270out = isOutside(tub.ϕWedge, zero(T), -rin)
+    ϕ0out   = is_outside(tub.ϕWedge, rin, zero(T))
+    ϕ90out  = is_outside(tub.ϕWedge, zero(T), rin)
+    ϕ180out = is_outside(tub.ϕWedge, -rin, zero(T))
+    ϕ270out = is_outside(tub.ϕWedge, zero(T), -rin)
     
     # if none of those 4 phis is outside, largest box still required
     if !(ϕ0out || ϕ90out || ϕ180out || ϕ270out)
@@ -119,27 +119,27 @@ function inside(tub::Tube{T}, point::Point3{T})::Int64  where T<:AbstractFloat
     x, y, z = point
 
     # Check Z
-    outside = abs(z) > tub.z + kTolerance(T)/2
+    outside = abs(z) > tub.z + tolerance(T)/2
     outside && return kOutside
-    cinside = abs(z) < tub.z - kTolerance(T)/2
+    cinside = abs(z) < tub.z - tolerance(T)/2
 
     # Check on RMax
     r2 = x * x + y * y
-    outside |= r2 > tub.rmax2 + kTolerance(T) * tub.rmax
+    outside |= r2 > tub.rmax2 + tolerance(T) * tub.rmax
     outside && return kOutside
-    cinside &= r2 < tub.rmax2 - kTolerance(T) * tub.rmax  
+    cinside &= r2 < tub.rmax2 - tolerance(T) * tub.rmax  
     
     # Check on RMin
     if tub.rmin > 0.
-        outside |= r2 <= tub.rmin2 - kTolerance(T) * tub.rmin
+        outside |= r2 <= tub.rmin2 - tolerance(T) * tub.rmin
         outside && return kOutside
-        cinside &= r2 > tub.rmin2 + kTolerance(T) * tub.rmin
+        cinside &= r2 > tub.rmin2 + tolerance(T) * tub.rmin
     end
     
     # Check on Phi
     if tub.Δϕ < 2π
-        outside |= isOutside(tub.ϕWedge, x, y)
-        cinside &= isInside(tub.ϕWedge, x, y)
+        outside |= is_outside(tub.ϕWedge, x, y)
+        cinside &= is_inside(tub.ϕWedge, x, y)
     end
 
     return outside ? kOutside : cinside ? kInside : kSurface
@@ -152,13 +152,13 @@ function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
 
     surfaces = 0
     r = sqrt(x*x + y*y)
-    inZ = abs(z) - tub.z  <=  kTolerance(T)/2
-    inR = r >= (tub.rmin - kTolerance(T)/2) && r <= (tub.rmax + kTolerance(T)/2)
-    if inR && abs(z - tub.z) <= kTolerance(T)/2  # top lid, normal along +Z
+    inZ = abs(z) - tub.z  <=  tolerance(T)/2
+    inR = r >= (tub.rmin - tolerance(T)/2) && r <= (tub.rmax + tolerance(T)/2)
+    if inR && abs(z - tub.z) <= tolerance(T)/2  # top lid, normal along +Z
         norm = [0.,0.,1.]
         surfaces += 1
     end
-    if inR && abs(z + tub.z) <= kTolerance(T)/2  # bottom base, normal along -Z
+    if inR && abs(z + tub.z) <= tolerance(T)/2  # bottom base, normal along -Z
         if surfaces > 0
             norm += [0.,0.,-1]
         else
@@ -168,7 +168,7 @@ function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     end
 
     if tub.rmin > 0.
-        if inZ && abs(r - tub.rmin) <= kTolerance(T)/2
+        if inZ && abs(r - tub.rmin) <= tolerance(T)/2
             if surfaces > 0
                 norm += [-x/r, -y/r, 0.]
             else
@@ -177,7 +177,7 @@ function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
             surfaces += 1
         end
     end
-    if inZ && abs(r - tub.rmax) <= kTolerance(T)/2
+    if inZ && abs(r - tub.rmax) <= tolerance(T)/2
         if surfaces > 0
             norm += [x/r, y/r, 0.]
         else
@@ -188,7 +188,7 @@ function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
 
     if tub.Δϕ < 2π
         w = tub.ϕWedge
-        if inR && isOnSurface(w.along1, w.normal1, x, y)
+        if inR && is_on_surface(w.along1, w.normal1, x, y)
             if surfaces > 0
                 norm += [-w.normal1[1],-w.normal1[2], 0.]
             else
@@ -197,7 +197,7 @@ function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
             surfaces += 1
         end
 
-        if inR && isOnSurface(w.along2, w.normal2, x, y)
+        if inR && is_on_surface(w.along2, w.normal2, x, y)
             if surfaces > 0
                 norm += [-w.normal2[1],-w.normal2[2], 0.]
             else
@@ -215,7 +215,7 @@ function normal(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     end
 end
 
-function safetyToIn(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
+function safety_to_in(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     x,y,z = point
     safety = abs(z) - tub.z
     r  = sqrt(x * x + y * y)
@@ -231,16 +231,16 @@ function safetyToIn(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
         w = tub.ϕWedge
         safephi = tub.Δϕ > π ? r : Inf
         dist =  x * w.along1[2] - y * w.along1[1]
-        dist > kTolerance(T)/2 && (safephi = dist)
+        dist > tolerance(T)/2 && (safephi = dist)
         dist =  x * w.along2[2] - y * w.along2[1]
-        dist > -kTolerance(T)/2 && dist > safephi && (safephi = dist)
+        dist > -tolerance(T)/2 && dist > safephi && (safephi = dist)
         safephi < Inf && safephi > safety && (safety = safephi)
     end
 
     return safety
 end
 
-function safetyToOut(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
+function safety_to_out(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
     x,y,z = point
     safety = tub.z - abs(z)
     r  = sqrt(x * x + y * y)
@@ -256,19 +256,19 @@ function safetyToOut(tub::Tube{T}, point::Point3{T}) where T<:AbstractFloat
         w = tub.ϕWedge
         safephi = tub.Δϕ > π ? r : Inf
         dist =  - x * w.along1[2] + y * w.along1[1]
-        dist > kTolerance(T)/2 && (safephi = dist)
+        dist > tolerance(T)/2 && (safephi = dist)
         dist =  - x * w.along2[2] + y * w.along2[1]
-        dist > -kTolerance(T)/2 && dist < safephi && (safephi = dist)
+        dist > -tolerance(T)/2 && dist < safephi && (safephi = dist)
         safephi < safety && (safety = safephi)
     end
     return safety
 end
 
-function phiPlaneIntersection(point::Point2{T}, dir::Vector2{T}, along::Vector2{T}, normal::Vector2{T}; ϕgtπ::Bool=false, toIn::Bool=false) where T<:AbstractFloat
+function phi_plane_intersection(point::Point2{T}, dir::Vector2{T}, along::Vector2{T}, normal::Vector2{T}; ϕgtπ::Bool=false, to_in::Bool=false) where T<:AbstractFloat
     pDotN = point[1] * normal[1] + point[2] * normal[2]
     dDotN = dir[1] * normal[1] + dir[2] * normal[2]
     # point in wrong side
-    if (toIn && (pDotN > 0. || pDotN == 0. && dDotN < 0.)) || (!toIn && pDotN <= 0.) 
+    if (to_in && (pDotN > 0. || pDotN == 0. && dDotN < 0.)) || (!to_in && pDotN <= 0.) 
         return T(NaN)
     end
     dirDotXY = dir[2] * along[1] - dir[1] * along[2]
@@ -282,7 +282,7 @@ function phiPlaneIntersection(point::Point2{T}, dir::Vector2{T}, along::Vector2{
     return dist 
 end
 
-function circleIntersection(point::Point2{T}, dir::Vector2{T}, R²::T; largest::Bool=false) where T<:AbstractFloat
+function circle_intersection(point::Point2{T}, dir::Vector2{T}, R²::T; largest::Bool=false) where T<:AbstractFloat
     # returns the distance to the circle (in units of norm(dir))
     r2 = point[1] * point[1] + point[2] * point[2]
     dr2 = dir[1] * dir[1] + dir[2] * dir[2]
@@ -295,7 +295,7 @@ function circleIntersection(point::Point2{T}, dir::Vector2{T}, R²::T; largest::
     return dist
 end
 
-function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distance_to_out(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     x, y, z = point
     dx, dy, dz = dir
     w = tub.ϕWedge
@@ -304,23 +304,23 @@ function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where
 
     #---First we check all dimensions of the tube, whether points are outside (return -1)
     distz = tub.z - abs(z)
-    done |= distz < -kTolerance(T)/2
+    done |= distz < -tolerance(T)/2
 
     rsq  = x*x + y*y
     rdotn = dx*x + dy*y
     crmax = rsq - tub.rmax2
 
     # if outside of Rmax, return -1
-    done |= crmax > kTolerance(T) * tub.rmax
+    done |= crmax > tolerance(T) * tub.rmax
     done && return distance
 
     if tub.rmin > 0.
         crmin = rsq - tub.rmin2
-        done |= crmin < -kTolerance(T) * tub.rmin
+        done |= crmin < -tolerance(T) * tub.rmin
         done && return distance
     end
     if tub.Δϕ < 2π
-        done |= isOutside(w, x, y)
+        done |= is_outside(w, x, y)
         done && return distance
     end
 
@@ -343,14 +343,14 @@ function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where
         crmin *= invnsq
         delta = b * b - crmin
         dist_rmin = -b + (delta > 0. ? -sqrt(delta) : 0.)
-        delta > 0. && dist_rmin >= -kTolerance(T)/2 && dist_rmin < distance && (distance = dist_rmin)
+        delta > 0. && dist_rmin >= -tolerance(T)/2 && dist_rmin < distance && (distance = dist_rmin)
     end
 
     # rmax
     crmax *= invnsq
     delta = b * b - crmax
     dist_rmax = -b + (delta >= 0. ? sqrt(delta) : 0.)
-    dist_rmax >= -kTolerance(T)/2 && dist_rmax < distance && (distance = dist_rmax)
+    dist_rmax >= -tolerance(T)/2 && dist_rmax < distance && (distance = dist_rmax)
  
     # Phi planes
 
@@ -359,24 +359,24 @@ function distanceToOut(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where
         p = Point2{T}(x,y)
         d = Vector2{T}(dx,dy)
         if tub.Δϕ < π
-            dist_phi = phiPlaneIntersection(p, d, w.along1, w.normal1)
+            dist_phi = phi_plane_intersection(p, d, w.along1, w.normal1)
             dist_phi < distance && (distance = dist_phi)
-            dist_phi = phiPlaneIntersection(p, d, w.along2, w.normal2)
+            dist_phi = phi_plane_intersection(p, d, w.along2, w.normal2)
             dist_phi < distance && (distance = dist_phi)
         elseif tub.Δϕ == π
-            dist_phi = phiPlaneIntersection(p, d, w.along2, w.normal2)
+            dist_phi = phi_plane_intersection(p, d, w.along2, w.normal2)
             dist_phi < distance && (distance = dist_phi)
         else
-            dist_phi = phiPlaneIntersection(p, d, w.along1, w.normal1, ϕgtπ=true)
+            dist_phi = phi_plane_intersection(p, d, w.along1, w.normal1, ϕgtπ=true)
             dist_phi < distance && (distance = dist_phi)
-            dist_phi = phiPlaneIntersection(p, d, w.along2, w.normal2, ϕgtπ=true)
+            dist_phi = phi_plane_intersection(p, d, w.along2, w.normal2, ϕgtπ=true)
             dist_phi < distance && (distance = dist_phi)
         end
     end
     return distance    
 end
 
-function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
+function distance_to_in(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat
     x, y, z = point
     dx, dy, dz = dir
     w = tub.ϕWedge
@@ -385,7 +385,7 @@ function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where 
 
     # outside of Z range and going away?
     distz = abs(z) - tub.z
-    done |= distz > kTolerance(T)/2 && z * dz >= 0
+    done |= distz > tolerance(T)/2 && z * dz >= 0
 
     # outside of outer tube and going away?
     rsq  = x*x + y*y
@@ -397,13 +397,13 @@ function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where 
     distance = T(-1.)
 
     # For points inside z-range, return -1
-    inside = distz < -kTolerance(T)/2
+    inside = distz < -tolerance(T)/2
     inside &= rsq < tub.tolIrmax2
     if tub.rmin > 0.
         inside &= rsq > tub.tolIrmin2
     end
     if tub.Δϕ < 2π
-        inside &= isInside(w, x, y, tol=kTolerance(T)/2)
+        inside &= is_inside(w, x, y, tol=tolerance(T)/2)
     end
     done |= inside
     done && return distance
@@ -415,24 +415,24 @@ function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where 
     hitx = x + distz * dx
     hity = y + distz * dy
     r2   = hitx * hitx + hity * hity; # radius of intersection with z-plane
-    okz  = distz > -kTolerance(T)/2 && z * dz < 0
+    okz  = distz > -tolerance(T)/2 && z * dz < 0
     okz &= (r2 <= tub.rmax2)
     if tub.rmin > 0.
         okz &= tub.rmin2 <= r2
     end
     if tub.Δϕ < 2π
-        okz &= isInside(w, hitx, hity, tol=kTolerance(T)/2, includeSurface=true)
+        okz &= is_inside(w, hitx, hity, tol=tolerance(T)/2, include_surface=true)
     end
     !done && okz && (distance = distz)
     done |= okz
 
     # Next step: is in surface and going inside
-    onsurface = rsq  >= tub.tolIrmax2 && rsq <= tub.tolOrmax2 && abs(z) < tub.z + kTolerance(T) && x*dx + y*dy <= 0.
+    onsurface = rsq  >= tub.tolIrmax2 && rsq <= tub.tolOrmax2 && abs(z) < tub.z + tolerance(T) && x*dx + y*dy <= 0.
     if tub.rmin > 0.
-        onsurface |= rsq  >= tub.tolOrmin2 && rsq <= tub.tolIrmin2 && abs(z) < tub.z + kTolerance(T) && x*dx + y*dy >= 0.
+        onsurface |= rsq  >= tub.tolOrmin2 && rsq <= tub.tolIrmin2 && abs(z) < tub.z + tolerance(T) && x*dx + y*dy >= 0.
     end
     if tub.Δϕ < 2π
-        insector = isInside(w, x, y)
+        insector = is_inside(w, x, y)
         onsurface &= insector
     end
     !done && onsurface && (distance = 0.)
@@ -442,22 +442,22 @@ function distanceToIn(tub::Tube{T}, point::Point3{T}, dir::Vector3{T})::T where 
     # Next step: intersection of the trajectories with the two circles
     p = Point2{T}(x,y)
     d = Vector2{T}(dx,dy)
-    dist_rmax = circleIntersection(p, d, tub.rmax2)
-    dist_rmax >= kTolerance(T)/2 && abs(z + dist_rmax * dz) <= tub.z && isInside(w, p + dist_rmax * d) && dist_rmax < distance && (distance = dist_rmax)
+    dist_rmax = circle_intersection(p, d, tub.rmax2)
+    dist_rmax >= tolerance(T)/2 && abs(z + dist_rmax * dz) <= tub.z && is_inside(w, p + dist_rmax * d) && dist_rmax < distance && (distance = dist_rmax)
     if tub.rmin > 0.
-        dist_rmin = circleIntersection(p, d, tub.rmin2, largest=true )
-        dist_rmin >= kTolerance(T)/2 && abs(z + dist_rmin * dz) <= tub.z && isInside(w, p + dist_rmin * d) && dist_rmin < distance && (distance = dist_rmin)
+        dist_rmin = circle_intersection(p, d, tub.rmin2, largest=true )
+        dist_rmin >= tolerance(T)/2 && abs(z + dist_rmin * dz) <= tub.z && is_inside(w, p + dist_rmin * d) && dist_rmin < distance && (distance = dist_rmin)
     end
 
     # Calculate intersection between trajectory and the two phi planes
     if tub.Δϕ < 2π
-        dist_phi = phiPlaneIntersection(p, d, w.along1, w.normal1, toIn=true)
+        dist_phi = phi_plane_intersection(p, d, w.along1, w.normal1, to_in=true)
         hit = p + dist_phi * d
-        !isnan(dist_phi) && abs(z + dist_phi * dz) <= tub.z && isInsideR(tub, hit) && isInside(w, hit) && dist_phi < distance && (distance = dist_phi)
+        !isnan(dist_phi) && abs(z + dist_phi * dz) <= tub.z && is_inside_r(tub, hit) && is_inside(w, hit) && dist_phi < distance && (distance = dist_phi)
         if tub.Δϕ != π
-            dist_phi = phiPlaneIntersection(p, d, w.along2, w.normal2, toIn=true)
+            dist_phi = phi_plane_intersection(p, d, w.along2, w.normal2, to_in=true)
             hit = p + dist_phi * d
-            !isnan(dist_phi) && abs(z + dist_phi * dz) <= tub.z && isInsideR(tub, hit) && isInside(w, hit) && dist_phi < distance && (distance = dist_phi)
+            !isnan(dist_phi) && abs(z + dist_phi * dz) <= tub.z && is_inside_r(tub, hit) && is_inside(w, hit) && dist_phi < distance && (distance = dist_phi)
         end
     end
     return distance

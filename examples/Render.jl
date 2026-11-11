@@ -5,8 +5,8 @@ const idx = [2 3 1; 1 3 2; 1 2 3]
 const rdx = [3 1 2; 1 3 2; 1 2 3]
 
 # Generate a X-Ray of a geometry----------------------------------------------
-function generateImage(vol::Volume{T}, npoints::Number, view::Int=1, d::T=T(0)) where T<:AbstractFloat
-    world = getWorld(vol)
+function generate_image(vol::Volume{T}, npoints::Number, view::Int=1, d::T=T(0)) where T<:AbstractFloat
+    world = world_volume(vol)
     lower, upper = extent(world.shape)
     ix, iy, iz = idx[view, :]
     xi, yi, zi = rdx[view, :]
@@ -21,21 +21,21 @@ function generateImage(vol::Volume{T}, npoints::Number, view::Int=1, d::T=T(0)) 
     for (i,x) in enumerate(xrange), (j,y) in enumerate(yrange)
         _point = (x, y, d)
         point = Point3{T}(_point[xi], _point[yi], _point[zi])
-        locateGlobalPoint!(state, point)
-        result[i,j] = currentVolume(state).material.density
+        locate_global_point!(state, point)
+        result[i,j] = current_volume(state).material.density
     end
     return xrange, yrange, result
 end
 
-world = processGDML("examples/trackML.gdml", Float64)
+world = read_gdml("examples/trackML.gdml", Float64)
 volume = world.daughters[2].volume.daughters[1].volume
-#world = processGDML("examples/polycones.gdml", Float64)
-world = processGDML("examples/cms2018.gdml", Float64)
+#world = read_gdml("examples/polycones.gdml", Float64)
+world = read_gdml("examples/cms2018.gdml", Float64)
 volume = world
 
-rx = generateImage(volume, 1e6, 1)
-ry = generateImage(volume, 1e6, 2)
-rz = generateImage(volume, 1e6, 3)
+rx = generate_image(volume, 1e6, 1)
+ry = generate_image(volume, 1e6, 2)
+rz = generate_image(volume, 1e6, 3)
 limits = (0, max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
 using GLMakie
 fig = Figure(size = (1000, 1000))

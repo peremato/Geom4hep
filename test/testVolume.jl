@@ -3,8 +3,8 @@
     lead  = Material{T}("Lead"; density=11.35)
     world = Volume{T}("world", Box{T}(100, 100, 100), air)
     small = Volume{T}("small", Box{T}(5, 5, 5), lead)
-    placeDaughter!(world, Transformation3D{T}(50, 0, 0), small)
-    placeDaughter!(world, Transformation3D{T}(-50, 0, 0), small)
+    place_daughter!(world, Transformation3D{T}(50, 0, 0), small)
+    place_daughter!(world, Transformation3D{T}(-50, 0, 0), small)
 
     @test length(world.daughters) == 2
     @test world[1] === small
@@ -18,8 +18,8 @@
 
     @testset "Assembly" begin
         asm = Assembly{T}("asm")
-        placeDaughter!(asm, Transformation3D{T}(0, 20, 0), small)
-        placeDaughter!(asm, Transformation3D{T}(0, -20, 30), small)
+        place_daughter!(asm, Transformation3D{T}(0, 20, 0), small)
+        place_daughter!(asm, Transformation3D{T}(0, -20, 30), small)
         lo, hi = extent(asm.shape)
         @test lo ≈ Point3{T}(-5, -25, -5)
         @test hi ≈ Point3{T}(5, 25, 35)
@@ -27,23 +27,23 @@
         @test inside(asm.shape, Point3{T}(0, 0, 0)) == kOutside
         # placing an assembly flattens its daughters into the mother
         top = Volume{T}("top", Box{T}(100, 100, 100), air)
-        placeDaughter!(top, Transformation3D{T}(10, 0, 0), asm)
+        place_daughter!(top, Transformation3D{T}(10, 0, 0), asm)
         @test length(top.daughters) == 2
         @test all(d.volume === small for d in top.daughters)
     end
 
-    @testset "getWorld" begin
-        w = getWorld(small)
+    @testset "world_volume" begin
+        w = world_volume(small)
         @test w.label == "world"
         @test length(w.daughters) == 1
-        @test getWorld(world) === world
+        @test world_volume(world) === world
     end
 end
 
 @testset "Tolerances" begin
-    @test kTolerance() == kTolerance(Float64)
-    @test kPushTolerance() == kPushTolerance(Float64)
-    @test kPushTolerance(Float32) isa Float32
+    @test tolerance() == tolerance(Float64)
+    @test push_tolerance() == push_tolerance(Float64)
+    @test push_tolerance(Float32) isa Float32
 end
 
 @testset "Mesh" begin

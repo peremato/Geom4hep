@@ -20,8 +20,8 @@ end
 function normal(box::Box{T}, point::Point3{T}) where T
     safety = abs.(abs.(point) - box.fDimensions)
     safmin = minimum(safety)
-    if safmin < kTolerance(T)/2
-        n = Vector3{T}(map( t -> t[1] - safmin < kTolerance(T)/2 ? sign(t[2]) : 0.0, zip(safety, point)))
+    if safmin < tolerance(T)/2
+        n = Vector3{T}(map( t -> t[1] - safmin < tolerance(T)/2 ? sign(t[2]) : 0.0, zip(safety, point)))
         normalize(n)
     else
         nothing    
@@ -36,12 +36,12 @@ function inside(box::Box{T}, point::Point3{T})::Int64  where T<:AbstractFloat
             dist = d 
         end
     end
-    abs(dist) <= kTolerance(T)/2 ? kSurface : dist < 0.0 ? kInside : kOutside
+    abs(dist) <= tolerance(T)/2 ? kSurface : dist < 0.0 ? kInside : kOutside
     #dist = maximum(abs.(point) - box.fDimensions)
-    #isapprox(dist, 0.0, atol = kTolerance(T)/2) ? kSurface : dist < 0.0 ? kInside : kOutside
+    #isapprox(dist, 0.0, atol = tolerance(T)/2) ? kSurface : dist < 0.0 ? kInside : kOutside
 end
 
-function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
+function distance_to_out(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T where T<:AbstractFloat
     safety = -Inf
     for i in 1:3
         d = abs(point[i]) - box.fDimensions[i]
@@ -49,7 +49,7 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T 
             safety = d 
         end
     end
-    if safety > kTolerance(T)/2
+    if safety > tolerance(T)/2
         return -1.0
     end 
     dist = Inf
@@ -62,27 +62,27 @@ function distanceToOut(box::Box{T}, point::Point3{T}, direction::Vector3{T})::T 
     return dist
     #safety = maximum(abs.(point) - box.fDimensions)
     #distance = minimum((copysign.(box.fDimensions, direction) - point) * (1.0 ./ direction))
-    #safety > kTolerance(T)/2 ? -1.0 : distance
+    #safety > tolerance(T)/2 ? -1.0 : distance
 end
 
-function distanceToIn(box::Box{T}, point::Point3{T}, direction::Vector3{T},rcp_direction::Vector3{T}=inv.(direction))::T where T<:AbstractFloat
+function distance_to_in(box::Box{T}, point::Point3{T}, direction::Vector3{T},rcp_direction::Vector3{T}=inv.(direction))::T where T<:AbstractFloat
     
     max=Point3{T}(box.fDimensions)
-    (distance,distout)= intersectAABoxRay(-max,max,point,direction,rcp_direction)
+    (distance,distout)= intersect_aabox_ray(-max,max,point,direction,rcp_direction)
     
     # The checks are as follows:
-    # 1.) distance < -kTolerance(T) would mean that we are already further in the volume than a micro step
+    # 1.) distance < -tolerance(T) would mean that we are already further in the volume than a micro step
     # 2.) distance >= distout Not sure if this is still needed
     # 3.) isnan(distance) NaN use to escape the intersect intersection routine and would cause problems
-    # 4.) distout <= kTolerance(T)/2) Checks to see if we are entering and immediatelly exiting
-    (distance < -kTolerance(T) || distance >= distout || isnan(distance) || distout <= kTolerance(T)/2) ? Inf : distance
+    # 4.) distout <= tolerance(T)/2) Checks to see if we are entering and immediatelly exiting
+    (distance < -tolerance(T) || distance >= distout || isnan(distance) || distout <= tolerance(T)/2) ? Inf : distance
 end
 
-function safetyToOut(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
+function safety_to_out(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     minimum(box.fDimensions - abs.(point))
 end
 
-function safetyToIn(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
+function safety_to_in(box::Box{T}, point::Point3{T}) where T<:AbstractFloat
     maximum(abs.(point) - box.fDimensions)
 end
 

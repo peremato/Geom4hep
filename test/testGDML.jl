@@ -1,5 +1,5 @@
 @testset "GDML{$T}" for T in (Float64, Float32)
-    world = processGDML(joinpath(@__DIR__, "twoboxes.gdml"), T)
+    world = read_gdml(joinpath(@__DIR__, "twoboxes.gdml"), T)
     @test world isa Volume{T}
     @test world.label == "World"
     @test world.shape isa Box{T}
@@ -21,7 +21,7 @@
     @test !Geom4hep.contains(trd, Point3{T}(0, 0, 0))
 
     @testset "$f" for f in ("boxes.gdml", "booleans.gdml", "cuttubes.gdml", "polycones.gdml")
-        w = processGDML(joinpath(@__DIR__, "..", "examples", f), T)
+        w = read_gdml(joinpath(@__DIR__, "..", "examples", f), T)
         @test w isa Volume{T}
         if f == "booleans.gdml"     # a single boolean solid as world
             @test w.shape isa Geom4hep.BooleanShape

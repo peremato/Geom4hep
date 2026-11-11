@@ -5,11 +5,11 @@ Current functionality:
 
 - Basic shapes: `Box`, `Tube`, `Trd`, `Trap`, `Cone`, `CutTube`, `Polycone`, and `BooleanUnion`/`BooleanSubtraction`/`BooleanIntersection`
 - Materials: `Isotope`, `Element`, `Material`
-- Essential navigation functions on shapes (`distanceToIn`, `distanceToOut`, `safetyToIn`, `safetyToOut`, `inside`, ...)
+- Essential navigation functions on shapes (`distance_to_in`, `distance_to_out`, `safety_to_in`, `safety_to_out`, `inside`, ...)
 - Construction of hierarchical geometry models with `Volume`, `PlacedVolume` and `Assembly`
 - Very basic navigator `TrivialNavigator` (linear search among all daughters)
 - Bounding Volume Hierarchy accelerated navigator `BVHNavigator`
-- GDML reader to input geometries (`processGDML`)
+- GDML reader to input geometries (`read_gdml`)
 - System of units in `Geom4hep.Units` (`using Geom4hep.Units; Box{Float64}(1cm, 2cm, 3cm)`)
 - 3D graphics support for shapes and geometry models with [Makie](https://docs.makie.org), loaded automatically as a package extension when a Makie backend is loaded
 - Benchmark functions for shapes and a number of examples

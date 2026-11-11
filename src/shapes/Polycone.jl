@@ -13,8 +13,8 @@ end
 function Polycone{T}(rmin::Vector, rmax::Vector, z::Vector, ϕ₀, Δϕ) where T<:AbstractFloat
     @assert length(rmin) == length(rmax) == length(z) "Vectors for rmin, rmax and z are different size"
     L = length(rmin)
-    sections = [Cone{T}(rmin[i],rmax[i], rmin[i+1], rmax[i+1], (z[i+1]-z[i])/2, ϕ₀, Δϕ) for i in 1:L-1 if (z[i+1] - z[i]) > kTolerance(T)]
-    zoffs = [(z[i]+z[i+1])/2 for i in 1:L-1 if (z[i+1] - z[i]) > kTolerance(T)]
+    sections = [Cone{T}(rmin[i],rmax[i], rmin[i+1], rmax[i+1], (z[i+1]-z[i])/2, ϕ₀, Δϕ) for i in 1:L-1 if (z[i+1] - z[i]) > tolerance(T)]
+    zoffs = [(z[i]+z[i+1])/2 for i in 1:L-1 if (z[i+1] - z[i]) > tolerance(T)]
     N = length(sections)
     Polycone{T,N,L}(sections, zoffs, rmin, rmax, z, ϕ₀, Δϕ)
 end
@@ -30,9 +30,9 @@ function GeometryBasics.mesh(pcone::Polycone{T,N,L}; facets::Integer=64) where {
 end
 
 #---Basic functionality-----------------------------------------------------------------------------
-getNz(::Polycone{T,N}) where {T,N} = N + 1
-getNSections(::Polycone{T,N}) where {T,N} = N
-function getSectionIndex(pcone::Polycone{T,N}, zpos::T) where {T,N}
+nz(::Polycone{T,N}) where {T,N} = N + 1
+nsections(::Polycone{T,N}) where {T,N} = N
+function section_index(pcone::Polycone{T,N}, zpos::T) where {T,N}
     (; sections, zᵢ) = pcone
     zpos < zᵢ[1] - sections[1].z && return -1
     for i  in 1:N
@@ -83,8 +83,8 @@ end
 
 function inside(pcone::Polycone{T,N}, point::Point3{T})::Int64  where {T,N}
     x, y, z = point
-    indexLow  = getSectionIndex(pcone, z - kTolerance(T))
-    indexHigh = getSectionIndex(pcone, z + kTolerance(T))
+    indexLow  = section_index(pcone, z - tolerance(T))
+    indexHigh = section_index(pcone, z + tolerance(T))
     indexLow < 0 && indexHigh < 0 && return kOutside
     indexLow < 0 && indexHigh == 1 && return inside(pcone.sections[1], point-Vector3{T}(0,0,pcone.zᵢ[1]))
     indexHigh < 0 && indexLow == N && return inside(pcone.sections[N], point-Vector3{T}(0,0,pcone.zᵢ[N]))
@@ -100,17 +100,17 @@ function inside(pcone::Polycone{T,N}, point::Point3{T})::Int64  where {T,N}
 end
 Base.contains(pcone::Polycone{T,N}, p::Point3{T}) where {T,N} = inside(pcone, p) == kInside
 
-function distanceToIn(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
+function distance_to_in(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
     z = point[3]
     dz = dir[3]
     distance = Inf
     increment = dz > 0 ? 1 : -1
-    abs(dz) < kTolerance(T) && (increment = 0)
-    index = getSectionIndex(pcone, z)
+    abs(dz) < tolerance(T) && (increment = 0)
+    index = section_index(pcone, z)
     index == -1 && (index = 1)
     index == -2 && (index = N)
     while true
-        distance = distanceToIn(pcone.sections[index], point - Vector3{T}(0,0,pcone.zᵢ[index]), dir)
+        distance = distance_to_in(pcone.sections[index], point - Vector3{T}(0,0,pcone.zᵢ[index]), dir)
         (distance < Inf || increment == 0) && break
         index += increment
         (index < 1 || index > N) && break
@@ -118,17 +118,17 @@ function distanceToIn(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::
     return distance
 end
 
-function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
+function safety_to_in(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     (; sections, zᵢ) = pcone
     z = point[3]
-    index = getSectionIndex(pcone, z)
+    index = section_index(pcone, z)
 
     index == -1 && (index = 1)
     index == -2 && (index = N)
 
     minSafety = 0
-    safety = safetyToIn(sections[index], point - Vector3{T}(0,0,zᵢ[index]))
-    safety < kTolerance(T) && return safety
+    safety = safety_to_in(sections[index], point - Vector3{T}(0,0,zᵢ[index]))
+    safety < tolerance(T) && return safety
 
     minSafety = safety
     zbase = zᵢ[index] + sections[index].z
@@ -136,7 +136,7 @@ function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     for i in index+1:N
         dz = zᵢ[i] - sections[i].z - zbase
         dz >= minSafety && break
-        safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
+        safety = safety_to_in(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
         safety < minSafety && (minSafety = safety)
     end
     # going left
@@ -145,28 +145,28 @@ function safetyToIn(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
         for i in index-1:-1:1
             dz = zbase - zᵢ[i] + sections[i].z
             dz >= minSafety && break
-            safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
+            safety = safety_to_in(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
             safety < minSafety && (minSafety = safety)
         end
     end
     return minSafety
 end
 
-function safetyToOut(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
+function safety_to_out(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     inside(pcone, point) == kOutside && return -1
     (; sections, zᵢ) = pcone
     z = point[3]
-    index = getSectionIndex(pcone, z)
+    index = section_index(pcone, z)
     index < 0 && return -1
-    safety = safetyToOut(sections[index], point - Vector3{T}(0,0,zᵢ[index]))
+    safety = safety_to_out(sections[index], point - Vector3{T}(0,0,zᵢ[index]))
     minSafety = safety
-    (minSafety == Inf || minSafety < kTolerance(T)) && return 0
+    (minSafety == Inf || minSafety < tolerance(T)) && return 0
     zbase = zᵢ[index] + sections[index].z
     # going right
     for i in index+1:N
         dz = zᵢ[i] - sections[i].z  - zbase
         dz >= minSafety && break
-        safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
+        safety = safety_to_in(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
         safety < minSafety && (minSafety = safety)
     end
     # going left
@@ -175,22 +175,22 @@ function safetyToOut(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
         for i in index-1:-1:1
             dz = zbase - zᵢ[i] + sections[i].z
             dz >= minSafety && break
-            safety = safetyToIn(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
+            safety = safety_to_in(sections[i], point - Vector3{T}(0,0,zᵢ[i]))
             safety < minSafety && (minSafety = safety)
         end
     end
     return minSafety
 end
 
-function distanceToOut(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
+function distance_to_out(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
     z = point[3]
     dz = dir[3]
     distance = Inf
     if N == 1
-        return distanceToOut(pcone.sections[1], point - Vector3{T}(0,0,pcone.zᵢ[1]), dir)
+        return distance_to_out(pcone.sections[1], point - Vector3{T}(0,0,pcone.zᵢ[1]), dir)
     end
-    indexLow  = getSectionIndex(pcone, z - kTolerance(T))
-    indexHigh = getSectionIndex(pcone, z + kTolerance(T))
+    indexLow  = section_index(pcone, z - tolerance(T))
+    indexHigh = section_index(pcone, z + tolerance(T))
     if indexLow < 0 && indexHigh < 0 
         return -1.
     elseif indexLow < 0 && indexHigh > 0
@@ -211,7 +211,7 @@ function distanceToOut(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T}):
 
     distance = T(0)
     increment = dz > 0 ? 1 : -1
-    abs(dz) < kTolerance(T) && (increment = 0)
+    abs(dz) < tolerance(T) && (increment = 0)
     pn = point
     istep = 0
     while true
@@ -223,9 +223,9 @@ function distanceToOut(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T}):
             pn -=  Vector3{T}(0,0,pcone.zᵢ[index])
         end
         istep += 1
-        dist = distanceToOut(pcone.sections[index], pn, dir)
+        dist = distance_to_out(pcone.sections[index], pn, dir)
         dist == -1. && return distance
-        if abs(dist) < kTolerance(T)/2
+        if abs(dist) < tolerance(T)/2
             index1 = index
             if index > 1 && index < N
                 index1 += increment

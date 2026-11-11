@@ -19,11 +19,11 @@ function Base.show(io::IO, wed::Wedge{T}) where T
     print(io, "Wedge{$T}",(wed.ϕ₀,wed.Δϕ))
 end
 
-function isOnSurface(along::Vector2{T}, normal::Vector2{T}, x::T, y::T) where T<:AbstractFloat  
-    along[1]*x + along[2]*y >= 0. && abs(normal[1]*x + normal[2]*y) < kTolerance(T)
+function is_on_surface(along::Vector2{T}, normal::Vector2{T}, x::T, y::T) where T<:AbstractFloat  
+    along[1]*x + along[2]*y >= 0. && abs(normal[1]*x + normal[2]*y) < tolerance(T)
 end
 
-function isInside(w::Wedge{T}, x::T, y::T; tol::T=T(0), includeSurface::Bool=false) where T<:AbstractFloat
+function is_inside(w::Wedge{T}, x::T, y::T; tol::T=T(0), include_surface::Bool=false) where T<:AbstractFloat
     w.Δϕ == T(2π) && return true
     startCheck = (-x * w.along1[2] + y * w.along1[1])
     endCheck   = (-w.along2[1] * y + w.along2[2] * x)
@@ -32,11 +32,11 @@ function isInside(w::Wedge{T}, x::T, y::T; tol::T=T(0), includeSurface::Bool=fal
     else
       inside = startCheck > -tol || endCheck > -tol
     end
-    includeSurface && return inside
-    inside &= !isOnSurface(w.along1, w.normal1, x, y) && !isOnSurface(w.along2, w.normal2, x, y)
+    include_surface && return inside
+    inside &= !is_on_surface(w.along1, w.normal1, x, y) && !is_on_surface(w.along2, w.normal2, x, y)
 end
 
-function isOutside(w::Wedge{T}, x::T, y::T; tol::T=T(0) ) where T<:AbstractFloat
+function is_outside(w::Wedge{T}, x::T, y::T; tol::T=T(0) ) where T<:AbstractFloat
     w.Δϕ == T(2π) && return false
     startCheck = (-x * w.along1[2] + y * w.along1[1])
     endCheck   = (-w.along2[1] * y + w.along2[2] * x)
@@ -45,12 +45,12 @@ function isOutside(w::Wedge{T}, x::T, y::T; tol::T=T(0) ) where T<:AbstractFloat
     else
       outside = startCheck < tol && endCheck < tol
     end
-    outside &= !isOnSurface(w.along1, w.normal1, x, y) && !isOnSurface(w.along2, w.normal2, x, y)
+    outside &= !is_on_surface(w.along1, w.normal1, x, y) && !is_on_surface(w.along2, w.normal2, x, y)
 end
-isOutside(w::Wedge{T}, p::Point2{T}; tol::T=T(0) ) where T<:AbstractFloat = isOutside(w, p[1], p[2]; tol=tol)
-isInside(w::Wedge{T}, p::Point2{T}; tol::T=T(0) ) where T<:AbstractFloat = isInside(w, p[1], p[2]; tol=tol)
+is_outside(w::Wedge{T}, p::Point2{T}; tol::T=T(0) ) where T<:AbstractFloat = is_outside(w, p[1], p[2]; tol=tol)
+is_inside(w::Wedge{T}, p::Point2{T}; tol::T=T(0) ) where T<:AbstractFloat = is_inside(w, p[1], p[2]; tol=tol)
 
-function safetyToOut(w::Wedge{T}, x::T, y::T) where T<:AbstractFloat
+function safety_to_out(w::Wedge{T}, x::T, y::T) where T<:AbstractFloat
     (; normal1, normal2, Δϕ) = w
     dist1 = x * normal1[1] + y * normal1[2]
     dist2 = x * normal2[1] + y * normal2[2]

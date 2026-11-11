@@ -8,10 +8,10 @@
     for p in (P(7, 0, 0), P(0, 0, 0), P(7, 0, 19), P(7, 0, 25), P(0, 12, 0), P(10, 0, 0), P(7, 0, 20))
         @test inside(ct, p) == inside(tb, p)
     end
-    @test distanceToOut(ct, P(7, 0, 0), V(0, 0, 1)) ≈ 20
-    @test distanceToOut(ct, P(7, 0, 0), V(1, 0, 0)) ≈ 3
-    @test distanceToIn(ct, P(7, 0, 50), V(0, 0, -1)) ≈ 30
-    @test distanceToIn(ct, P(-30, 0, 0), V(1, 0, 0)) ≈ 20
+    @test distance_to_out(ct, P(7, 0, 0), V(0, 0, 1)) ≈ 20
+    @test distance_to_out(ct, P(7, 0, 0), V(1, 0, 0)) ≈ 3
+    @test distance_to_in(ct, P(7, 0, 50), V(0, 0, -1)) ≈ 30
+    @test distance_to_in(ct, P(-30, 0, 0), V(1, 0, 0)) ≈ 20
     lo, hi = extent(ct)
     @test lo[3] ≈ -20 && hi[3] ≈ 20
     @test hi[1] ≈ 10 && hi[2] ≈ 10
@@ -22,6 +22,6 @@
     @test inside(ct45, P(5, 0, 14)) == kInside
     @test inside(ct45, P(5, 0, 16)) == kOutside
     @test inside(ct45, P(-5, 0, 24)) == kInside
-    @test distanceToOut(ct45, P(5, 0, 0), V(0, 0, 1)) ≈ 15
-    @test distanceToOut(ct45, P(-5, 0, 0), V(0, 0, 1)) ≈ 25
+    @test distance_to_out(ct45, P(5, 0, 0), V(0, 0, 1)) ≈ 15
+    @test distance_to_out(ct45, P(-5, 0, 0), V(0, 0, 1)) ≈ 25
 end

@@ -1,19 +1,19 @@
 - Before changes
   ```
-  @time generateXRay(nav, world, 1e6, 1)
+  @time generate_xray(nav, world, 1e6, 1)
   272.065976 seconds (2.91 G allocations: 72.223 GiB, 2.17% gc time)
   ```
 - With changes from Philippe G.
   ```
-  @time generateXRay(nav, world, 1e6, 1)
+  @time generate_xray(nav, world, 1e6, 1)
   223.448555 seconds (10 allocations: 7.632 MiB)
   ```
 
 ./test/XRayBenchmarkFromROOTFile ../Geom4hep/examples/cms2018.gdml MB x 100 --novoxel
-generateXRay(nav, world, 100, 1)
+generate_xray(nav, world, 100, 1)
 
 
-| program |  options            |  time | allocations | # steps | # distanceToIn | Comments |
+| program |  options            |  time | allocations | # steps | # distance_to_in | Comments |
 |---------|---------------------|-------|-------------|---------|----------------|----------|
 | VecGeom |  NewSimpleNavigator | 8.1 s |             |  1.8 M  | 88 M           | |
 | VecGeom |  default            | 1.27 s|             |  1.8 M  | 334 k ???      | |

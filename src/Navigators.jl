@@ -22,23 +22,23 @@ end
 function BVHNavigator(world::Volume{T}; SAHfrac::T=T(8)) where T
     nav = BVHNavigator{T}(world, BVHParam{T}(SAHfrac), Dict{UInt64,BVH{T}}(),Int64[])
     #--- Create accelerationstructures---------------------------------
-    buildBVH(nav, world, Set{UInt64}())
+    build_bvh(nav, world, Set{UInt64}())
     sizehint!(nav.pvolind,1024)
     nav
 end
 
-function buildBVH(nav::BVHNavigator{T}, vol::Volume{T}, set::Set{UInt64}) where T
+function build_bvh(nav::BVHNavigator{T}, vol::Volume{T}, set::Set{UInt64}) where T
     id = vol.id
     #---return immediatelly if BVH is already there----
     id in set && return
     push!(set, id)
     #---only for more than 4 daughters
     if length(vol.daughters) > 4
-        nav.bvhdict[id] = buildBVH(vol.daughters, nav.param)
+        nav.bvhdict[id] = build_bvh(vol.daughters, nav.param)
     end
     #---Call recursively itself------------------------
     for d in vol.daughters
-        buildBVH(nav, d.volume, set)
+        build_bvh(nav, d.volume, set)
     end
 end
 
@@ -66,31 +66,31 @@ end
     state.isinworld = false 
 end
 
-@inline function currentVolume(state::NavigatorState{T}) where T<:AbstractFloat
+@inline function current_volume(state::NavigatorState{T}) where T<:AbstractFloat
     isempty(state.pvolstack) ? state.topvol : first(state.pvolstack).volume
 end
-@inline function currentTransformation(state::NavigatorState{T}) where T<:AbstractFloat
+@inline function current_transformation(state::NavigatorState{T}) where T<:AbstractFloat
     isempty(state.pvolstack) ? one(Transformation3D{T}) : first(state.pvolstack).transformation
 end
 
-@inline function popOut!(state::NavigatorState{T}, point::Point3{T}) where T<:AbstractFloat
+@inline function pop_out!(state::NavigatorState{T}, point::Point3{T}) where T<:AbstractFloat
     if !isempty(state.pvolstack)
-        point = point * currentTransformation(state) # transform to the mother system of reference
+        point = point * current_transformation(state) # transform to the mother system of reference
         pop!(state.pvolstack)
-        relocatePoint!(state, point; inmother=true)
+        relocate_point!(state, point; inmother=true)
     else
         state.isinworld = false
     end
 end
 
-@inline function pushIn!(state::NavigatorState{T}, pvol::PlacedVolume{T}, point::Point3{T}) where T<:AbstractFloat
+@inline function push_in!(state::NavigatorState{T}, pvol::PlacedVolume{T}, point::Point3{T}) where T<:AbstractFloat
     push!(state.pvolstack, pvol)
-    relocatePoint!(state, pvol.transformation * point)
+    relocate_point!(state, pvol.transformation * point)
 end
 
 #---Basic loops implemented using acceleration structures-------------------------------------------
-containedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}) where T = eachindex(vol.daughters)
-function containedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}) where T
+contained_daughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}) where T = eachindex(vol.daughters)
+function contained_daughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}) where T
     id = vol.id
     if haskey(nav.bvhdict, id)
         bvh = nav.bvhdict[id]
@@ -101,8 +101,8 @@ function containedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{
     return nav.pvolind
 end
 
-intersectedDaughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}, ::Vector3{T}) where T = eachindex(vol.daughters)
-function intersectedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}, dir::Vector3{T}) where T
+intersected_daughters(::TrivialNavigator{T}, vol::Volume{T}, ::Point3{T}, ::Vector3{T}) where T = eachindex(vol.daughters)
+function intersected_daughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point3{T}, dir::Vector3{T}) where T
     id = vol.id
     if haskey(nav.bvhdict, id)
         bvh = nav.bvhdict[id]
@@ -114,7 +114,7 @@ function intersectedDaughters(nav::BVHNavigator{T}, vol::Volume{T}, point::Point
 end
 
 #---Locate global point and initialize state-------------------------------------------------------- 
-function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) where {T, NAV}
+function locate_global_point!(state::NavigatorState{T,NAV}, point::Point3{T}) where {T, NAV}
     nav = state.navigator
     reset!(state)
     vol = state.topvol
@@ -125,7 +125,7 @@ function locateGlobalPoint!(state::NavigatorState{T,NAV}, point::Point3{T}) wher
     isinside = true
     while isinside
         isinside = false
-        for i in containedDaughters(nav, vol, point)
+        for i in contained_daughters(nav, vol, point)
             pvol = vol.daughters[i]
             if contains(pvol, point)
                 push!(state.pvolstack, pvol)
@@ -141,24 +141,24 @@ end
 
 
 #---Locate global point and initialize state-------------------------------------------------------- 
-function relocatePoint!(state::NavigatorState{T,NAV}, point::Point3{T}; inmother::Bool=false) where {T, NAV}
+function relocate_point!(state::NavigatorState{T,NAV}, point::Point3{T}; inmother::Bool=false) where {T, NAV}
     nav  = state.navigator        # use the navigator acceleration
-    vol  = currentVolume(state)   # start from data has been just updated
+    vol  = current_volume(state)   # start from data has been just updated
     # if last does not contain the point go up the hierarchy
     if inmother
         while !contains(vol, point)
-            point = point * currentTransformation(state)
+            point = point * current_transformation(state)
             if !isempty(state.pvolstack)
                 pop!(state.pvolstack)
             end
-            vol = currentVolume(state)
+            vol = current_volume(state)
         end
     end
     # check the daughters in a non-recursive manner
     isinside = true
     while isinside
         isinside = false
-        for i in containedDaughters(nav, vol, point)
+        for i in contained_daughters(nav, vol, point)
             pvol = vol.daughters[i]
             if contains(pvol, point)
                 push!(state.pvolstack, pvol)
@@ -172,18 +172,18 @@ function relocatePoint!(state::NavigatorState{T,NAV}, point::Point3{T}; inmother
     return nothing
 end
 
-@inline function isInVolume(state::NavigatorState{T}) where T<:AbstractFloat
+@inline function is_in_volume(state::NavigatorState{T}) where T<:AbstractFloat
     state.isinworld
 end
 
-function getClosestDaughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::Vector3{T}, step_limit::T ) where {T,NAV}
+function closest_daughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::Vector3{T}, step_limit::T ) where {T,NAV}
     step = step_limit
     candidate = 0
     #---Linear loop over the daughters-------------------------------------------------
-    for i in intersectedDaughters(nav, volume, point, dir)
+    for i in intersected_daughters(nav, volume, point, dir)
         pvol = volume.daughters[i]
         #---Assuming that it is not yet inside the daughter (otherwise it returns -1.)
-        dist = distanceToIn(pvol, point, dir)
+        dist = distance_to_in(pvol, point, dir)
         dist < 0. && return (zero(T), pvol.idx ) 
         if dist > 0. && dist != Inf && dist < step
             step = dist
@@ -194,24 +194,24 @@ function getClosestDaughter(nav::NAV, volume::Volume{T}, point::Point3{T}, dir::
 end
 
 #---Update the NavigatorState and get the step (distance)
-function computeStep!(state::NavigatorState{T,NAV}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where {T,NAV}
+function compute_step!(state::NavigatorState{T,NAV}, gpoint::Point3{T}, gdir::Vector3{T}, step_limit::T) where {T,NAV}
     lpoint, ldir = transform((pvol.transformation for pvol in state.pvolstack.store), gpoint, gdir) 
-    volume = currentVolume(state)
-    step, idx = getClosestDaughter(state.navigator, volume, lpoint, ldir, step_limit)
+    volume = current_volume(state)
+    step, idx = closest_daughter(state.navigator, volume, lpoint, ldir, step_limit)
     #---If didn't hit any daughter return distance to out
     if idx == 0
-        step = distanceToOut(volume.shape, lpoint, ldir)
-        if step > -kTolerance(T)
-            popOut!(state, lpoint + ldir * (step + kPushTolerance(T)))  # go to mother or siblings
+        step = distance_to_out(volume.shape, lpoint, ldir)
+        if step > -tolerance(T)
+            pop_out!(state, lpoint + ldir * (step + push_tolerance(T)))  # go to mother or siblings
         elseif step < 0
             shape = volume.shape
             volstack = [pvol.idx for pvol in state.pvolstack]
-            error("Negative distanceToOut. \nstep = $step \nshape = $shape \nvolstack = $volstack \npoint = $lpoint \ndir =   $ldir" )
+            error("Negative distance_to_out. \nstep = $step \nshape = $shape \nvolstack = $volstack \npoint = $lpoint \ndir =   $ldir" )
         end
     else
     #---We hit a daughter, push it into the stack
         pvol = volume.daughters[idx]
-        pushIn!(state, pvol, lpoint + ldir * (step + kPushTolerance(T))) # go to daughter or grand-daughters
+        push_in!(state, pvol, lpoint + ldir * (step + push_tolerance(T))) # go to daughter or grand-daughters
     end
     return step
 end

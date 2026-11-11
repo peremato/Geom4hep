@@ -118,12 +118,12 @@ function _children(n::_Branch, bp::BVHParam)
     return (_Leaf(bc),)
 end
 
-_buildBVH(n::_Leaf, ::BVHParam) = n.data.indices
-_buildBVH(n::_Branch, bp::BVHParam) = BVH(AABB(n.data), [_buildBVH(c, bp) for c in _children(n, bp)]...)
-buildBVH(pvols::Vector{PlacedVolume{T}}, bp::BVHParam{T}) where T = _buildBVH(_Branch(BoxedVolumes(pvols)), bp)
-buildBVH(pvols::Vector{PlacedVolume{T}}) where T = buildBVH(pvols, BVHParam{T}())
+_build_bvh(n::_Leaf, ::BVHParam) = n.data.indices
+_build_bvh(n::_Branch, bp::BVHParam) = BVH(AABB(n.data), [_build_bvh(c, bp) for c in _children(n, bp)]...)
+build_bvh(pvols::Vector{PlacedVolume{T}}, bp::BVHParam{T}) where T = _build_bvh(_Branch(BoxedVolumes(pvols)), bp)
+build_bvh(pvols::Vector{PlacedVolume{T}}) where T = build_bvh(pvols, BVHParam{T}())
 
-resetBVH(bvh::BVH, vertices, faces) = nothing
+reset_bvh(bvh::BVH, vertices, faces) = nothing
 
 #---Returns an iterator over all subsets of PlacedVolume indices such that `f(x::AABB) == true` for all parent axis aligned bounding boxes `x`.
 function _pvolindices!(ind::Vector{Int64}, f::Function, b::BVH{T}) where T

@@ -21,8 +21,8 @@ GeometryBasics.faces(::AABB{T}) where T = QuadFace{Int64}[(1,3,7,2), (1,2,6,4), 
 GeometryBasics.normals(::AABB{T}) where T = Point3{T}[(0,0,-1), (0,-1,0), (-1,0,0), (1,0,0), (0,1,0), (0,0,1)]
 
 function intersect(bb::AABB{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
-    (distance, distout) =  intersectAABoxRay(bb.min, bb.max, point, dir, rcp_dir)
-    (distance >= distout  || distout <= kTolerance(T) / 2 ) ? false : true
+    (distance, distout) =  intersect_aabox_ray(bb.min, bb.max, point, dir, rcp_dir)
+    (distance >= distout  || distout <= tolerance(T) / 2 ) ? false : true
 end
 
 function inside(b::AABB{T}, point::Point3{T}) where {T}
@@ -30,7 +30,7 @@ function inside(b::AABB{T}, point::Point3{T}) where {T}
 end
 
 #---Fast Axial Aligned Bounded Box Ray intersection routine.  Returns both distances to the intesections
-function intersectAABoxRay(bbmin::Point3{T}, bbmax::Point3{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
+function intersect_aabox_ray(bbmin::Point3{T}, bbmax::Point3{T}, point::Point3{T}, dir::Vector3{T}, rcp_dir::Vector3{T}=inv.(dir)) where {T}
     
     tmin = typemin(T)
     tmax = typemax(T)
