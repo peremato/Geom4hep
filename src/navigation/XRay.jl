@@ -21,12 +21,23 @@
     return mass, n
 end
 
-@kernel function _xray_kernel!(image, nsteps, model, origin, du, dv, dir, maxsteps, j0)
-    i, jj = @index(Global, NTuple)
-    j = jj + j0                       # columns are processed in batches (see `batch` in `xray`)
-    mass, n = _xray_pixel(model, origin, du, dv, dir, maxsteps, i, j)
-    @inbounds image[i, j] = mass
-    @inbounds nsteps[i, j] = n
+# The image is processed in tiles of _TILE_I × _TILE_J pixels (adjacent pixels, similar rays), visited
+# in a scrambled order (see `xray`)
+const _TILE_I = 64
+const _TILE_J = 16
+
+@kernel function _xray_kernel!(image, nsteps, model, origin, du, dv, dir, maxsteps, t0, ntiles, stride)
+    g = @index(Global, Linear) - 1
+    k, w = divrem(g, _TILE_I * _TILE_J)                 # tile in the batch, pixel in the tile
+    c, r = divrem(w, _TILE_I)
+    tile = mod((k + t0) * Int64(stride), Int64(ntiles))  # tile in the image
+    tj, ti = divrem(Int(tile), cld(size(image, 1), _TILE_I))
+    i, j = ti * _TILE_I + r + 1, tj * _TILE_J + c + 1
+    if i <= size(image, 1) && j <= size(image, 2)
+        mass, n = _xray_pixel(model, origin, du, dv, dir, maxsteps, i, j)
+        @inbounds image[i, j] = mass
+        @inbounds nsteps[i, j] = n
+    end
 end
 
 """
@@ -66,16 +77,26 @@ function xray(model::GeometryModel{T}, axis::Integer, npixels::Integer; backend=
         dnsteps = KernelAbstractions.zeros(backend, Int32, nu, nv)
         dmodel = adapt(backend, model)
         kernel! = _xray_kernel!(backend)
-        # Columns are processed in batches; the size of the batches adapts to take ~launch_time each
-        ncols, j0 = max(1, 4096 ÷ nu), 0
-        while j0 < nv
-            nj = min(ncols, nv - j0)
+        # The tiles are processed in batches whose size adapts to take ~launch_time each. The cost of
+        # a ray varies a lot across the image (by orders of magnitude between the empty border and the
+        # centre of a detector), so the tiles are visited in a scrambled order (k ↦ k⋅stride mod
+        # ntiles, stride coprime with ntiles): every batch is a sample of the whole image, with a
+        # predictable cost.
+        ntiles = cld(nu, _TILE_I) * cld(nv, _TILE_J)
+        stride = max(1, round(Int, 0.618 * ntiles))
+        while gcd(stride, ntiles) != 1
+            stride += 1
+        end
+        nbatch, t0 = 1, 0
+        while t0 < ntiles
+            n = min(nbatch, ntiles - t0)
             t = @elapsed begin
-                kernel!(dimage, dnsteps, dmodel, origin, du, dv, dir, Int32(maxsteps), j0; ndrange=(nu, nj))
+                kernel!(dimage, dnsteps, dmodel, origin, du, dv, dir, Int32(maxsteps), t0, ntiles, stride;
+                        ndrange=n * _TILE_I * _TILE_J)
                 KernelAbstractions.synchronize(backend)
             end
-            j0 += nj
-            ncols = clamp(round(Int, nj * launch_time / max(t, 1e-3)), 1, 2nj)   # grow at most ×2
+            t0 += n
+            nbatch = clamp(round(Int, n * launch_time / max(t, 1e-3)), 1, 2n)   # grow at most ×2
         end
         image, nsteps = Array(dimage), Array(dnsteps)
     end

@@ -114,6 +114,72 @@ end
     @test minimum(img) == 0
 end
 
+@testset "Navigation at surfaces{$T}" for T in (Float64, Float32)
+    # a daughter sharing the inner surface of its mother, crossed by rays at grazing angles: the
+    # point pushed into the mother is still on the surface of the daughter, which must be entered
+    world  = Volume{T}("world", Box{T}(5000, 5000, 100), Material{T}("vacuum"; density=0))
+    mother = Volume{T}("mother", Tube{T}(3800, 4000, 50, 0, 2π), Material{T}("air"; density=1))
+    inner  = Volume{T}("inner", Tube{T}(3800, 3900, 50, 0, 2π), Material{T}("iron"; density=10))
+    place_daughter!(mother, Transformation3D{T}(0, 0, 0), inner)
+    place_daughter!(world, Transformation3D{T}(0, 0, 0), mother)
+    m = close_geometry(world)
+    nbad = 0
+    for y in range(T(3700), T(3799), length=200)
+        p, d = Point3{T}(-4500, y, 0), Vector3{T}(1, 0, 0)
+        s = locate(m, p)
+        mass = zero(T)
+        while in_world(s)
+            ρ = m.materials[material_index(m, s)].density
+            step, s = compute_step(m, s, p, d, T(Inf))
+            p += step * d
+            mass += step * ρ
+        end
+        x(r) = sqrt(r^2 - y^2)
+        expected = 2 * (10 * (x(T(3900)) - x(T(3800))) + (x(T(4000)) - x(T(3900))))
+        nbad += !isapprox(mass, expected; rtol=1e-3)
+    end
+    @test nbad == 0
+
+    # the same with boxes (whose distance_to_in on the surface is not exactly 0): a daughter sharing
+    # the +y face of its mother, rays entering the mother through that face at grazing angles
+    world  = Volume{T}("world", Box{T}(500, 500, 500), Material{T}("vacuum"; density=0))
+    mother = Volume{T}("mother", Box{T}(100, 100, 100), Material{T}("air"; density=1))
+    inner  = Volume{T}("inner", Box{T}(100, 10, 100), Material{T}("iron"; density=10))
+    place_daughter!(mother, Transformation3D{T}(0, 90, 0), inner)
+    place_daughter!(world, Transformation3D{T}(0, 0, 0), mother)
+    m = close_geometry(world)
+    nbad = 0
+    for θ in range(T(0.01), T(0.2), length=50), z in (T(-50), T(0), T(50))
+        d = Vector3{T}(cos(θ), -sin(θ), 0)
+        p = Point3{T}(-50, 100, z) - T(200) * d                # crossing y = 100 at x = -50
+        s = locate(m, p)
+        mass = zero(T)
+        while in_world(s)
+            ρ = m.materials[material_index(m, s)].density
+            step, s = compute_step(m, s, p, d, T(Inf))
+            p += step * d
+            mass += step * ρ
+        end
+        l, L = 20 / sin(θ), 150 / cos(θ)                       # paths to the bottom of the daughter, to x = 100
+        expected = l < L ? 10l + (L - l) : 10L
+        nbad += !isapprox(mass, expected; rtol=1e-3)
+    end
+    @test nbad == 0
+
+    # leaving a (non-convex) boolean shape at an angle from its surface: not entering it again there
+    u = BooleanUnion(Box{T}(10, 10, 10), Box{T}(10, 50, 50), Transformation3D{T}(30, 0, 0))
+    world = Volume{T}("world", Box{T}(100, 100, 100), Material{T}("vacuum"; density=0))
+    place_daughter!(world, Transformation3D{T}(0, 0, 0), Volume{T}("u", u, Material{T}("mat"; density=1)))
+    m = close_geometry(world)
+    nbad = 0
+    for y in range(T(-9), T(9), length=50), z in range(T(-9), T(9), length=50)
+        p = Point3{T}(10, y, z)                            # on the +x face of the first box
+        d = Vector3{T}(1 / 2, 0, sqrt(T(3)) / 2)           # 60° from the normal
+        nbad += !isapprox(shape_call(distance_to_in, m, m.volumes[2].shape, p, d), 20; atol=1e-2)
+    end
+    @test nbad == 0
+end
+
 @testset "Navigator agreement (GDML, flat model)" begin
     T = Float64
     world = read_gdml(joinpath(@__DIR__, "..", "examples", "boxes.gdml"), T)

@@ -93,22 +93,34 @@ end
 #---Locating points------------------------------------------------------------------------------------
 @inline _inside_volume(model::GeometryModel, vidx, lpoint) = shape_call(inside, model, @inbounds(model.volumes[vidx]).shape, lpoint)
 
-# Go down the hierarchy to the deepest volume containing the point
-@noinline function _descend(model::GeometryModel{T}, s::NavState{T}, gpoint::Point3{T}) where T
+# Go down the hierarchy to the deepest volume containing the point. With a direction `gdir` (the
+# point moving along it), a daughter whose surface the point is on is also entered when the direction
+# goes into it: a point pushed across a boundary shared by a daughter of the entered volume can stay
+# within the surface tolerance of that daughter (e.g. crossing a cylinder at a grazing angle).
+@noinline function _descend(model::GeometryModel{T}, s::NavState{T}, gpoint::Point3{T}, gdir=nothing) where T
     while s.depth < MAX_NAV_DEPTH
         vol = @inbounds model.volumes[s.volume]
         lpoint = s.tolocal * gpoint
         found = Int32(0)
+        surface = Int32(0)                  # first daughter entered at its surface
         it = _daughters_start(vol)
         while true
             pidx, it = _next_daughter(model, vol, it, bb -> inside(bb, lpoint))
             pidx == 0 && break
             pl = @inbounds model.placements[pidx]
-            if _inside_volume(model, pl.volume, pl.transformation * lpoint) == kInside
+            dpoint = pl.transformation * lpoint
+            pos = _inside_volume(model, pl.volume, dpoint)
+            if pos == kInside
                 found = pidx
                 break
+            elseif gdir !== nothing && pos == kSurface && surface == 0
+                # entering: on the surface, distance_to_in is 0 or (within the tolerance) negative
+                ddir = pl.transformation * (s.tolocal * gdir)
+                d = shape_call(distance_to_in, model, @inbounds(model.volumes[pl.volume]).shape, dpoint, ddir)
+                d <= 0 && (surface = pidx)
             end
         end
+        found == 0 && (found = surface)
         found == 0 && return s
         s = _push(model, s, found)
     end
@@ -116,12 +128,12 @@ end
 end
 
 # Go up the hierarchy until a volume contains the point, then down again
-@noinline function _relocate(model::GeometryModel{T}, s::NavState{T}, gpoint::Point3{T}) where T
+@noinline function _relocate(model::GeometryModel{T}, s::NavState{T}, gpoint::Point3{T}, gdir=nothing) where T
     while in_world(s) && _inside_volume(model, s.volume, s.tolocal * gpoint) != kInside
         s = _pop(model, s)
     end
     in_world(s) || return s
-    return _descend(model, s, gpoint)
+    return _descend(model, s, gpoint, gdir)
 end
 
 """
@@ -154,7 +166,7 @@ after crossing it. The new state is computed for the point pushed slightly beyon
         # The point is (numerically) outside the current volume: move by a small step and relocate,
         # so that the caller always makes progress
         step = _min_step(gpoint)
-        return step, _relocate(model, s, gpoint + step * gdir)
+        return step, _relocate(model, s, gpoint + step * gdir, gdir)
     end
     step = min(dout, step_limit)
     hit = Int32(0)
@@ -183,8 +195,8 @@ after crossing it. The new state is computed for the point pushed slightly beyon
     step = max(step, minstep)
     newpoint = gpoint + (step + minstep) * gdir
     if hit != 0                                    # entering a daughter
-        return step, _descend(model, _push(model, s, hit), newpoint)
+        return step, _descend(model, _push(model, s, hit), newpoint, gdir)
     else                                           # leaving the current volume
-        return step, _relocate(model, _pop(model, s), newpoint)
+        return step, _relocate(model, _pop(model, s), newpoint, gdir)
     end
 end

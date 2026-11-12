@@ -86,7 +86,9 @@ function distance_to_in(c::CSGShape{T}, point::Point3{T}, dir::Vector3{T})::T wh
     pos = inside(c, point)
     pos == kInside && return T(-1)
     push = push_tolerance(T)
-    pos == kSurface && inside(c, point + push * dir) != kOutside && return zero(T)
+    # on the surface: entering if the point moved along `dir` gets inside (pushed until decisive,
+    # a single push can stay within the surface tolerance when leaving at an angle)
+    pos == kSurface && first(_classify_probe(c, point, dir, push)) != kOutside && return zero(T)
     offset = zero(T)                     # distance to the probe point (pushed beyond the boundaries)
     probe = point
     for _ in 1:4 * c.csg.ncomp + 16

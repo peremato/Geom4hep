@@ -47,8 +47,9 @@ properties, and safety distances for boolean shapes.
 
 Known limitations:
 - `polyhedra`, `torus` and other GDML solids are not yet supported; they are replaced by `NoShape` with a warning.
-- In Float32, the tolerance (1 µm) is coarse for very thin features: a small fraction of the distances to
-  boolean shapes with sub-tolerance details can be wrong (about 0.03% for the CMS geometry).
+- In Float32, the tolerance (1 µm) is coarse: a ray running parallel to a surface, within the tolerance,
+  can be taken as inside or outside the shape (in the X-ray images of the CMS geometry, a few pixels in
+  10⁵ differ from Float64).
 - The CPU backend of KernelAbstractions 0.10 (POCL) is not used: `xray` runs on Julia threads on the CPU.
 
 ## Running the unit tests
@@ -77,7 +78,7 @@ julia --project=examples -i examples/DrawDetector.jl
 ```
 
 ### Produce a X-Ray image of a detector
-The example `XRay.jl` generates X-Ray images of a detector model (part of the CMS 2018 geometry): the mass thickness traversed along straight lines parallel to the axes, computed on the CPU or on a GPU (add `Metal` or `CUDA` to the examples environment first). The result is saved in `cms2018-xray.png`.
+The example `XRay.jl` generates X-Ray images of a detector model (part of the CMS 2018 geometry): the mass thickness traversed along straight lines parallel to the axes, computed on the CPU or on a GPU (`Metal` is part of the examples environment; add `CUDA` to it for NVIDIA GPUs). The result is saved in `cms2018-xray-<device>.png`.
 ```
 julia --project=examples -t auto examples/XRay.jl [cpu|metal|cuda]
 ```
