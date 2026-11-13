@@ -38,6 +38,38 @@ end
         end
     end
 
+    @testset "two-component booleans" begin
+        # flat booleans of two components (fast path of distance_to_out for A - B and A ∩ B) against the tree shapes
+        rot(x, y, z, a, b, c) = Transformation3D{T}(x, y, z, RotXYZ{T}(a, b, c))
+        shapes = [BooleanSubtraction(Box{T}(350, 350, 25), Tube{T}(0, 32, 50, 0, 2π), tr(0, 0, 0)),
+                  BooleanSubtraction(Tube{T}(5, 20, 20, 0, 2π), Box{T}(8, 8, 30), rot(10, 0, 0, 0, 0, 0.5)),
+                  BooleanSubtraction(Sphere{T}(0, 20, 0, 2π, 0, π), Box{T}(10, 10, 10), tr(15, 0, 0)),
+                  BooleanIntersection(Box{T}(20, 20, 20), Sphere{T}(10, 25, 0, 2π, 0, π), tr(0, 0, 5)),
+                  BooleanIntersection(Tube{T}(0, 20, 20, 0, 2π), Box{T}(15, 15, 15), rot(3, 0, 0, 0.4, 0, 0.7)),
+                  BooleanUnion(Box{T}(10, 10, 10), Tube{T}(0, 5, 20, 0, 2π), tr(0, 0, 0))]
+        world = Volume{T}("world", Box{T}(1000, 1000, 1000), mat)
+        foreach(s -> place_daughter!(world, tr(0, 0, 0), Volume{T}("s", s, mat)), shapes)
+        m = close_geometry(world)
+        rng = MersenneTwister(3)
+        nbad = ninside = nnormal = 0
+        for (k, s) in enumerate(shapes), _ in 1:2000
+            ref = m.volumes[k+1].shape
+            lo, hi = extent(s)
+            p = Point3{T}(lo .- 2 .+ (hi .- lo .+ 4) .* rand(rng, T, 3))
+            d = Vector3{T}(normalize(randn(rng, 3))...)
+            pos = inside(s, p)
+            nbad += pos != shape_call(inside, m, ref, p)
+            pos == kInside || continue
+            ninside += 1
+            dist = distance_to_out(s, p, d)
+            nbad += !isapprox(dist, shape_call(distance_to_out, m, ref, p, d); atol=10push_tolerance(T), rtol=1e-4)
+            n = shape_call(normal, m, ref, p + dist * d)          # at the exit point, along the ray
+            nnormal += isapprox(norm(n), 1; rtol=1e-3) && n ⋅ d > 0
+        end
+        @test nbad == 0
+        @test nnormal == ninside
+    end
+
     @testset "GDML models" begin
         for f in ("boxes.gdml", "polycones.gdml", "cuttubes.gdml", "booleans.gdml")
             world = read_gdml(joinpath(@__DIR__, "..", "examples", f), T)
