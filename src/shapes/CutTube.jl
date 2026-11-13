@@ -173,6 +173,11 @@ function distance_to_in(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T})::T
     pinside = inside(ctube, point)
     pinside == kInside && return T(-1)
 
+    # Outside one of the cut planes and moving away from it: never enters
+    for plane in (bot, top)
+        safety(plane, point) > tolerance(T)/2 && dot(dir, plane.normal) >= 0 && return T(Inf)
+    end
+
     # Compute distance to cut planes
     d0 = dot(dir, bot.normal) > 0 ? T(-T(Inf)) : distance_to_in(bot, point, dir)
     d1 = dot(dir, top.normal) > 0 ? T(-T(Inf)) : distance_to_in(top, point, dir)
@@ -180,7 +185,7 @@ function distance_to_in(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T})::T
     splanes = max(safety(top,point), safety(bot, point))
 
     # Mark tracks hitting the planes
-    hitplanes = dplanes < T(Inf) && splanes > -tolerance(T)
+    hitplanes = isfinite(dplanes) && splanes > -tolerance(T)
     #!hitplanes && pinside != kInside && return distance
 
     # Propagate with dplanes only the particles that are hitting
@@ -190,7 +195,7 @@ function distance_to_in(ctube::CutTube{T}, point::Point3{T}, dir::Vector3{T})::T
     # Check now which of the propagated points already entering the solid
     intube = inside(ctube.tube, propagated)
     done = hitplanes && intube != kOutside
-    done && return abs(dplanes) < tolerance(T) ? 0 : dplanes
+    done && return abs(dplanes) < tolerance(T) ? zero(T) : dplanes
 
     # The limit distance for tube crossing cannot exceed the distance to exiting the cut planes
     dexit = min(distance_to_out(bot, propagated, dir), distance_to_out(top, propagated, dir))

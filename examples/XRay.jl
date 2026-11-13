@@ -1,91 +1,47 @@
-using Geom4hep
-using Printf
-using StaticArrays
-using TimerOutputs
+#  X-ray images of a detector: the mass thickness (density × length) integrated along rays parallel to
+#  the axes, computed with the navigator of a flat GeometryModel, on the CPU or on a GPU.
+#
+#  Usage (from the repository root):
+#     julia --project=examples -t auto examples/XRay.jl [cpu|metal|cuda] [Float32|Float64]
+#  Metal (Apple GPUs) is part of the examples environment; for NVIDIA GPUs add CUDA to it first:
+#  `julia --project=examples -e 'using Pkg; Pkg.add("CUDA")'`.
 
-const idx = [2 3 1; 1 3 2; 1 2 3]
-const rdx = [3 1 2; 1 3 2; 1 2 3]
+using Geom4hep, Printf, GLMakie
 
-# Generate a X-Ray of a geometry----------------------------------------------
-function generate_xray(nav::AbstractNavigator, vol::Volume{T}, npoints::Number, view::Int=1) where T<:AbstractFloat
-    world = world_volume(vol)
-    # Setup plane of points and results
-    lower, upper = extent(world.shape)
-    ix, iy, iz = idx[view, :]
-    xi, yi, zi = rdx[view, :]
+device = length(ARGS) > 0 ? ARGS[1] : "cpu"
+T      = length(ARGS) > 1 ? eval(Symbol(ARGS[2])) : (device == "cpu" ? Float64 : Float32)
 
-    #nx = ny = round(Int, sqrt(npoints))
-    nx = npoints
-    ny = trunc(Int, nx * (upper[iy] - lower[iy])/(upper[ix] - lower[ix]))
-    xrange = range(lower[ix], upper[ix], length = nx+1)[1:nx]
-    yrange = range(lower[iy], upper[iy], length = ny+1)[1:ny]
-    z = lower[iz] + push_tolerance(T)
- 
-    result = zeros(T, nx,ny)
-    state = NavigatorState{T}(world, nav)
-    _dir = (0, 0, 1)
-    dir = Vector3{T}(_dir[xi], _dir[yi], _dir[zi]) 
-
-    for (i,x) in enumerate(xrange), (j,y) in enumerate(yrange)
-        _point = (x, y, z)
-        point = Point3{T}(_point[xi], _point[yi], _point[zi])
-        #@timeit Geom4hep.to "point" locate_global_point!(state, point)
-        locate_global_point!(state, point)
-        mass = T(0)
-        step = T(0)
-        nsteps = 0
-        maxsteps = 1000
-        while is_in_volume(state) && nsteps < maxsteps
-            density = current_volume(state).material.density
-            #@timeit Geom4hep.to "compute_step" step = compute_step!(state, point, dir, T(10000))
-            step = compute_step!(state, point, dir, T(10000))
-            if step == -1
-                error("step == -1 may indicate a navigation error. \nstate = $state \npoint = $point \ndir =   $dir" )
-            end
-            if step > 0
-                point = point + dir * step
-                mass += step * density
-            end
-            nsteps += 1
-            if nsteps == maxsteps
-                error("Reached max number of steps. \nstep = $step \nstate = $state \npoint = $point \ndir =   $dir" )
-            end
-        end
-        result[i,j] = -log(nsteps+1)
-    end
-    return xrange, yrange, result
+backend = if device == "metal"
+    @eval using Metal
+    MetalBackend()                         # Metal GPUs only support Float32
+elseif device == "cuda"
+    @eval using CUDA
+    CUDABackend()
+else
+    Geom4hep.CPU()
 end
 
-using GLMakie
+#-----build the detector-----------------------------------------------------------------------------
+full = read_gdml(joinpath(@__DIR__, "cms2018.gdml"), T)
+world = world_volume(full[1,7,1])          # a muon barrel sector; use `full` for the complete detector
+model = close_geometry(world)
+println(model)
 
-#if abspath(PROGRAM_FILE) == @__FILE__
-    #-----build detector---------------------------------------
-    #full = read_gdml("examples/trackML.gdml", Float64)
-    #volume = full[2,1]
- 
-    full = read_gdml("examples/cms2018.gdml", Float64)
-    volume = full[1,7,1]
- 
-    world = world_volume(volume)
-    nav = BVHNavigator(world)
-    #nav = TrivialNavigator(world)
+#-----generate the images----------------------------------------------------------------------------
+xray(model, 1, 8; backend)                 # compile
+images = map(1:3) do axis
+    t = @elapsed u, v, img, nsteps = xray(model, axis, 1000; backend)
+    @printf "axis %d: %d×%d pixels, %.3g steps in %.2f s on %s\n" axis size(img)... sum(nsteps) t device
+    (u, v, img)
+end
 
-    #-----Generate and Plot results----------------------------
-    @printf "generating x-projection\n"
-    rx = generate_xray(nav, world, 1000, 1)
-    @printf "generating y-projection\n"
-    ry = generate_xray(nav, world, 1000, 2)
-    @printf "generating z-projection\n"
-    rz = generate_xray(nav, world, 1000, 3)
-    limits = (min(minimum(rx[3]), minimum(ry[3]), minimum(rz[3])), max(maximum(rx[3]), maximum(ry[3]), maximum(rz[3])))
- 
-    #----Plot the results--------------------------------------
-    fig = Figure(size = (1000, 1000))
-    @printf "ploting the results\n"
-    heatmap!(Axis(fig[1, 1], title = "X direction"), rx..., colormap=:grayC, colorrange=limits)
-    heatmap!(Axis(fig[2, 1], title = "Y direction"), ry..., colormap=:grayC, colorrange=limits)
-    heatmap!(Axis(fig[1, 2], title = "Z direction"), rz..., colormap=:grayC, colorrange=limits)
-    #draw!(LScene(fig[2, 2]), volume; wireframe=true, maxlevel=2)
-    #display(fig)
-    save("cms2018.png", fig)
-#end
+#-----plot the results-------------------------------------------------------------------------------
+limits = (0, maximum(maximum(img) for (_, _, img) in images))
+fig = Figure(size = (1000, 1000))
+for (axis, (u, v, img)) in enumerate(images)
+    pos = ((1, 1), (1, 2), (2, 1))[axis]
+    heatmap!(Axis(fig[pos...], title = "rays along $("xyz"[axis])", aspect = DataAspect()), u, v, img,
+             colormap = :grayC, colorrange = limits)
+end
+save("cms2018-xray-$device.png", fig)
+println("image saved in cms2018-xray-$device.png")

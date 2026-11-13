@@ -1,10 +1,9 @@
-#---Cone--------------------------------------------------------------------------------------------
-struct Polycone{T<:AbstractFloat, N, L} <: AbstractShape{T}
-    sections::SVector{N, Cone{T}}  # array of sections
-    zᵢ::SVector{N,T}               # sections shifts
-    rmin::SVector{L,T}             # rmin Vector
-    rmax::SVector{L,T}             # rmax Vector
-    z::SVector{L,T}                # z-planes
+#---Polycone----------------------------------------------------------------------------------------
+#   A sequence of cone sections along z. The storage of the sections is a type parameter: an SVector
+#   for shapes built by the user, or a view into the shared arrays of a flat GeometryModel.
+struct Polycone{T<:AbstractFloat, VC<:AbstractVector{Cone{T}}, VZ<:AbstractVector{T}} <: AbstractShape{T}
+    sections::VC                   # cone sections (non-zero length)
+    zᵢ::VZ                         # z offset of the centre of each section
     ϕ₀::T                          # starting ϕ value (in radians)
     Δϕ::T                          # delta ϕ value of tube segment (in radians)
 end
@@ -14,25 +13,31 @@ function Polycone{T}(rmin::Vector, rmax::Vector, z::Vector, ϕ₀, Δϕ) where T
     @assert length(rmin) == length(rmax) == length(z) "Vectors for rmin, rmax and z are different size"
     L = length(rmin)
     sections = [Cone{T}(rmin[i],rmax[i], rmin[i+1], rmax[i+1], (z[i+1]-z[i])/2, ϕ₀, Δϕ) for i in 1:L-1 if (z[i+1] - z[i]) > tolerance(T)]
-    zoffs = [(z[i]+z[i+1])/2 for i in 1:L-1 if (z[i+1] - z[i]) > tolerance(T)]
+    zoffs = [T((z[i]+z[i+1])/2) for i in 1:L-1 if (z[i+1] - z[i]) > tolerance(T)]
     N = length(sections)
-    Polycone{T,N,L}(sections, zoffs, rmin, rmax, z, ϕ₀, Δϕ)
+    Polycone{T}(SVector{N,Cone{T}}(sections), SVector{N,T}(zoffs), T(ϕ₀), T(Δϕ))
 end
+Polycone{T}(sections::VC, zᵢ::VZ, ϕ₀, Δϕ) where {T, VC<:AbstractVector{Cone{T}}, VZ<:AbstractVector{T}} =
+    Polycone{T,VC,VZ}(sections, zᵢ, ϕ₀, Δϕ)
 
 #---Printing and Plotting---------------------------------------------------------------------------
-function Base.show(io::IO, pcone::Polycone{T,N}) where {T,N}
-    print(io, "Polycone{$T, $N}",(rmin=pcone.rmin, rmax=pcone.rmax, z=pcone.z, ϕ₀=pcone.ϕ₀, Δϕ=pcone.Δϕ))
+function Base.show(io::IO, pcone::Polycone{T}) where T
+    (; sections, zᵢ) = pcone
+    z = [[zᵢ[i] - sections[i].z for i in eachindex(sections)]; zᵢ[end] + sections[end].z]
+    print(io, "Polycone{$T}",(nsections=length(sections), z=z, ϕ₀=pcone.ϕ₀, Δϕ=pcone.Δϕ))
 end
 
 
-function GeometryBasics.mesh(pcone::Polycone{T,N,L}; facets::Integer=64) where {T,N,L}
+function GeometryBasics.mesh(pcone::Polycone{T}; facets::Integer=64) where T
+    N = length(pcone.sections)
     merge([Mesh(map(x-> _gbpoint(x + Vector3{T}(0,0,pcone.zᵢ[i])), coordinates(pcone.sections[i], facets)), collect(faces(pcone.sections[i], facets))) for i in 1:N])
 end
 
 #---Basic functionality-----------------------------------------------------------------------------
-nz(::Polycone{T,N}) where {T,N} = N + 1
-nsections(::Polycone{T,N}) where {T,N} = N
-function section_index(pcone::Polycone{T,N}, zpos::T) where {T,N}
+nz(pcone::Polycone) = length(pcone.sections) + 1
+nsections(pcone::Polycone) = length(pcone.sections)
+function section_index(pcone::Polycone{T}, zpos::T) where T
+    N = length(pcone.sections)
     (; sections, zᵢ) = pcone
     zpos < zᵢ[1] - sections[1].z && return -1
     for i  in 1:N
@@ -43,11 +48,16 @@ function section_index(pcone::Polycone{T,N}, zpos::T) where {T,N}
     return -2
 end
 
-function capacity(pcone::Polycone{T,N})::T where {T,N}
-    sum(map(capacity, pcone.sections))
+function capacity(pcone::Polycone{T})::T where T
+    c = zero(T)
+    for cone in pcone.sections
+        c += capacity(cone)
+    end
+    return c
 end
 
-function surface(pcone::Polycone{T,N})::T where {T,N}
+function surface(pcone::Polycone{T})::T where T
+    N = length(pcone.sections)
     (; sections, Δϕ) = pcone
     annulus(rmin, rmax) = Δϕ * (rmax^2 - rmin^2) / 2
     surf = zero(T)
@@ -69,7 +79,8 @@ function surface(pcone::Polycone{T,N})::T where {T,N}
     return surf
 end
 
-function extent(pcone::Polycone{T,N})::Tuple{Point3{T},Point3{T}} where {T,N}
+function extent(pcone::Polycone{T})::Tuple{Point3{T},Point3{T}} where T
+    N = length(pcone.sections)
     rmax::T = 0
     rmin::T = 0
     z::T = 0
@@ -85,13 +96,15 @@ function extent(pcone::Polycone{T,N})::Tuple{Point3{T},Point3{T}} where {T,N}
     return (low + Vector3{T}(0, 0, pcone.zᵢ[1] - pcone.sections[1].z), high + Vector3{T}(0, 0, pcone.zᵢ[N] + pcone.sections[N].z))
 end
 
-function inside(pcone::Polycone{T,N}, point::Point3{T})::Int64  where {T,N}
+function inside(pcone::Polycone{T}, point::Point3{T})::Int64  where T
+    N = length(pcone.sections)
     x, y, z = point
     indexLow  = section_index(pcone, z - tolerance(T))
     indexHigh = section_index(pcone, z + tolerance(T))
     indexLow < 0 && indexHigh < 0 && return kOutside
-    indexLow < 0 && indexHigh == 1 && return inside(pcone.sections[1], point-Vector3{T}(0,0,pcone.zᵢ[1]))
-    indexHigh < 0 && indexLow == N && return inside(pcone.sections[N], point-Vector3{T}(0,0,pcone.zᵢ[N]))
+    # beyond one end (the section at the other side can be thinner than the tolerance)
+    indexLow < 0 && return inside(pcone.sections[indexHigh], point-Vector3{T}(0,0,pcone.zᵢ[indexHigh]))
+    indexHigh < 0 && return inside(pcone.sections[indexLow], point-Vector3{T}(0,0,pcone.zᵢ[indexLow]))
     if indexLow == indexHigh
         return inside(pcone.sections[indexLow], point-Vector3{T}(0,0,pcone.zᵢ[indexLow]))
     else
@@ -102,9 +115,10 @@ function inside(pcone::Polycone{T,N}, point::Point3{T})::Int64  where {T,N}
         return kSurface
     end
 end
-Base.contains(pcone::Polycone{T,N}, p::Point3{T}) where {T,N} = inside(pcone, p) == kInside
+Base.contains(pcone::Polycone{T}, p::Point3{T}) where T = inside(pcone, p) == kInside
 
-function distance_to_in(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
+function distance_to_in(pcone::Polycone{T}, point::Point3{T}, dir::Vector3{T})::T where T
+    N = length(pcone.sections)
     z = point[3]
     dz = dir[3]
     distance = T(Inf)
@@ -122,7 +136,8 @@ function distance_to_in(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})
     return distance
 end
 
-function safety_to_in(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
+function safety_to_in(pcone::Polycone{T}, point::Point3{T})::T where T
+    N = length(pcone.sections)
     (; sections, zᵢ) = pcone
     z = point[3]
     index = section_index(pcone, z)
@@ -156,7 +171,8 @@ function safety_to_in(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     return minSafety
 end
 
-function normal(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
+function normal(pcone::Polycone{T}, point::Point3{T}) where T
+    N = length(pcone.sections)
     inside(pcone, point) != kSurface && return zero(Vector3{T})
     (; sections, zᵢ) = pcone
     x, y, z = point
@@ -197,7 +213,8 @@ function normal(pcone::Polycone{T,N}, point::Point3{T}) where {T,N}
     return normalize(n)
 end
 
-function safety_to_out(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
+function safety_to_out(pcone::Polycone{T}, point::Point3{T})::T where T
+    N = length(pcone.sections)
     inside(pcone, point) == kOutside && return -1
     (; sections, zᵢ) = pcone
     z = point[3]
@@ -227,7 +244,8 @@ function safety_to_out(pcone::Polycone{T,N}, point::Point3{T})::T where {T,N}
     return minSafety
 end
 
-function distance_to_out(pcone::Polycone{T,N}, point::Point3{T}, dir::Vector3{T})::T where {T,N}
+function distance_to_out(pcone::Polycone{T}, point::Point3{T}, dir::Vector3{T})::T where T
+    N = length(pcone.sections)
     z = point[3]
     dz = dir[3]
     distance = T(Inf)

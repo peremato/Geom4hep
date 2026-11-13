@@ -1,12 +1,9 @@
-# Environment for the examples. Usage (from the repository root):
-#   julia --project=examples -e 'using Pkg; Pkg.instantiate()'   # Julia ≥ 1.11 picks up Geom4hep from [sources]
-#   julia --project=examples examples/XRay.jl
-# On Julia 1.10 run once: julia --project=examples -e 'using Pkg; Pkg.develop(path=".")'
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Geom4hep = "eb5d0804-93e0-431a-a4d4-b4f95b95575a"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
+Metal = "dde4c033-4e86-420c-a63e-0dd931031962"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"

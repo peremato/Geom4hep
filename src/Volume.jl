@@ -2,7 +2,8 @@
 const Shape{T<:AbstractFloat} = Union{BaseShape{T}, 
                                       BooleanUnion{T}, 
                                       BooleanSubtraction{T}, 
-                                      BooleanIntersection{T}}
+                                      BooleanIntersection{T},
+                                      MultiUnion{T}}
 # const Shape{T<:AbstractFloat} = AbstractShape{T}
 #---Volume-------------------------------------------------------------------------
 struct VolumeP{T<:AbstractFloat,PV}

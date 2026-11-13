@@ -15,7 +15,9 @@ function test_shapes(::Type{T}) where T
         Polycone{T}([0., 0, 1, 1, 0.5, 0.5], [2., 2, 3, 3, 1.5, 2.5], [-1., 0, 0, 1, 1, 2], 0.3, 4.0),
         BooleanUnion(Box{T}(1, 1, 1), Tube{T}(0, 1, 2, 0, 2π), Transformation3D{T}(1, 0, 0)),
         BooleanSubtraction(Box{T}(1, 1, 1), Tube{T}(0, 0.5, 2, 0, 2π)),
-        BooleanIntersection(Box{T}(1, 1, 1), Geom4hep.Cone{T}(0, 1.5, 0, 0.5, 1.2, 0, 2π))]
+        BooleanIntersection(Box{T}(1, 1, 1), Geom4hep.Cone{T}(0, 1.5, 0, 0.5, 1.2, 0, 2π)),
+        MultiUnion{T}([Box{T}(1, 1, 1), Tube{T}(0, 1, 2, 0, 2π), Box{T}(0.5, 2, 0.5)],
+                      [one(Transformation3D{T}), Transformation3D{T}(1.5, 0, 0), Transformation3D{T}(0, 1, 0)])]
 end
 shapename(s) = string(nameof(typeof(s)))
 
@@ -83,7 +85,7 @@ end
 @testset "Capacity and surface" begin
     T = Float64
     @testset "$(shapename(s))" for s in test_shapes(T)
-        if s isa Geom4hep.BooleanShape
+        if s isa Union{Geom4hep.BooleanShape, MultiUnion}
             @test capacity(s; npoints=200_000) ≈ estimate_capacity(s; npoints=200_000)
             @test surface(s; npoints=200_000) > 0
         else
@@ -108,7 +110,7 @@ end
              (distance_to_out, (P, V)), (normal, (P,)), (extent, ()), (capacity, ()), (surface, ())]
     @testset "$(shapename(s))" for s in test_shapes(T)
         for (f, args) in funcs
-            s isa Geom4hep.BooleanShape && f in (capacity, surface) && continue   # sampling estimates
+            s isa Union{Geom4hep.BooleanShape, MultiUnion} && f in (capacity, surface) && continue   # sampling estimates
             sig = (typeof(s), args...)
             rt = only(Base.return_types(f, sig))
             @test isconcretetype(rt)
