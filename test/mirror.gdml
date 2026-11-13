@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!-- A spherical mirror (sphere shell cut by a box) in a gas box, with optical elements that are skipped -->
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <define>
+    <matrix coldim="2" name="REFLECTIVITY" values="1.5e-06 0.9 4.5e-06 0.9"/>
+  </define>
+  <materials>
+    <material name="Gas" state="gas"><D unit="g/cm3" value="0.01"/><atom unit="g/mole" value="20"/></material>
+    <material name="Glass" state="solid"><D unit="g/cm3" value="2.4"/><atom unit="g/mole" value="60"/></material>
+  </materials>
+  <solids>
+    <box lunit="mm" name="WorldBox" x="2000" y="2000" z="4000"/>
+    <sphere aunit="deg" deltaphi="360" deltatheta="90" lunit="mm" name="Shell" rmax="1505" rmin="1500" startphi="0" starttheta="0"/>
+    <box lunit="mm" name="Cut" x="1000" y="1000" z="400"/>
+    <intersection name="Mirror">
+      <first ref="Shell"/>
+      <second ref="Cut"/>
+      <position name="Mirror_pos" unit="mm" x="0" y="0" z="1400"/>
+    </intersection>
+    <opticalsurface finish="0" model="1" name="MirrorSurface" type="0" value="0">
+      <property name="REFLECTIVITY" ref="REFLECTIVITY"/>
+    </opticalsurface>
+  </solids>
+  <structure>
+    <volume name="Mirror">
+      <materialref ref="Glass"/>
+      <solidref ref="Mirror"/>
+    </volume>
+    <volume name="World">
+      <materialref ref="Gas"/>
+      <solidref ref="WorldBox"/>
+      <physvol name="Mirror">
+        <volumeref ref="Mirror"/>
+        <position name="Mirror_pv_pos" unit="mm" x="0" y="0" z="-500"/>
+      </physvol>
+    </volume>
+    <skinsurface name="MirrorSkin" surfaceproperty="MirrorSurface">
+      <volumeref ref="Mirror"/>
+    </skinsurface>
+  </structure>
+  <setup name="Default" version="1.0">
+    <world ref="World"/>
+  </setup>
+</gdml>
