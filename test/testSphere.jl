@@ -134,4 +134,26 @@ using Random
         @test okin >= 0.995 * nin            # a few rays may graze the surfaces
         @test okout >= 0.995 * nout
     end
+
+    @testset "mesh" begin
+        # closed and outward oriented: the volume enclosed by the mesh is the capacity. Sum of the
+        # signed volumes of the tetrahedra (reference point, face triangle), quads split in two
+        # triangles. The reference point is off the origin, otherwise the faces in planes through the
+        # origin (ϕ planes, z = 0, θ cones) would not contribute and not be checked.
+        function meshvolume(s, facets)
+            o = Vector3{Float64}(1, 2, 3)
+            p = collect(coordinates(s, facets))
+            sum(faces(s, facets)) do f
+                a, b, c, d = (Vector3{Float64}(p[k]) - o for k in f)
+                (a ⋅ (b × c) + a ⋅ (c × d)) / 6
+            end
+        end
+        for s in (Sphere{T}(0, 10), Sphere{T}(5, 10), Sphere{T}(5, 10, 0, π/2), Sphere{T}(0, 10, 0.3, 4.5),
+                  Sphere{T}(5, 10, 0, 2π, π/6, π/3), Sphere{T}(0, 10, 0, 2π, 0, π/2),
+                  Sphere{T}(5, 10, 0, 2π, π/2, π/2), Sphere{T}(3, 10, 1, 2, 2π/3, π/3))
+            @test meshvolume(s, 128) ≈ capacity(s) rtol = 2e-3
+        end
+        m = mesh(Sphere{T}(5, 10, 0, π, 0.2, 1.0); facets=32)
+        @test length(coordinates(m)) == 2 * 6 * 17         # (nθ + 1) × (nϕ + 1) points on each sphere
+    end
 end

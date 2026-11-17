@@ -270,3 +270,44 @@ function distance_to_in(s::Sphere{T}, point::Point3{T}, dir::Vector3{T})::T wher
     best < Inf && distance_to_out(s, p + best * d, d) <= tol && return T(Inf)
     return best
 end
+
+#---Drawing functions-------------------------------------------------------------------------------
+#   Grid of nθ × nϕ quads on the outer sphere (rmax) and on the inner sphere (rmin, or collapsed to
+#   the origin if rmin = 0, which makes the walls cones or sectors), closed by the walls at the θ
+#   boundaries (cones or the plane z = 0) and at the two ϕ planes. All faces are oriented outwards.
+function _sphere_grid(s::Sphere{T}, facets) where T
+    nϕ = max(4, round(Int, facets * s.Δϕ / 2π))
+    nθ = max(2, round(Int, facets / 2 * s.Δθ / π))
+    return nθ, nϕ
+end
+
+function GeometryBasics.coordinates(s::Sphere{T}, facets=36) where T<:AbstractFloat
+    nθ, nϕ = _sphere_grid(s, facets)
+    points = Point3{T}[]
+    for r in (s.rmax, s.rmin), i in 0:nθ, j in 0:nϕ
+        θ, ϕ = s.θ₀ + s.Δθ * i / nθ, s.ϕ₀ + s.Δϕ * j / nϕ
+        push!(points, Point3{T}(r * sin(θ) * cos(ϕ), r * sin(θ) * sin(ϕ), r * cos(θ)))
+    end
+    return points
+end
+
+function GeometryBasics.faces(s::Sphere{T}, facets=36) where T<:AbstractFloat
+    nθ, nϕ = _sphere_grid(s, facets)
+    idx(layer, i, j) = layer * (nθ + 1) * (nϕ + 1) + i * (nϕ + 1) + j + 1     # layer 0: rmax, 1: rmin
+    quads = QuadFace{Int}[]
+    for i in 0:nθ-1, j in 0:nϕ-1                                             # spherical surfaces
+        push!(quads, QuadFace{Int}(idx(0, i, j), idx(0, i+1, j), idx(0, i+1, j+1), idx(0, i, j+1)))
+        s.rmin > 0 && push!(quads, QuadFace{Int}(idx(1, i, j), idx(1, i, j+1), idx(1, i+1, j+1), idx(1, i+1, j)))
+    end
+    for j in 0:nϕ-1                                                          # θ boundaries
+        s.θkind₀ == THETA_NONE || push!(quads, QuadFace{Int}(idx(0, 0, j), idx(0, 0, j+1), idx(1, 0, j+1), idx(1, 0, j)))
+        s.θkind₁ == THETA_NONE || push!(quads, QuadFace{Int}(idx(0, nθ, j), idx(1, nθ, j), idx(1, nθ, j+1), idx(0, nθ, j+1)))
+    end
+    if !s.fullϕ                                                              # ϕ planes
+        for i in 0:nθ-1
+            push!(quads, QuadFace{Int}(idx(0, i, 0), idx(1, i, 0), idx(1, i+1, 0), idx(0, i+1, 0)))
+            push!(quads, QuadFace{Int}(idx(0, i, nϕ), idx(0, i+1, nϕ), idx(1, i+1, nϕ), idx(1, i, nϕ)))
+        end
+    end
+    return quads
+end
