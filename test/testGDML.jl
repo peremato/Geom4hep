@@ -20,6 +20,24 @@
     @test Geom4hep.contains(trd, Point3{T}(0, 0, 200))
     @test !Geom4hep.contains(trd, Point3{T}(0, 0, 0))
 
+    @testset "sphere and optical elements" begin
+        w = @test_logs read_gdml(joinpath(@__DIR__, "mirror.gdml"), T)      # no warnings
+        mirror = w.daughters[1].volume
+        @test mirror.shape isa BooleanIntersection
+        @test mirror.shape.left isa Sphere{T}
+        model, index = close_geometry(w; with_index=true)
+        @test [v.label for v in index.volumes] == ["World", "Mirror"]
+        @test [m.name for m in index.materials] == ["Gas", "Glass"]
+        # a ray along z from the origin hits the inner surface of the mirror at z = 1500 - 500
+        p, d = Point3{T}(0, 0, 0), Vector3{T}(0, 0, 1)
+        s = locate(model, p)
+        @test index.volumes[s.volume].label == "World"
+        step, s = compute_step(model, s, p, d, T(Inf))
+        @test step ≈ 1000 atol = 10Geom4hep.tolerance(T)
+        @test index.volumes[s.volume].label == "Mirror"
+        @test index.materials[material_index(model, s)].name == "Glass"
+    end
+
     @testset "$f" for f in ("boxes.gdml", "booleans.gdml", "cuttubes.gdml", "polycones.gdml")
         w = read_gdml(joinpath(@__DIR__, "..", "examples", f), T)
         @test w isa Volume{T}

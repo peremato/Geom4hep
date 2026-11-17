@@ -54,7 +54,7 @@ function _add_shape!(b::_ModelBuilder{T}, shape) where T
     return ref
 end
 
-_convert_shape!(b::_ModelBuilder{T}, shape::Union{Box{T},Trd{T},Trap{T},Tube{T},Cone{T},CutTube{T}}) where T = _store!(b, shape, 0)
+_convert_shape!(b::_ModelBuilder{T}, shape::Union{Box{T},Trd{T},Trap{T},Tube{T},Cone{T},CutTube{T},Sphere{T}}) where T = _store!(b, shape, 0)
 _convert_shape!(b::_ModelBuilder{T}, shape::NoShape{T}) where T = _store!(b, FlatNoShape{T}(), 0)
 
 function _convert_shape!(b::_ModelBuilder{T}, shape::Polycone{T}) where T
@@ -163,17 +163,32 @@ function _add_bvh!(b::_ModelBuilder{T}, vol::Volume{T}, first::Int32) where T
 end
 
 """
-    close_geometry(world::Volume; bvh_threshold=4)
+    close_geometry(world::Volume; bvh_threshold=4, with_index=false)
 
 Build a flat [`GeometryModel`](@ref) from a hierarchy of volumes. Boolean shapes are converted to
 CSG programs over primitive shapes, and a BVH is built for the daughters of volumes with more than
 `bvh_threshold` daughters.
+
+With `with_index=true` it returns `(model, index)`, where `index.volumes[i]` is the `Volume` stored
+as volume `i` of the model (the `volume` field of a `NavState`) and `index.materials[i]` the
+`Material` with index `i` (see `material_index`). This allows to attach information to the volumes
+and materials of the model, e.g. by name.
 """
-function close_geometry(world::Volume{T}; bvh_threshold::Integer=4) where T
+function close_geometry(world::Volume{T}; bvh_threshold::Integer=4, with_index::Bool=false) where T
     b = _ModelBuilder{T}(bvh_threshold)
     _add_volume!(b, world, 0)
     shapes = Tuple(b.arrays)
     D = isempty(b.depth) ? 0 : maximum(values(b.depth))
-    GeometryModel{T,D}(shapes, b.volumes, b.placements, b.materials, b.bvhnodes, b.bvhindices,
-                       b.cones, b.zoffsets, b.csg_components, b.csg_program)
+    model = GeometryModel{T,D}(shapes, b.volumes, b.placements, b.materials, b.bvhnodes, b.bvhindices,
+                               b.cones, b.zoffsets, b.csg_components, b.csg_program)
+    with_index || return model
+    volumes = Vector{Volume{T}}(undef, length(b.volumes))
+    for (v, i) in b.volidx
+        volumes[i] = v
+    end
+    materials = Vector{Material{T}}(undef, length(b.materials))
+    for (m, i) in b.matidx
+        materials[i] = m
+    end
+    return model, (volumes = volumes, materials = materials)
 end

@@ -10,6 +10,7 @@ using Geom4hep, LinearAlgebra
     include("testPolycone.jl")
     include("testTrap.jl")
     include("testCutTube.jl")
+    include("testSphere.jl")
     include("testBoolean.jl")
     include("testMultiUnion.jl")
     include("testVolume.jl")

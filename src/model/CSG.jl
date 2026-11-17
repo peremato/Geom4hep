@@ -31,6 +31,35 @@ const CSG_MAX_STACK = 32       # 2 bits per entry in a UInt64
     end
 end
 
+#---Fast path for subtractions and intersections of two components (A - B, A ∩ B)--------------------
+#   From a point inside the shape, the first boundary crossed is the exit: the distance to out is
+#   min(distance_to_out(A), distance_to_in(B)) for a subtraction and min(distance_to_out(A),
+#   distance_to_out(B)) for an intersection, as in Geant4 and VecGeom, with no probe points. The loop
+#   (over the run-time number of components, so not unrolled) keeps a single call site of each
+#   primitive function: the GPU compilers inline all of them, and Metal takes much longer to compile
+#   a kernel when they are repeated.
+@inline _pair_op(c::CSGShape) = @inbounds c.model.csg_program[c.csg.first_op + 3]
+@inline _has_pair_exit(c::CSGShape) = c.csg.ncomp == 2 && _pair_op(c) != CSG_UNION
+
+# The point is inside the shape (otherwise the result is -1 or meaningless, as for the primitives)
+function _pair_distance_to_out(c::CSGShape{T}, point::Point3{T}, dir::Vector3{T})::T where T
+    subtraction = _pair_op(c) == CSG_SUBTRACTION
+    invdir = inv.(dir)
+    dist = T(Inf)
+    for k in 0:c.csg.ncomp-1
+        comp = _component(c, k)
+        if k == 1 && subtraction         # distance to enter B, clamped to 0 on its surface moving in
+            (inside(comp.aabb, point) || intersect(comp.aabb, point, dir, invdir)) || continue
+            d = max(_primitive(distance_to_in, c, comp, comp.transformation * point, comp.transformation * dir), zero(T))
+        else
+            d = _primitive(distance_to_out, c, comp, comp.transformation * point, comp.transformation * dir)
+            d < 0 && return T(-1)
+        end
+        dist = min(dist, d)
+    end
+    return dist
+end
+
 function inside(c::CSGShape{T}, point::Point3{T})::Int64 where T
     inside(c.csg.aabb, point) || return kOutside
     stack = UInt64(0)
@@ -67,13 +96,16 @@ function _next_boundary(c::CSGShape{T}, point::Point3{T}, dir::Vector3{T}, invdi
 end
 
 # Classify a probe point beyond a boundary; with a grazing crossing it can still be within the
-# tolerance of a surface: push it further along the ray until the classification is decisive.
+# tolerance of a surface (at shallow angles the band along the ray is wide, mostly in single
+# precision): push it further along the ray until the classification is decisive.
 @inline function _classify_probe(c::CSGShape{T}, point, dir, offset) where T
     probe = point + offset * dir
     pos = inside(c, probe)
-    for _ in 1:4
+    push = push_tolerance(T)
+    for _ in 1:6                         # pushes doubling up to 32× the first: about 63 in total
         pos == kSurface || break
-        offset += push_tolerance(T)
+        offset += push
+        push += push
         probe = point + offset * dir
         pos = inside(c, probe)
     end
@@ -103,6 +135,7 @@ function distance_to_in(c::CSGShape{T}, point::Point3{T}, dir::Vector3{T})::T wh
 end
 
 function distance_to_out(c::CSGShape{T}, point::Point3{T}, dir::Vector3{T})::T where T
+    _has_pair_exit(c) && return _pair_distance_to_out(c, point, dir)
     inside(c, point) == kOutside && return T(-1)
     invdir = inv.(dir)
     push = push_tolerance(T)

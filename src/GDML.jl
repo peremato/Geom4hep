@@ -61,6 +61,8 @@ function fill_define!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                 rotations[attrs["name"]] = RotZYX{T}(parse(T, attrs["z"]) * unit, 
                                                      parse(T, attrs["y"]) * unit, 
                                                      parse(T, attrs["x"]) * unit)
+            elseif elemname in ("matrix", "constant", "variable", "quantity")
+                continue                         # e.g. tables of optical properties: not used
             else
                 @warn "GDML: define $elemname not yet supported" maxlog=1
             end
@@ -173,6 +175,17 @@ function fill_solids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                                                 parse(T, attrs["z"]) * lunit / 2,
                                                 parse(T, attrs["startphi"]) * aunit,
                                                 parse(T, attrs["deltaphi"]) * aunit)
+            elseif elemname == "sphere"
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
+                attr(k, default) = haskey(attrs, k) ? parse(T, attrs[k]) : T(default)
+                solids[attrs["name"]] = Sphere{T}(attr("rmin", 0) * lunit, parse(T, attrs["rmax"]) * lunit,
+                                                  attr("startphi", 0) * aunit, attr("deltaphi", 2π/aunit) * aunit,
+                                                  attr("starttheta", 0) * aunit, attr("deltatheta", π/aunit) * aunit)
+            elseif elemname == "orb"
+                solids[attrs["name"]] = Sphere{T}(0, parse(T, attrs["r"]) * _lunit(attrs))
+            elseif elemname == "opticalsurface"
+                continue                         # optical surfaces are not part of the geometry
             elseif elemname == "cone"
                 lunit = _lunit(attrs)
                 aunit = _aunit(attrs)

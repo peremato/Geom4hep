@@ -6,7 +6,8 @@ const BaseShape{T<:AbstractFloat} = Union{NoShape{T},
                                           Tube{T},
                                           Cone{T},
                                           Polycone{T},
-                                          CutTube{T}}
+                                          CutTube{T},
+                                          Sphere{T}}
 
 #---Boolean Shapes----------------------------------------------------------------------------------
 #   The types of the operands are parameters (L, R). Shapes built by the user use a small Union of
