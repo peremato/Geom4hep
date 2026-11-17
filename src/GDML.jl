@@ -212,6 +212,21 @@ function fill_solids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                 solids[attrs["name"]] = Polycone{T}(rmin, rmax, z,
                                                     parse(T, attrs["startphi"]) * aunit,
                                                     parse(T, attrs["deltaphi"]) * aunit)
+            elseif elemname == "polyhedra"
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
+                rmax, rmin, z = Vector{T}(), Vector{T}(), Vector{T}()
+                for cc in child_nodes(e)
+                    if name(cc) == "zplane"
+                        aa = attributes_dict(XMLElement(cc))
+                        push!(rmax, parse(T, aa["rmax"]) * lunit)
+                        push!(rmin, parse(T, get(aa, "rmin", "0")) * lunit)
+                        push!(z, parse(T, aa["z"]) * lunit)
+                    end
+                end
+                solids[attrs["name"]] = Polyhedra{T}(parse(Int, attrs["numsides"]), rmin, rmax, z,
+                                                     parse(T, attrs["startphi"]) * aunit,
+                                                     parse(T, attrs["deltaphi"]) * aunit)
             elseif elemname == "cutTube"
                 lunit = _lunit(attrs)
                 aunit = _aunit(attrs)
