@@ -55,7 +55,7 @@ function _add_shape!(b::_ModelBuilder{T}, shape) where T
     return ref
 end
 
-_convert_shape!(b::_ModelBuilder{T}, shape::Union{Box{T},Trd{T},Trap{T},Tube{T},Cone{T},CutTube{T},Sphere{T}}) where T = _store!(b, shape, 0)
+_convert_shape!(b::_ModelBuilder{T}, shape::Union{Box{T},Trd{T},Trap{T},Tube{T},Cone{T},CutTube{T},Sphere{T},Torus{T}}) where T = _store!(b, shape, 0)
 _convert_shape!(b::_ModelBuilder{T}, shape::NoShape{T}) where T = _store!(b, FlatNoShape{T}(), 0)
 
 function _convert_shape!(b::_ModelBuilder{T}, shape::Polycone{T}) where T

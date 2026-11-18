@@ -38,7 +38,7 @@
         @test index.materials[material_index(model, s)].name == "Glass"
     end
 
-    @testset "$f" for f in ("boxes.gdml", "booleans.gdml", "cuttubes.gdml", "polycones.gdml", "polyhedra.gdml")
+    @testset "$f" for f in ("boxes.gdml", "booleans.gdml", "cuttubes.gdml", "polycones.gdml", "polyhedra.gdml", "torus.gdml")
         w = read_gdml(joinpath(@__DIR__, "..", "examples", f), T)
         @test w isa Volume{T}
         if f == "booleans.gdml"     # a single boolean solid as world
