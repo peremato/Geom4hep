@@ -15,6 +15,7 @@ mutable struct _ModelBuilder{T}
     bvhindices::Vector{Int32}
     cones::Vector{Cone{T}}
     zoffsets::Vector{T}
+    pgons::Vector{PolyhedraSection{T}}
     csg_components::Vector{CSGComponent{T}}
     csg_program::Vector{Int32}
     bvh_threshold::Int
@@ -23,7 +24,7 @@ end
 function _ModelBuilder{T}(bvh_threshold) where T
     _ModelBuilder{T}(Dict{DataType,Int}(), Vector[], IdDict{Any,ShapeRef}(), Dict{ShapeRef,Int}(),
                      FlatVolume[], IdDict{Any,Int32}(), FlatPlacement{T}[], FlatMaterial{T}[], IdDict{Any,Int32}(),
-                     BVHNode{T}[], Int32[], Cone{T}[], T[], CSGComponent{T}[], Int32[], bvh_threshold)
+                     BVHNode{T}[], Int32[], Cone{T}[], T[], PolyhedraSection{T}[], CSGComponent{T}[], Int32[], bvh_threshold)
 end
 
 function _store!(b::_ModelBuilder, flat, depth::Int)
@@ -62,6 +63,12 @@ function _convert_shape!(b::_ModelBuilder{T}, shape::Polycone{T}) where T
     append!(b.cones, shape.sections)
     append!(b.zoffsets, shape.zᵢ)
     _store!(b, FlatPolycone{T}(first, length(shape.sections), shape.ϕ₀, shape.Δϕ), 0)
+end
+
+function _convert_shape!(b::_ModelBuilder{T}, shape::Polyhedra{T}) where T
+    first = length(b.pgons)
+    append!(b.pgons, shape.sections)
+    _store!(b, FlatPolyhedra{T}(first, length(shape.sections), shape.nsides, shape.ϕ₀, shape.Δϕ, shape.fullϕ, shape.wedge), 0)
 end
 
 # Boolean shapes become CSG programs over primitive components
@@ -180,7 +187,7 @@ function close_geometry(world::Volume{T}; bvh_threshold::Integer=4, with_index::
     shapes = Tuple(b.arrays)
     D = isempty(b.depth) ? 0 : maximum(values(b.depth))
     model = GeometryModel{T,D}(shapes, b.volumes, b.placements, b.materials, b.bvhnodes, b.bvhindices,
-                               b.cones, b.zoffsets, b.csg_components, b.csg_program)
+                               b.cones, b.zoffsets, b.pgons, b.csg_components, b.csg_program)
     with_index || return model
     volumes = Vector{Volume{T}}(undef, length(b.volumes))
     for (v, i) in b.volidx

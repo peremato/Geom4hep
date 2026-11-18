@@ -3,7 +3,7 @@ A native Julia geometry modeller for HEP, in the spirit of the Geant4/VecGeom ge
 
 Current functionality:
 
-- Basic shapes: `Box`, `Tube`, `Trd`, `Trap`, `Cone`, `CutTube`, `Polycone`
+- Basic shapes: `Box`, `Tube`, `Trd`, `Trap`, `Cone`, `CutTube`, `Sphere` (also GDML `orb`), `Polycone`, `Polyhedra`
 - Boolean shapes: `BooleanUnion`/`BooleanSubtraction`/`BooleanIntersection`, and `MultiUnion` (union of any number of placed shapes)
 - Materials: `Isotope`, `Element`, `Material`
 - Shape functions: `inside`, `distance_to_in`, `distance_to_out`, `safety_to_in`, `safety_to_out`, `normal`, `extent`, `capacity`, `surface`
@@ -42,11 +42,12 @@ problems (they can miss boundaries of non-convex mother volumes) and will be rem
 ## Status
 The package is being revived and re-organized. Done: package hygiene and tests, own point/vector types and
 a `snake_case` API, consistent normals and Float32 support, and the flat geometry model with a navigator
-shared by CPU and GPU. Next: more solids (polyhedra, sphere, torus, tessellated, ...), material
+shared by CPU and GPU. Next: more solids (torus, para, extruded, tessellated, ...), material
 properties, and safety distances for boolean shapes.
 
 Known limitations:
-- `polyhedra`, `torus` and other GDML solids are not yet supported; they are replaced by `NoShape` with a warning.
+- `torus` and other GDML solids are not yet supported; they are replaced by `NoShape` with a warning.
+- Polyhedra: only the z-planes form (GDML `polyhedra`), not the (r, z) corners form (`genericPolyhedra`).
 - In Float32, the tolerance (1 µm) is coarse: a ray running parallel to a surface, within the tolerance,
   can be taken as inside or outside the shape (in the X-ray images of the CMS geometry, a few pixels in
   10⁵ differ from Float64).

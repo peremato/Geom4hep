@@ -6,6 +6,7 @@ const BaseShape{T<:AbstractFloat} = Union{NoShape{T},
                                           Tube{T},
                                           Cone{T},
                                           Polycone{T},
+                                          Polyhedra{T},
                                           CutTube{T},
                                           Sphere{T}}
 

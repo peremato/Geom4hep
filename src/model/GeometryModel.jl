@@ -5,8 +5,8 @@
 #
 #   Shapes are stored in one array per concrete type (the `shapes` tuple) and referenced by a
 #   `ShapeRef(kind, index)`. Calling a shape function goes through `dispatch`, a generated chain of
-#   `if` statements over the kinds, so there is no dynamic dispatch. Polycones keep their sections in
-#   shared arrays. Boolean shapes (of any nesting) are stored as flat CSG expressions over primitive
+#   `if` statements over the kinds, so there is no dynamic dispatch. Polycones and polyhedra keep their
+#   sections in shared arrays. Boolean shapes (of any nesting) are stored as flat CSG expressions over primitive
 #   shapes (see CSG.jl), so that the generated code does not grow with the nesting of booleans: some
 #   GPU compilers (e.g. Metal) inline all function calls.
 #---------------------------------------------------------------------------------------------------
@@ -53,6 +53,16 @@ struct FlatPolycone{T<:AbstractFloat}
     Δϕ::T
 end
 
+struct FlatPolyhedra{T<:AbstractFloat}
+    first::Int32     # offset of the sections in `pgons`
+    count::Int32
+    nsides::Int32
+    ϕ₀::T
+    Δϕ::T
+    fullϕ::Bool
+    wedge::Wedge{T}
+end
+
 "Component of a CSG expression: a primitive shape placed in the frame of the boolean shape."
 struct CSGComponent{T<:AbstractFloat}
     ref::ShapeRef                          # primitive shape
@@ -91,7 +101,7 @@ extent(::FlatNoShape{T}) where T = (zero(Point3{T}), zero(Point3{T}))
 Flat representation of a geometry, built with [`close_geometry`](@ref). `D` is 1 if the model has
 boolean (CSG) shapes, 0 otherwise. Use `Adapt.adapt(backend, model)` to move it to a GPU.
 """
-struct GeometryModel{T<:AbstractFloat, D, S<:Tuple, VV, VP, VM, VN, VI, VC, VZ, VK, VO}
+struct GeometryModel{T<:AbstractFloat, D, S<:Tuple, VV, VP, VM, VN, VI, VC, VZ, VG, VK, VO}
     shapes::S                     # tuple of arrays, one per kind of shape
     volumes::VV                   # FlatVolume
     placements::VP                # FlatPlacement{T}
@@ -100,20 +110,21 @@ struct GeometryModel{T<:AbstractFloat, D, S<:Tuple, VV, VP, VM, VN, VI, VC, VZ, 
     bvhindices::VI                # Int32 (placement indices)
     cones::VC                     # Cone{T}: sections of polycones
     zoffsets::VZ                  # T: z offsets of the sections of polycones
+    pgons::VG                     # PolyhedraSection{T}: sections of polyhedra
     csg_components::VK            # CSGComponent{T}: components of boolean shapes
     csg_program::VO               # Int32: programs of boolean shapes
 end
 
 function GeometryModel{T,D}(shapes::S, volumes::VV, placements::VP, materials::VM, bvhnodes::VN, bvhindices::VI,
-                            cones::VC, zoffsets::VZ, csg_components::VK, csg_program::VO) where {T,D,S,VV,VP,VM,VN,VI,VC,VZ,VK,VO}
-    GeometryModel{T,D,S,VV,VP,VM,VN,VI,VC,VZ,VK,VO}(shapes, volumes, placements, materials, bvhnodes, bvhindices,
-                                                    cones, zoffsets, csg_components, csg_program)
+                            cones::VC, zoffsets::VZ, pgons::VG, csg_components::VK, csg_program::VO) where {T,D,S,VV,VP,VM,VN,VI,VC,VZ,VG,VK,VO}
+    GeometryModel{T,D,S,VV,VP,VM,VN,VI,VC,VZ,VG,VK,VO}(shapes, volumes, placements, materials, bvhnodes, bvhindices,
+                                                       cones, zoffsets, pgons, csg_components, csg_program)
 end
 
 function Adapt.adapt_structure(to, m::GeometryModel{T,D}) where {T,D}
     GeometryModel{T,D}(map(a -> adapt(to, a), m.shapes), adapt(to, m.volumes), adapt(to, m.placements),
                        adapt(to, m.materials), adapt(to, m.bvhnodes), adapt(to, m.bvhindices),
-                       adapt(to, m.cones), adapt(to, m.zoffsets), adapt(to, m.csg_components), adapt(to, m.csg_program))
+                       adapt(to, m.cones), adapt(to, m.zoffsets), adapt(to, m.pgons), adapt(to, m.csg_components), adapt(to, m.csg_program))
 end
 
 function Base.show(io::IO, m::GeometryModel{T,D}) where {T,D}
@@ -127,6 +138,10 @@ end
 @inline function _materialize(model::GeometryModel{T}, s::FlatPolycone{T}, ::Val) where T
     r = s.first+1:s.first+s.count
     Polycone{T}(view(model.cones, r), view(model.zoffsets, r), s.ϕ₀, s.Δϕ)
+end
+@inline function _materialize(model::GeometryModel{T}, s::FlatPolyhedra{T}, ::Val) where T
+    secs = view(model.pgons, s.first+1:s.first+s.count)
+    Polyhedra{T,typeof(secs)}(secs, s.nsides, s.ϕ₀, s.Δϕ, s.fullϕ, s.wedge)
 end
 @inline function _materialize(model::M, s::FlatCSG{T}, ::Val{D}) where {M,T,D}
     D == 0 && return FlatNoShape{T}()     # CSG components are primitives (never happens)
