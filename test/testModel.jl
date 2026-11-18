@@ -71,7 +71,7 @@ end
     end
 
     @testset "GDML models" begin
-        for f in ("boxes.gdml", "polycones.gdml", "cuttubes.gdml", "booleans.gdml")
+        for f in ("boxes.gdml", "polycones.gdml", "polyhedra.gdml", "cuttubes.gdml", "booleans.gdml")
             world = read_gdml(joinpath(@__DIR__, "..", "examples", f), T)
             m = close_geometry(world)
             vols = volume_order(world)
@@ -209,6 +209,33 @@ end
         d = Vector3{T}(1 / 2, 0, sqrt(T(3)) / 2)           # 60° from the normal
         nbad += !isapprox(shape_call(distance_to_in, m, m.volumes[2].shape, p, d), 20; atol=1e-2)
     end
+    @test nbad == 0
+end
+
+@testset "Navigation in polyhedra{$T}" for T in (Float64, Float32)
+    # 18 steel wedges fill the 18-sided air polyhedra HRCF exactly (shared side and end surfaces):
+    # a ray must not make a step longer than the tolerances in the air
+    world, index = close_geometry(read_gdml(joinpath(@__DIR__, "..", "examples", "polyhedra.gdml"), T); with_index=true)
+    m = world
+    air = findfirst(v -> v.label == "HRCF", index.volumes)
+    rng = MersenneTwister(7)
+    nbad = nsteel = 0
+    for _ in 1:300
+        p = Point3{T}(0, 0, 0) + Vector3{T}((rand(rng, T) * 2 - 1) * 3400, (rand(rng, T) * 2 - 1) * 3400, -1400)
+        d = normalize(Vector3{T}(randn(rng, T), randn(rng, T), 1))
+        s = locate(m, p)
+        n = 0
+        while in_world(s) && n < 10_000
+            step, s2 = compute_step(m, s, p, d, T(Inf))
+            s.volume == air && step > 100push_tolerance(T) && (nbad += 1)
+            index.volumes[s.volume].label == "HEC" && (nsteel += 1)
+            p += step * d
+            s = s2
+            n += 1
+        end
+        @test !in_world(s)
+    end
+    @test nsteel > 100
     @test nbad == 0
 end
 
