@@ -212,6 +212,14 @@ function fill_solids!(dicts::GDMLDicts{T}, element::XMLElement) where T<:Abstrac
                 solids[attrs["name"]] = Polycone{T}(rmin, rmax, z,
                                                     parse(T, attrs["startphi"]) * aunit,
                                                     parse(T, attrs["deltaphi"]) * aunit)
+            elseif elemname == "torus"
+                lunit = _lunit(attrs)
+                aunit = _aunit(attrs)
+                solids[attrs["name"]] = Torus{T}(parse(T, get(attrs, "rmin", "0")) * lunit,
+                                                 parse(T, attrs["rmax"]) * lunit,
+                                                 parse(T, attrs["rtor"]) * lunit,
+                                                 parse(T, get(attrs, "startphi", "0")) * aunit,
+                                                 parse(T, get(attrs, "deltaphi", "360")) * aunit)
             elseif elemname == "polyhedra"
                 lunit = _lunit(attrs)
                 aunit = _aunit(attrs)

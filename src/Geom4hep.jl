@@ -2,7 +2,7 @@ module Geom4hep
 
 export Point3, Point2, Vector3, Vector2, nonzero
 export AbstractShape, AbstractMaterial
-export Shape, NoShape, Box, Trd, Tube, Wedge, is_inside, is_outside, Cone, Polycone, Polyhedra, nz, nsections, section_index
+export Shape, NoShape, Box, Trd, Tube, Wedge, is_inside, is_outside, Cone, Polycone, Polyhedra, Torus, nz, nsections, section_index
 export CutTube, Plane, Trap, Sphere, BooleanUnion, BooleanIntersection, BooleanSubtraction, MultiUnion, add_component!, ncomponents
 export getindex, capacity, surface, estimate_capacity, estimate_surface, extent, normal, distance_to_out,  distance_to_in, inside, safety_to_out, safety_to_in
 export Material, Isotope, Element
@@ -34,6 +34,7 @@ include("shapes/Tube.jl")
 include("shapes/Cone.jl")
 include("shapes/Polycone.jl")
 include("shapes/Polyhedra.jl")
+include("shapes/Torus.jl")
 include("shapes/CutTube.jl")
 include("shapes/Trap.jl")
 include("shapes/Sphere.jl")

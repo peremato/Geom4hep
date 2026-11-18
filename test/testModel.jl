@@ -71,7 +71,7 @@ end
     end
 
     @testset "GDML models" begin
-        for f in ("boxes.gdml", "polycones.gdml", "polyhedra.gdml", "cuttubes.gdml", "booleans.gdml")
+        for f in ("boxes.gdml", "polycones.gdml", "polyhedra.gdml", "torus.gdml", "cuttubes.gdml", "booleans.gdml")
             world = read_gdml(joinpath(@__DIR__, "..", "examples", f), T)
             m = close_geometry(world)
             vols = volume_order(world)
