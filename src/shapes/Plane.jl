@@ -15,8 +15,11 @@ function Plane{T}(θ, ϕ, origin::Point3{T}) where T<:AbstractFloat
     Plane{T}(normal, -dot(normal,origin))
 end
 
+# Plane of the (planar) quadrilateral p1, p2, p3, p4. The normal is the cross product of the diagonals,
+# which is also correct when two consecutive vertices coincide (e.g. a face of a Trap with a side of
+# zero length, which is a triangle); the orientation is that of (p4 - p1) × (p3 - p1).
 function Plane{T}(p1::Point3{T}, p2::Point3{T}, p3::Point3{T}, p4::Point3{T}) where T<:AbstractFloat
-    normal = (p4 - p1) × (p3 - p1)
+    normal = (p4 - p2) × (p3 - p1)
     center = (p1 + p2 + p3 + p4)/4
     Plane{T}(normal, center)
 end

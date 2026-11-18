@@ -159,3 +159,41 @@
 end
 
 
+
+@testset "Trap with degenerate faces{$T}" for T in (Float64, Float32)
+    # a face at +z with sides of zero length (a triangular prism), as the TEC module frames of CMS
+    tec = Trap{T}(67.15, 0.0494756, 0, 0.382, 6.65, 6.65, 0, 0.382, 5e-14, 5e-14, 0)
+    wedge = Trap{T}(20, 0, 0, 10, 10, 10, 0, 10, 0, 0, 0)         # edge at +z along y
+    @test all(p -> all(isfinite, p.normal) && norm(p.normal) ≈ 1, tec.planes)
+    @test all(p -> all(isfinite, p.normal) && norm(p.normal) ≈ 1, wedge.planes)
+    # entering through the face at -y, leaving through the one at +y (it used to return 1.2e9)
+    p, d = Point3{T}(-4.451195, -0.38195857, -13.122291), Vector3{T}(0, 1, -4.371139f-8)
+    @test inside(tec, p) != kOutside                               # 4e-5 inside the -y face
+    @test distance_to_out(tec, p, d) ≈ 0.764 rtol = 1e-3
+    @test distance_to_in(wedge, Point3{T}(0, -50, 0), Vector3{T}(0, 1, 0)) ≈ 40
+    @test distance_to_out(wedge, Point3{T}(0, 0, 0), Vector3{T}(0, 1, 0)) ≈ 10
+    @test distance_to_out(wedge, Point3{T}(0, 0, 0), Vector3{T}(1, 0, 0)) ≈ 5      # side going to the edge
+    @test capacity(wedge) ≈ 20 * 20 * 40 / 2
+    # random rays: end points on the surface, and the shape entered or left there
+    rng = MersenneTwister(11)
+    for s in (tec, wedge)
+        lo, hi = extent(s)
+        nbad = 0
+        for _ in 1:2000
+            q = Point3{T}(lo + (hi - lo) .* (rand(rng, T, 3) .* 1.4 .- 0.2))
+            v = normalize(Vector3{T}(randn(rng, T, 3)))
+            pos = inside(s, q)
+            if pos == kInside
+                t = distance_to_out(s, q, v)
+                e = q + t * v
+                nbad += !(isfinite(t) && inside(s, e) == kSurface && inside(s, e + 10tolerance(T) * v) != kInside)
+            elseif pos == kOutside
+                t = distance_to_in(s, q, v)
+                t == Inf && continue
+                e = q + t * v
+                nbad += !(inside(s, e) == kSurface && inside(s, e + 10tolerance(T) * v) != kOutside)
+            end
+        end
+        @test nbad <= 5
+    end
+end
