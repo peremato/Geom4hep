@@ -79,7 +79,8 @@ nsections(ph::Polyhedra) = length(ph.sections)
 @inline function _side_index(ph::Polyhedra{T}, x, y) where T
     n = ph.nsides
     n == 1 && return Int32(0)
-    δ = mod(atan(y, x) - ph.ϕ₀, T(2π))
+    δ = atan(y, x) - ph.ϕ₀
+    δ -= T(2π) * floor(δ / T(2π))                  # in [0, 2π) (cheaper than mod on GPUs)
     if δ < ph.Δϕ
         return min(unsafe_trunc(Int32, δ * n / ph.Δϕ), n - Int32(1))
     else
@@ -117,9 +118,9 @@ end
 @inline function _section_at(ph::Polyhedra, z)
     secs = ph.sections
     N = length(secs)
-    z < secs[1].z1 && return 0
+    z < @inbounds(secs[1]).z1 && return 0
     for i in 1:N
-        z <= secs[i].z2 && return i
+        z <= @inbounds(secs[i]).z2 && return i
     end
     return N + 1
 end
@@ -179,18 +180,18 @@ function inside(ph::Polyhedra{T}, point::Point3{T})::Int64 where T
     tol = tolerance(T) / 2
     secs = ph.sections
     N = length(secs)
-    (z < secs[1].z1 - tol || z > secs[N].z2 + tol) && return kOutside
+    (z < @inbounds(secs[1]).z1 - tol || z > @inbounds(secs[N]).z2 + tol) && return kOutside
     _, _, proj = _side_projection(ph, x, y)
     lo, hi = _section_at(ph, z - tol), _section_at(ph, z + tol)
     lo < 1 && (lo = hi)
     hi > N && (hi = lo)
     if lo == hi
-        v = _section_value(ph, secs[lo], proj, x, y, z)
+        v = _section_value(ph, @inbounds(secs[lo]), proj, x, y, z)
         return v < -tol ? kInside : v <= tol ? kSurface : kOutside
     end
     # close to a plane shared by two sections: it is not a boundary where both sections are present
-    vlo = _radial_value(ph, secs[lo], proj, x, y, z)
-    vhi = _radial_value(ph, secs[hi], proj, x, y, z)
+    vlo = _radial_value(ph, @inbounds(secs[lo]), proj, x, y, z)
+    vhi = _radial_value(ph, @inbounds(secs[hi]), proj, x, y, z)
     vlo < -tol && vhi < -tol && return kInside
     vlo > tol && vhi > tol && return kOutside
     return kSurface
@@ -214,7 +215,7 @@ function safety_to_out(ph::Polyhedra{T}, point::Point3{T})::T where T
     pos == kSurface && return zero(T)
     _, _, proj = _side_projection(ph, x, y)
     i = clamp(_section_at(ph, z), 1, length(ph.sections))
-    return max(-_section_value(ph, ph.sections[i], proj, x, y, z), zero(T))   # conservative at shared planes
+    return max(-_section_value(ph, @inbounds(ph.sections[i]), proj, x, y, z), zero(T))   # conservative at shared planes
 end
 
 function normal(ph::Polyhedra{T}, point::Point3{T})::Vector3{T} where T
@@ -229,7 +230,7 @@ function normal(ph::Polyhedra{T}, point::Point3{T})::Vector3{T} where T
     d2 = w.normal2[1] * x + w.normal2[2] * y
     n = zero(Vector3{T})
     for i in 1:N
-        sec = secs[i]
+        sec = @inbounds secs[i]
         sec.z1 - tol <= z <= sec.z2 + tol || continue
         _section_value(ph, sec, proj, x, y, z) <= tol || continue
         t = z - sec.z1
@@ -240,10 +241,10 @@ function normal(ph::Polyhedra{T}, point::Point3{T})::Vector3{T} where T
             abs(d2) <= tol && (ph.Δϕ <= π || d1 <= tol) && (n -= Vector3{T}(w.normal2[1], w.normal2[2], 0))
         end
         # z planes, unless the neighbouring section covers the point there
-        if abs(z - sec.z1) <= tol && !(i > 1 && _radial_value(ph, secs[i-1], proj, x, y, z) < -tol)
+        if abs(z - sec.z1) <= tol && !(i > 1 && _radial_value(ph, @inbounds(secs[i-1]), proj, x, y, z) < -tol)
             n -= Vector3{T}(0, 0, 1)
         end
-        if abs(z - sec.z2) <= tol && !(i < N && _radial_value(ph, secs[i+1], proj, x, y, z) < -tol)
+        if abs(z - sec.z2) <= tol && !(i < N && _radial_value(ph, @inbounds(secs[i+1]), proj, x, y, z) < -tol)
             n += Vector3{T}(0, 0, 1)
         end
     end
@@ -352,7 +353,7 @@ function distance_to_in(ph::Polyhedra{T}, point::Point3{T}, dir::Vector3{T})::T 
     best = T(Inf)
     first, last, step = _section_range(ph, dir)
     for i in first:step:last
-        sec = ph.sections[i]
+        sec = @inbounds ph.sections[i]
         # sections behind the point, and beyond the best entry found
         dz > 0 && (sec.z2 < z - tol && continue; sec.z1 > z + best * dz + tol && break)
         dz < 0 && (sec.z1 > z + tol && continue; sec.z2 < z + best * dz - tol && break)
@@ -378,7 +379,7 @@ function distance_to_out(ph::Polyhedra{T}, point::Point3{T}, dir::Vector3{T})::T
     started = false
     first, last, step = _section_range(ph, dir)
     for i in first:step:last
-        sec = ph.sections[i]
+        sec = @inbounds ph.sections[i]
         dz > 0 && (sec.z2 < z - tol && continue; sec.z1 > z + t * dz + tol && break)
         dz < 0 && (sec.z1 > z + tol && continue; sec.z2 < z + t * dz - tol && break)
         dz == 0 && !(sec.z1 - tol <= z <= sec.z2 + tol) && continue

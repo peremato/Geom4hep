@@ -98,16 +98,16 @@ end
 # Classify a probe point beyond a boundary; with a grazing crossing it can still be within the
 # tolerance of a surface (at shallow angles the band along the ray is wide, mostly in single
 # precision): push it further along the ray until the classification is decisive.
+#   A single call of `inside` in a loop that is not unrolled: on GPUs every call is inlined, and each
+#   copy of `inside` of a CSG shape contains the code of all the kinds of components.
 @inline function _classify_probe(c::CSGShape{T}, point, dir, offset) where T
-    probe = point + offset * dir
-    pos = inside(c, probe)
     push = push_tolerance(T)
-    for _ in 1:6                         # pushes doubling up to 32× the first: about 63 in total
-        pos == kSurface || break
-        offset += push
-        push += push
-        probe = point + offset * dir
-        pos = inside(c, probe)
+    pos = kSurface
+    n = 0
+    @nounroll while pos == kSurface && n < 7          # up to 6 pushes doubling to 32× the first
+        n > 0 && (offset += push; push += push)
+        pos = inside(c, point + offset * dir)
+        n += 1
     end
     return pos, offset
 end

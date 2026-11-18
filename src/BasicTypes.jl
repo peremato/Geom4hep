@@ -21,6 +21,18 @@ there are averaged. Returns the zero vector if `point` is not on the surface (wi
 """
 function normal end
 
+"""
+    @nounroll for/while ... end
+
+Ask LLVM not to unroll the loop. On GPUs all calls are inlined, so unrolling a loop that calls large
+functions multiplies the size of the kernel (see the CSG shapes).
+"""
+macro nounroll(ex)
+    (ex isa Expr && ex.head in (:for, :while)) || error("@nounroll expects a for or while loop")
+    push!(ex.args[2].args, Expr(:loopinfo, (Symbol("llvm.loop.unroll.disable"), 1)))
+    return esc(ex)
+end
+
 #---constants
 #const tolerance = 1e-9
 const kInside  = 0
