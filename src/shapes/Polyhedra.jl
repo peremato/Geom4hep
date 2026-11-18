@@ -251,21 +251,38 @@ function normal(ph::Polyhedra{T}, point::Point3{T})::Vector3{T} where T
     return normalize(n)
 end
 
-# For a point on the surface, whether moving along `dir` goes into the shape: the distance-like value
-# of the shape (smallest of the values of the sections near the point) decreases along `dir`. Cheaper
-# than the normal (code size matters on GPUs, where all functions are inlined).
-@inline function _union_value(ph::Polyhedra{T}, p::Point3{T}) where T
+# For a point on the surface, whether moving along `dir` goes into the shape: in a section the point
+# is on, the constraints that are active (the surfaces the point is on) all decrease along `dir`. The
+# rates are computed analytically (a finite difference of the values is noise in Float32 far from the
+# origin), and are much cheaper than the normal (code size matters on GPUs, where all is inlined).
+@inline function _moving_in(ph::Polyhedra{T}, p::Point3{T}, d::Vector3{T}) where T
     x, y, z = p
-    tol = tolerance(T)
-    _, _, proj = _side_projection(ph, x, y)
-    v = T(Inf)
-    for sec in ph.sections
-        sec.z1 - tol <= z <= sec.z2 + tol && (v = min(v, _section_value(ph, sec, proj, x, y, z)))
+    tol = tolerance(T) / 2
+    c, s, proj = _side_projection(ph, x, y)
+    dproj = c * d[1] + s * d[2]                       # rate of the projection along d
+    wv, wr = T(-Inf), T(-Inf)                         # wedge: value and rate of the active plane
+    if !ph.fullϕ
+        w = ph.wedge
+        g1, e1 = w.normal1[1] * x + w.normal1[2] * y, w.normal1[1] * d[1] + w.normal1[2] * d[2]
+        g2, e2 = w.normal2[1] * x + w.normal2[2] * y, w.normal2[1] * d[1] + w.normal2[2] * d[2]
+        wv, wr = (ph.Δϕ <= π) == (g1 <= g2) ? (-g1, -e1) : (-g2, -e2)
     end
-    return v
+    for sec in ph.sections
+        sec.z1 - tol <= z <= sec.z2 + tol || continue
+        t = z - sec.z1
+        constraints = (((proj - (sec.rmax1 + sec.smax * t)) * sec.kmax, (dproj - sec.smax * d[3]) * sec.kmax),
+                       _hollow(sec) ? ((sec.rmin1 + sec.smin * t - proj) * sec.kmin, (sec.smin * d[3] - dproj) * sec.kmin) : (T(-Inf), T(-Inf)),
+                       (wv, wr), (sec.z1 - z, -d[3]), (z - sec.z2, d[3]))
+        vmax = maximum(first, constraints)
+        vmax <= tol || continue                       # the point is not on this section
+        rate = T(-Inf)
+        for (v, r) in constraints
+            v >= vmax - tol && (rate = max(rate, r))
+        end
+        rate < 0 && return true
+    end
+    return false
 end
-@inline _moving_in(ph::Polyhedra{T}, p::Point3{T}, d::Vector3{T}) where T =
-    _union_value(ph, p + tolerance(T) * d) < _union_value(ph, p)
 
 #---Intersections of a line with a section------------------------------------------------------------
 # Clip the interval (lo, hi) of the line p + t d with the half-space g0 + t g1 ≤ 0
