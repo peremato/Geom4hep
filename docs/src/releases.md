@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## 0.1.0 - 19-11-2026
 - New features:
     - Shapes: `Sphere` (with ϕ and θ segments, also GDML `orb`), `Polyhedra` and `Torus`, and the mesh
       of all the shapes for drawing.
