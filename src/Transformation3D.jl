@@ -1,4 +1,18 @@
 #---Transformation3D----------------------------------------------------------------------
+"""
+    Transformation3D{T}(dx, dy, dz)
+    Transformation3D{T}(dx, dy, dz, rotation::Rotation{3})
+    Transformation3D{T}(dx, dy, dz, rotx, roty, rotz)
+    Transformation3D{T}(rotation::RotMatrix3, translation::Vector3)
+    one(Transformation3D{T})
+
+Placement of a daughter volume (or of a boolean operand) in the frame of its mother. Applied to a
+point of the mother, it gives the point in the frame of the daughter: `t * p == R * (p - t)` for a
+translation `t = (dx, dy, dz)` and rotation `R`, so `Transformation3D{T}(dx, dy, dz)` places the
+daughter at (dx, dy, dz). Rotations come from Rotations.jl (`RotXYZ`, `RotZXZ`, ...); the angles
+`rotx, roty, rotz` build a `RotXYZ`. `p * t` applies the inverse transformation, and
+`t1 * t2` composes them.
+"""
 struct Transformation3D{T<:AbstractFloat}
     rotation::RotMatrix3{T}
     translation::Vector3{T}

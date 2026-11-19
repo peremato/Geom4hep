@@ -1,6 +1,13 @@
 #---Polycone----------------------------------------------------------------------------------------
 #   A sequence of cone sections along z. The storage of the sections is a type parameter: an SVector
 #   for shapes built by the user, or a view into the shared arrays of a flat GeometryModel.
+"""
+    Polycone{T}(rmin::Vector, rmax::Vector, z::Vector, ϕ₀, Δϕ)
+
+Polycone (as G4Polycone, z-planes form): a sequence of cone sections along z. `z` are the z planes
+(increasing) and `rmin`, `rmax` the inner and outer radii at each plane; the ϕ range is
+[`ϕ₀`, `ϕ₀ + Δϕ`].
+"""
 struct Polycone{T<:AbstractFloat, VC<:AbstractVector{Cone{T}}, VZ<:AbstractVector{T}} <: AbstractShape{T}
     sections::VC                   # cone sections (non-zero length)
     zᵢ::VZ                         # z offset of the centre of each section

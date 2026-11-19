@@ -8,6 +8,12 @@
 #---------------------------------------------------------------------------------------------------
 const THETA_NONE, THETA_PLANE, THETA_CONE = Int32(0), Int32(1), Int32(2)
 
+"""
+    Sphere{T}(rmin, rmax, ϕ₀=0, Δϕ=2π, θ₀=0, Δθ=π)
+
+Spherical shell or section (as G4Sphere): inner and outer radii `rmin` and `rmax`, the ϕ range
+[`ϕ₀`, `ϕ₀ + Δϕ`] and the polar range [`θ₀`, `θ₀ + Δθ`]. `Sphere{T}(0, r)` is a full ball (G4Orb).
+"""
 struct Sphere{T<:AbstractFloat} <: AbstractShape{T}
     rmin::T
     rmax::T

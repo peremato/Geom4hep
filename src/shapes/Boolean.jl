@@ -22,8 +22,20 @@ struct BooleanShape{T<:AbstractFloat, OP, L, R} <: AbstractShape{T}
     right_aabb::AABB{T}
 end
 
+"""
+    BooleanUnion(left, right, placement=one(Transformation3D{T}))
+    BooleanSubtraction(left, right, placement=one(Transformation3D{T}))
+    BooleanIntersection(left, right, placement=one(Transformation3D{T}))
+
+Boolean combination of two shapes (as G4UnionSolid, G4SubtractionSolid and G4IntersectionSolid):
+the points in `left` or `right`, in `left` and not in `right`, or in both. `right` is placed in the
+frame of `left` with `placement` (as in [`place_daughter!`](@ref)). The operands can themselves be
+boolean shapes.
+"""
 const BooleanUnion{T} = BooleanShape{T, :union}
+"See [`BooleanUnion`](@ref)."
 const BooleanSubtraction{T} =  BooleanShape{T, :subtraction}
+"See [`BooleanUnion`](@ref)."
 const BooleanIntersection{T} = BooleanShape{T, :intersection}
 
 # Since all the other constructors only use 3 arguments we can sneak the AABB calc in here

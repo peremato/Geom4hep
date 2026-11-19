@@ -26,11 +26,19 @@ end
 @inline _outside_state(::Type{T}) where T = NavState{T}(-1, 0, ntuple(_ -> Int32(0), Val(MAX_NAV_DEPTH)), one(Transformation3D{T}), 0)
 @inline _blocking(s::NavState{T}, pidx) where T = NavState{T}(s.depth, s.volume, s.path, s.tolocal, Int32(pidx))
 
-"`true` if the state corresponds to a point inside the world volume."
 @inline in_world(s::NavState) = s.volume != 0
+@doc """
+    in_world(state::NavState)
 
-"Index of the material of the current volume."
+`true` if the point of `state` is inside the world volume.
+""" in_world
+
 @inline material_index(model::GeometryModel, s::NavState) = @inbounds model.volumes[s.volume].material
+@doc """
+    material_index(model::GeometryModel, state::NavState)
+
+Index in `model.materials` of the material of the current volume of `state`.
+""" material_index
 
 #---Moving along the hierarchy-------------------------------------------------------------------------
 @inline function _push(model::GeometryModel{T}, s::NavState{T}, pidx::Int32) where T

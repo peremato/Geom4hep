@@ -1,4 +1,8 @@
 # Geom4hep
+
+[![Docs (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://peremato.github.io/Geom4hep/dev/)
+[![CI](https://github.com/peremato/Geom4hep/actions/workflows/ci.yaml/badge.svg)](https://github.com/peremato/Geom4hep/actions/workflows/ci.yaml)
+
 A native Julia geometry modeller for HEP, in the spirit of the Geant4/VecGeom geometry: basic solids, boolean combinations, hierarchical volumes and materials, with data structures designed to be usable on GPUs.
 
 Current functionality:
@@ -15,6 +19,9 @@ Current functionality:
 - Benchmarks of the shape functions following the methodology of VecGeom, and comparison with VecGeom
 
 All types are parametric on the floating point type (`Float64` or `Float32`).
+
+The [documentation](https://peremato.github.io/Geom4hep/dev/) has a user guide, examples and the reference
+of the public API.
 
 ## Supported shapes
 The solids of Geant4 and their status in Geom4hep (✅ supported, ❌ not yet supported):

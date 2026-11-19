@@ -3,6 +3,13 @@
 #   Long chains of binary unions are converted to a MultiUnion when a flat GeometryModel is built,
 #   which keeps the nesting of boolean shapes shallow. The storage of the components is a type
 #   parameter: Vectors for shapes built by the user, views into a flat GeometryModel otherwise.
+"""
+    MultiUnion{T}(shapes, transformations)
+    MultiUnion{T}()
+
+Union of any number of shapes (as G4MultiUnion), each one placed with its transformation (as in
+[`place_daughter!`](@ref)). Components can be added with [`add_component!`](@ref).
+"""
 struct MultiUnion{T<:AbstractFloat, VS<:AbstractVector, VT<:AbstractVector{Transformation3D{T}}, VA<:AbstractVector{AABB{T}}} <: AbstractShape{T}
     shapes::VS              # component shapes
     transformations::VT     # placement of each component (`transformation * point` gives the component frame)

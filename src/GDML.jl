@@ -359,6 +359,13 @@ end
 
 
 # process the full file
+"""
+    read_gdml(filename, T=Float64) -> Volume{T}
+
+Read a GDML file and return its world volume, with the shapes, materials and volume hierarchy it
+defines, with floating point type `T`. Lengths are converted to mm and angles to radians. Solids
+that are not supported are replaced by [`NoShape`](@ref) with a warning.
+"""
 function read_gdml(fname::String, ::Type{T}=Float64) where T
     dicts = GDMLDicts{T}()
     world = nothing

@@ -1,5 +1,13 @@
 
 #---CutTube----------------------------------------------------------------------------------------
+"""
+    CutTube{T}(rmin, rmax, z, ϕ₀, Δϕ, bottom_normal::Vector3, top_normal::Vector3)
+    CutTube{T}(rmin, rmax, z, ϕ₀, Δϕ, θb, ϕb, θt, ϕt)
+
+Tube segment cut by two planes (as G4CutTubs): a [`Tube`](@ref) with radii `rmin`, `rmax` and ϕ range
+[`ϕ₀`, `ϕ₀ + Δϕ`] whose ends are the planes through (0, 0, -z) and (0, 0, z) with outward normals
+`bottom_normal` and `top_normal`, given as vectors or by their polar and azimuthal angles.
+"""
 struct CutTube{T<:AbstractFloat} <: AbstractShape{T}
     tube::Tube{T}                  # tube (infinite length)
     z::T                           # half z length 

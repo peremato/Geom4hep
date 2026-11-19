@@ -12,6 +12,12 @@
 #   so D'' ≥ -rtor/(ρ D) and D'' ≤ 1/D. With these bounds the steps behave as Newton steps close to a
 #   crossing and remain long along grazing rays.
 #---------------------------------------------------------------------------------------------------
+"""
+    Torus{T}(rmin, rmax, rtor, ϕ₀=0, Δϕ=2π)
+
+Torus or torus segment (as G4Torus): the points at a distance between `rmin` and `rmax` from the
+circle of radius `rtor` in the xy plane (the swept radius), within the ϕ range [`ϕ₀`, `ϕ₀ + Δϕ`].
+"""
 struct Torus{T<:AbstractFloat} <: AbstractShape{T}
     rmin::T            # inner radius of the tube (0 for a solid tube)
     rmax::T            # outer radius of the tube
