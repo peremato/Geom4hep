@@ -1,7 +1,7 @@
 # Geom4hep
 
-[![Docs (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://peremato.github.io/Geom4hep/dev/)
-[![CI](https:https://juliahep.github.io/Geom4hep.jl/dev//actions/workflows/ci.yaml/badge.svg)](https:https://juliahep.github.io/Geom4hep.jl/dev//actions/workflows/ci.yaml)
+[![Docs (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliahep.github.io/Geom4hep.jl/dev/)
+[![CI](https://github.com/JuliaHEP/Geom4hep.jl/actions/workflows/ci.yaml/badge.svg)](https://github.com/JuliaHEP/Geom4hep.jl/actions/workflows/ci.yaml)
 
 A native Julia geometry modeller for HEP, in the spirit of the Geant4/VecGeom geometry: basic solids, boolean combinations, hierarchical volumes and materials, with data structures designed to be usable on GPUs.
 
