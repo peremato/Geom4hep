@@ -16,6 +16,41 @@ Current functionality:
 
 All types are parametric on the floating point type (`Float64` or `Float32`).
 
+## Supported shapes
+The solids of Geant4 and their status in Geom4hep (✅ supported, ❌ not yet supported):
+
+| Geant4 solid | Geom4hep | GDML element | Notes |
+|---|---|---|---|
+| `G4Box` | ✅ `Box` | `box` | |
+| `G4Tubs` | ✅ `Tube` | `tube` | |
+| `G4CutTubs` | ✅ `CutTube` | `cutTube` | |
+| `G4Cons` | ✅ `Cone` | `cone` | |
+| `G4Trd` | ✅ `Trd` | `trd` | |
+| `G4Trap` | ✅ `Trap` | `trap` | |
+| `G4Sphere` | ✅ `Sphere` | `sphere` | with ϕ and θ segments |
+| `G4Orb` | ✅ `Sphere` | `orb` | as a full `Sphere` (no dedicated, faster type) |
+| `G4Torus` | ✅ `Torus` | `torus` | |
+| `G4Polycone` | ✅ `Polycone` | `polycone` | z-planes form only; not the (r, z) corners form (`genericPolycone`) |
+| `G4Polyhedra` | ✅ `Polyhedra` | `polyhedra` | z-planes form only; not the (r, z) corners form (`genericPolyhedra`) |
+| `G4UnionSolid`, `G4SubtractionSolid`, `G4IntersectionSolid` | ✅ `BooleanUnion`, `BooleanSubtraction`, `BooleanIntersection` | `union`, `subtraction`, `intersection` | safeties are conservative (0) in the flat model |
+| `G4MultiUnion` | ✅ `MultiUnion` | ❌ `multiUnion` | no acceleration structure over the components |
+| `G4Para` | ❌ | `para` | |
+| `G4GenericTrap` | ❌ | `arb8` | |
+| `G4GenericPolycone` | ❌ | `genericPolycone` | |
+| `G4EllipticalTube` | ❌ | `eltube` | |
+| `G4EllipticalCone` | ❌ | `elcone` | |
+| `G4Ellipsoid` | ❌ | `ellipsoid` | |
+| `G4Paraboloid` | ❌ | `paraboloid` | |
+| `G4Hype` | ❌ | `hype` | |
+| `G4Tet` | ❌ | `tet` | |
+| `G4ExtrudedSolid` | ❌ | `xtru` | |
+| `G4TessellatedSolid` | ❌ | `tessellated` | |
+| `G4TwistedBox`, `G4TwistedTrd`, `G4TwistedTrap`, `G4TwistedTubs` | ❌ | `twistedbox`, `twistedtrd`, `twistedtrap`, `twistedtubs` | |
+| `G4ScaledSolid` | ❌ | `scaledSolid` | |
+| `G4ReflectedSolid` | ❌ | `reflectedSolid` | |
+
+GDML solids that are not supported are replaced by `NoShape` with a warning.
+
 ## Navigation on CPUs and GPUs
 `close_geometry(world)` converts a hierarchy of volumes into a flat `GeometryModel`: all the data is stored
 in arrays of isbits structures referenced by indices, shapes are called without dynamic dispatch, boolean
