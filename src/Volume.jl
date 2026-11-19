@@ -23,6 +23,12 @@ end
 
 
 #---PlacedVolume-------------------------------------------------------------------
+"""
+    PlacedVolume{T}
+
+A daughter volume placed in its mother: the `volume` and its `transformation` (see
+[`place_daughter!`](@ref)). The daughters of a [`Volume`](@ref) are in its `daughters` vector.
+"""
 struct PlacedVolume{T<:AbstractFloat}
     idx::Int64
     transformation::Transformation3D{T}
@@ -40,6 +46,13 @@ function PlacedVolume{T}(idx::Int64,transformation::Transformation3D{T},volume::
 end
 
 #---Convenient Alias to simplify signatures---------------------------------------
+"""
+    Volume{T}(label, shape, material)
+
+A logical volume (as G4LogicalVolume): a shape filled with a material, with daughter volumes placed
+inside it with [`place_daughter!`](@ref). The same volume can be placed several times. `vol[i]`
+gives the volume of the `i`-th daughter, and `vol[i, j, ...]` goes down the hierarchy.
+"""
 const Volume{T} = VolumeP{T,PlacedVolume{T}} where T<:AbstractFloat  
 
 #---Constructor--------------------------------------------------------------------
@@ -78,6 +91,14 @@ end
     distance_to_in(pvol.volume.shape, pvol.transformation * p, pvol.transformation * d)
 end
 
+"""
+    place_daughter!(mother::Volume, placement::Transformation3D, daughter::Volume)
+
+Place `daughter` inside `mother` with `placement` (see [`Transformation3D`](@ref):
+`Transformation3D{T}(x, y, z)` places the daughter at (x, y, z) of the mother). The daughter must be
+contained in the mother and must not overlap the other daughters (this is not checked). Placing an
+[`Assembly`](@ref) places each of its volumes. Returns `mother`.
+"""
 function place_daughter!(volume::Volume{T}, placement::Transformation3D{T}, subvol::Volume{T}) where T<:AbstractFloat
     if subvol.shape isa NoShape
         for d in subvol.daughters
@@ -89,6 +110,12 @@ function place_daughter!(volume::Volume{T}, placement::Transformation3D{T}, subv
     volume
 end
 
+"""
+    world_volume(vol::Volume)
+
+`vol` if its label is "world"; otherwise a new world volume (a box of vacuum 5% larger than `vol`)
+with `vol` placed in it.
+"""
 function world_volume(vol::Volume{T}) where T<:AbstractFloat
     if vol.label == "world"
         return vol
@@ -109,6 +136,12 @@ function AABB(pvol::PlacedVolume{T}) where T
 end
 
 #---Assemblies--------------------------------------------------------------------------------------
+"""
+    Assembly{T}(label)
+
+A group of volumes without a shape of its own (as G4AssemblyVolume): its daughters are placed
+directly in the mother when the assembly is placed with [`place_daughter!`](@ref).
+"""
 struct Assembly{T<:AbstractFloat}
 end
 

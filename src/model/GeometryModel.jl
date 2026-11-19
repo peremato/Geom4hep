@@ -168,3 +168,9 @@ end
 
 #---Shape functions on the shape of a volume of the model----------------------------------------------
 @inline shape_call(f, model::GeometryModel{T,D}, ref::ShapeRef, args...) where {T,D} = dispatch(f, model, ref, Val(D), args...)
+@doc """
+    shape_call(f, model::GeometryModel, ref::ShapeRef, args...)
+
+Call the shape function `f` (e.g. `inside`, `distance_to_in`, `extent`) on the shape `ref` of `model`
+without dynamic dispatch: `shape_call(inside, model, model.volumes[1].shape, point)`.
+""" shape_call

@@ -1,4 +1,10 @@
 #---Cone-------------------------------------------------------------
+"""
+    Cone{T}(rmin1, rmax1, rmin2, rmax2, z, ϕ₀, Δϕ)
+
+Cone or cone segment (as G4Cons) along the z axis, with half length `z`: inner and outer radii
+`rmin1` and `rmax1` at -z, `rmin2` and `rmax2` at +z, and the ϕ range [`ϕ₀`, `ϕ₀ + Δϕ`].
+"""
 struct Cone{T<:AbstractFloat} <: AbstractShape{T}
     rmin1::T # inner radius at the surface positioned at -z
     rmax1::T # outer radius at the surface positioned at -z

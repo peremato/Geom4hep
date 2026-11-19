@@ -1,6 +1,90 @@
 #--- basic stuff
+"""
+    AbstractShape{T<:AbstractFloat}
+
+Supertype of all the shapes (solids). `T` is the floating point type of the shape parameters and of
+the points and directions it works with (`Float64` or `Float32`). A shape is defined in its own
+frame; it is positioned in a mother volume by the transformation of its placement.
+
+Every shape implements [`inside`](@ref), [`distance_to_in`](@ref), [`distance_to_out`](@ref),
+[`safety_to_in`](@ref), [`safety_to_out`](@ref), [`normal`](@ref), [`extent`](@ref),
+[`capacity`](@ref) and [`surface`](@ref), and the mesh functions used for drawing
+(`coordinates`, `faces`, [`mesh`](@ref)).
+"""
 abstract type AbstractShape{T<:AbstractFloat} end
+
+"""
+    AbstractMaterial{T<:AbstractFloat}
+
+Supertype of [`Isotope`](@ref), [`Element`](@ref) and [`Material`](@ref).
+"""
 abstract type AbstractMaterial{T<:AbstractFloat} end
+
+#---Shape functions (methods for each shape are in src/shapes)--------------------------------------
+"""
+    inside(shape, point) -> kInside | kSurface | kOutside
+
+Classify `point` (in the frame of `shape`) as inside the shape, on its surface (within
+[`tolerance`](@ref)) or outside it. The constants `kInside`, `kSurface` and `kOutside` are exported.
+"""
+function inside end
+
+"""
+    distance_to_in(shape, point, dir)
+
+Distance along the unit direction `dir` from `point`, outside `shape`, to where the ray enters the
+shape. `Inf` if the ray misses the shape. A point on the surface moving into the shape gets 0. The
+result is not meaningful for points inside the shape (see [`inside`](@ref)).
+"""
+function distance_to_in end
+
+"""
+    distance_to_out(shape, point, dir)
+
+Distance along the unit direction `dir` from `point`, inside `shape`, to where the ray leaves the
+shape. A point on the surface moving out of the shape gets 0, and a point outside the shape gets a
+negative value (-1).
+"""
+function distance_to_out end
+
+"""
+    safety_to_in(shape, point)
+
+Lower bound of the distance from `point`, outside `shape`, to the shape (an isotropic safe step). It
+is cheaper to compute than the exact distance; it is ≤ 0 for points inside the shape.
+"""
+function safety_to_in end
+
+"""
+    safety_to_out(shape, point)
+
+Lower bound of the distance from `point`, inside `shape`, to its surface (an isotropic safe step). It
+is ≤ 0 for points outside the shape.
+"""
+function safety_to_out end
+
+"""
+    extent(shape) -> (lower::Point3, upper::Point3)
+
+Corners of an axis-aligned box, in the frame of the shape, that contains it.
+"""
+function extent end
+
+"""
+    capacity(shape)
+
+Volume of the shape. For shapes without a closed formula it is estimated by sampling (see
+[`estimate_capacity`](@ref)).
+"""
+function capacity end
+
+"""
+    surface(shape)
+
+Area of the surface of the shape. For shapes without a closed formula it is estimated by sampling
+(see [`estimate_surface`](@ref)).
+"""
+function surface end
 
 """
     mesh(shape::AbstractShape; facets=64)
@@ -40,10 +124,23 @@ const kSurface = 1
 const kOutside = 2
 export kInside, kSurface, kOutside
 
+"""
+    tolerance(T=Float64)
+
+Thickness of the surfaces of the shapes: a point closer than `tolerance(T)/2` to a surface is on
+the surface ([`inside`](@ref) returns `kSurface`). 1 nm for `Float64` and 1 µm for `Float32`
+(lengths in mm).
+"""
 tolerance(::Type{Float32}) = 1f-3
 tolerance(::Type{Float64}) = 1e-9
 tolerance() = tolerance(Float64)
 
+"""
+    push_tolerance(T=Float64)
+
+Distance by which the navigator pushes a point beyond a boundary it has reached, to locate it in
+the next volume.
+"""
 push_tolerance(::Type{Float32}) = 1f-3
 push_tolerance(::Type{Float64}) = 1e-6
 push_tolerance() = push_tolerance(Float64)

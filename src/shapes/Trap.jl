@@ -1,4 +1,19 @@
 #---Trap (General Trapezoid)------------------------------------------------------------------------
+"""
+    Trap{T}(z, θ, ϕ, y1, x1, x2, α1, y2, x3, x4, α2)
+    Trap{T}(x1, x2, y1, y2, z)
+
+General trapezoid (as G4Trap), with half length `z`. The faces at -z and +z are trapezoids with
+sides parallel to the x axis:
+
+- at -z: half length `y1` along y, half lengths `x1` and `x2` of the sides at y = -y1 and y = +y1, and
+  `α1` the angle to the y axis of the line joining the centres of these sides;
+- at +z: the same with `y2`, `x3`, `x4` and `α2`.
+
+`θ` and `ϕ` are the polar and azimuthal angles of the line joining the centres of the two faces.
+The second form is a right trapezoid with rectangular faces of half lengths (`x1`, `y1`) at -z and
+(`x2`, `y2`) at +z.
+"""
 struct Trap{T<:AbstractFloat} <: AbstractShape{T}
     z::T    # Half-length along the z-axis
     θ::T    # Polar angle of the line joining the centres of the faces at -/+z

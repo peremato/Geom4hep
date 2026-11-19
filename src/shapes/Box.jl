@@ -1,4 +1,10 @@
 #---Box-------------------------------------------------------------------------
+"""
+    Box{T}(x, y, z)
+
+Box (as G4Box) centred at the origin, with half lengths `x`, `y` and `z` along the axes. `box[i]`
+gives the half length along axis `i`.
+"""
 struct Box{T<:AbstractFloat} <: AbstractShape{T}
     fDimensions::SVector{3,T} # the HALF lengths of the box
 end

@@ -66,7 +66,19 @@ function draw end
 Draw a shape, volume hierarchy, AABB or BVH into an existing `LScene`. Requires a Makie backend.
 """
 function draw! end
+"""
+    draw_distance_to_in(shape, npoints)
+
+Figure with the points where random rays from outside `shape` enter it (a test of
+[`distance_to_in`](@ref)). Requires a Makie backend.
+"""
 function draw_distance_to_in end
+"""
+    draw_distance_to_out(shape, npoints)
+
+Figure with the points where random rays from inside `shape` leave it (a test of
+[`distance_to_out`](@ref)). Requires a Makie backend.
+"""
 function draw_distance_to_out end
 
 end # module

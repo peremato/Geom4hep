@@ -1,4 +1,10 @@
 #---Trapezoid (TRD)-------------------------------------------------------------
+"""
+    Trd{T}(x1, x2, y1, y2, z)
+
+Trapezoid (as G4Trd) with half length `z` along the z axis and rectangular faces at -z and +z with
+half lengths (`x1`, `y1`) and (`x2`, `y2`).
+"""
 struct Trd{T<:AbstractFloat} <: AbstractShape{T}
     x1::T   # Half-length along x at the surface positioned at -dz
     x2::T   # Half-length along x at the surface positioned at +dz

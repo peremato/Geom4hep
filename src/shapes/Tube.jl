@@ -1,4 +1,10 @@
 #---Tube -------------------------------------------------------------
+"""
+    Tube{T}(rmin, rmax, z, ϕ₀, Δϕ)
+
+Tube or tube segment (as G4Tubs) along the z axis: inner and outer radii `rmin` and `rmax` (`rmin = 0`
+for a solid cylinder), half length `z`, and the ϕ range [`ϕ₀`, `ϕ₀ + Δϕ`] (`0, 2π` for a full tube).
+"""
 struct Tube{T<:AbstractFloat} <: AbstractShape{T}
     rmin::T # inner radius
     rmax::T # outer radius
