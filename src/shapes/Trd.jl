@@ -195,60 +195,24 @@ function distance_to_out(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T wher
 
     x, y, z = point
     dx, dy, dz = dir
-    distance = zero(T)
-
-    # hit top Z face?
-    safz = trd.z - abs(z)
-    out = safz < -tolerance(T)/2
-    distx = trd.halfx1plusx2 - trd.fx * z
-    out |= (distx - abs(x)) * trd.calfx < -tolerance(T)/2
-    disty = trd.halfy1plusy2 - trd.fy * z
-    out |= (disty - abs(y)) * trd.calfy < -tolerance(T)/2
+    hx = trd.halfx1plusx2 - trd.fx * z      # half-widths at z
+    hy = trd.halfy1plusy2 - trd.fy * z
+    out = (trd.z - abs(z) < -tolerance(T)/2) | ((hx - abs(x)) * trd.calfx < -tolerance(T)/2) |
+          ((hy - abs(y)) * trd.calfy < -tolerance(T)/2)
     out && return T(-1)
-    if dz > 0
-        distz = (trd.z - z)/abs(dz)
-        hitx = abs(x + distz * dx)
-        hity = abs(y + distz * dy)
-        if hitx <= trd.x2 && hity <= trd.y2
-            distance = distz
-            abs(distance) < -tolerance(T)/2 && return zero(T)
-        end
-    end
-    # hit bottom Z face?
-    if dz < 0
-        distz = (trd.z + z)/abs(dz)
-        hitx = abs(x + distz * dx)
-        hity = abs(y + distz * dy)
-        if hitx <= trd.x1 && hity <= trd.y1
-            distance = distz
-            abs(distance) < -tolerance(T)/2 && return zero(T)
-        end
-    end
 
-    # hitting X faces?
-    okx, distx = face_intersection(trd, point, dir, false, false, false)
-    if okx
-        distance = distx
-        return distx < tolerance(T)/2 ? zero(T) : distx
+    # The Trd is convex: the exit is the nearest of the planes the ray moves towards (as in VecGeom).
+    # The distances are kept as num/den with den > 0, so that only the result is divided.
+    num = dz == 0 ? T(Inf) : trd.z - sign(dz) * z
+    den = dz == 0 ? one(T) : abs(dz)
+    for (half, pos, vel, slope) in ((hx, x, dx, trd.fx), (hx, -x, -dx, trd.fx), (hy, y, dy, trd.fy), (hy, -y, -dy, trd.fy))
+        cosine = vel + slope * dz           # the outward normal of the side plane is (1, 0, slope) for x
+        better = (cosine > 0) & ((half - pos) * den < num * cosine)
+        num = ifelse(better, half - pos, num)
+        den = ifelse(better, cosine, den)
     end
-    okx, distx = face_intersection(trd, point, dir, false, true, false)
-    if okx
-        distance = distx
-        return distx < tolerance(T)/2 ? zero(T) : distx
-    end
-
-    # hitting Y faces?
-    oky, disty = face_intersection(trd, point, dir, true, false, false)
-    if oky
-        distance = disty
-        return disty < tolerance(T)/2 ? zero(T) : disty
-    end
-    oky, disty = face_intersection(trd, point, dir, true, true, false)
-    if oky
-        distance = disty
-        return disty < tolerance(T)/2 ? zero(T) : disty
-    end
-    return distance 
+    distance = num / den
+    return distance < tolerance(T)/2 ? zero(T) : distance
 end
 
 function distance_to_in(trd::Trd{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat

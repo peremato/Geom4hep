@@ -58,22 +58,25 @@ end
 function distance_to_in(box::Box{T}, point::Point3{T}, direction::Vector3{T},rcp_direction::Vector3{T}=inv.(direction))::T where T<:AbstractFloat
     
     # Checks by face, on the distance to the face (not along the ray, which is large at grazing angles):
-    # outside or on a face and moving away from it: no entry; further inside than the surface: Inf
+    # outside or on a face and moving away from it: no entry; further inside than the surface: Inf.
+    # Branchless (no early returns): the branches are unpredictable for random rays and cost more
+    # than the slab test they would skip.
+    away = false
     deepest = typemin(T)
     for i in 1:3
         safe = abs(point[i]) - box.fDimensions[i]
         pd = point[i] * direction[i]
-        ((safe > tolerance(T)/2 && pd >= 0) || (safe > -tolerance(T)/2 && pd > 0)) && return T(Inf)
+        away |= (safe > tolerance(T)/2) & (pd >= 0) | (safe > -tolerance(T)/2) & (pd > 0)
         deepest = max(deepest, safe)
     end
-    deepest < -tolerance(T) && return T(Inf)
 
     bmax = Point3{T}(box.fDimensions)
     (distance,distout)= intersect_aabox_ray(-bmax, bmax, point, direction, rcp_direction)
     # A point on the surface moving in gets distance <= 0. The other checks:
-    # - distance >= distout or NaN: the ray misses the box
+    # - !(distance < distout), also NaN: the ray misses the box
     # - distout <= tolerance(T)/2: entering and immediately exiting
-    (distance >= distout || isnan(distance) || distout <= tolerance(T)/2) ? T(Inf) : distance
+    miss = away | (deepest < -tolerance(T)) | !(distance < distout) | (distout <= tolerance(T)/2)
+    ifelse(miss, T(Inf), distance)
 end
 
 function safety_to_out(box::Box{T}, point::Point3{T}) where T<:AbstractFloat

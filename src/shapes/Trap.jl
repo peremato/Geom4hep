@@ -129,25 +129,21 @@ function distance_to_out(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T wh
     (; z, planes) = trap
     dz = dir[3]
 
-    # step 0: if point is outside any plane --> return -1, otherwise initialize at Infinity
-    outside = abs(point[3]) > z + tolerance(T)/2
-    outside && return T(-1)
-    distance = T(Inf)
-
-    # Step 1: find range of distances along dir between Z-planes (smin, smax)
-    dz != 0 && (distance = (copysign(z,dz) - point[3]) / dz)
-
-    # Step 2: find distances for intersections with side planes.
-    for i in 1:4
-        dist = T(Inf)
+    # The Trap is convex: the exit is the nearest of the planes the ray moves towards; -1 if the point
+    # is outside any plane. The distances are kept as num/den with den > 0, so that only the result
+    # is divided, and the loop has no (unpredictable) branches.
+    out = abs(point[3]) > z + tolerance(T)/2
+    num = dz == 0 ? T(Inf) : z - sign(dz) * point[3]       # Z planes
+    den = dz == 0 ? one(T) : abs(dz)
+    for i in 1:4                                           # side planes
         ndir = dot(dir, planes[i].normal)
         safe = safety(planes[i], point)
-
-        safe > tolerance(T) && return T(-1)
-        ndir > 0 && safe < tolerance(T) && (dist = -safe/ndir)
-        dist < distance && (distance = dist)
+        out |= safe > tolerance(T)
+        better = (ndir > 0) & (safe < tolerance(T)) & (-safe * den < num * ndir)
+        num = ifelse(better, -safe, num)
+        den = ifelse(better, ndir, den)
     end
-    return distance
+    return ifelse(out, T(-1), num / den)
 end
 
 function distance_to_in(trap::Trap{T}, point::Point3{T}, dir::Vector3{T})::T where T<:AbstractFloat

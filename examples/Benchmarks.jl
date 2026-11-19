@@ -2,7 +2,7 @@
 #  benchmarks of VecGeom (see `vecgeom_suite` and src/Benchmark.jl), optionally compared with VecGeom.
 #
 #  Usage (from the repository root):
-#     julia --project=examples examples/Benchmarks.jl [options] [name filter]
+#     julia --project=examples examples/Benchmarks.jl [options] [name regex]
 #  Options:
 #     --vecgeom DIR   run also the VecGeom benchmark programs found in DIR (a VecGeom build configured
 #                     with -DBUILD_TESTING=ON -DVECGEOM_TEST_BENCHMARK=ON: <build>/test/benchmark),
@@ -56,7 +56,8 @@ function run_vecgeom(dir, program, npoints, nrep)
 end
 
 #---Run------------------------------------------------------------------------------------------------
-suite = filter(b -> occursin(pattern, b.name), vecgeom_suite(T))
+suite = filter(b -> occursin(Regex(pattern), b.name), vecgeom_suite(T))
+isempty(suite) && error("no benchmark case matches \"$pattern\"")
 @printf "Geom4hep shape benchmarks (%s)%s, at least %d calls per function; times in ns per call\n" T (vgdir === nothing ? "" : ", compared with VecGeom") calls
 @printf "%-20s %-16s %10s %10s" "case" "function" "Geom4hep" "(model)"
 vgdir === nothing || @printf " %10s %10s %8s" "VecGeom" "(unspec.)" "ratio"
