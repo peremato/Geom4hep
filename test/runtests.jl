@@ -20,4 +20,5 @@ using Geom4hep, LinearAlgebra
     include("testNavigation.jl")
     include("testModel.jl")
     include("testGDML.jl")
+    include("testBenchmark.jl")
 end

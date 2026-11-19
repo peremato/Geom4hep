@@ -12,9 +12,44 @@ Current functionality:
 - System of units in `Geom4hep.Units` (`using Geom4hep.Units; Box{Float64}(1cm, 2cm, 3cm)`)
 - Flat geometry model for navigation on CPUs and GPUs (see below)
 - 3D graphics support for shapes and geometry models with [Makie](https://docs.makie.org), loaded automatically as a package extension when a Makie backend is loaded
-- Benchmark functions for shapes and a number of examples
+- Benchmarks of the shape functions following the methodology of VecGeom, and comparison with VecGeom
 
 All types are parametric on the floating point type (`Float64` or `Float32`).
+
+## Supported shapes
+The solids of Geant4 and their status in Geom4hep (✅ supported, ❌ not yet supported):
+
+| Geant4 solid | Geom4hep | GDML element | Notes |
+|---|---|---|---|
+| `G4Box` | ✅ `Box` | `box` | |
+| `G4Tubs` | ✅ `Tube` | `tube` | |
+| `G4CutTubs` | ✅ `CutTube` | `cutTube` | |
+| `G4Cons` | ✅ `Cone` | `cone` | |
+| `G4Trd` | ✅ `Trd` | `trd` | |
+| `G4Trap` | ✅ `Trap` | `trap` | |
+| `G4Sphere` | ✅ `Sphere` | `sphere` | with ϕ and θ segments |
+| `G4Orb` | ✅ `Sphere` | `orb` | as a full `Sphere` (no dedicated, faster type) |
+| `G4Torus` | ✅ `Torus` | `torus` | |
+| `G4Polycone` | ✅ `Polycone` | `polycone` | z-planes form only; not the (r, z) corners form (`genericPolycone`) |
+| `G4Polyhedra` | ✅ `Polyhedra` | `polyhedra` | z-planes form only; not the (r, z) corners form (`genericPolyhedra`) |
+| `G4UnionSolid`, `G4SubtractionSolid`, `G4IntersectionSolid` | ✅ `BooleanUnion`, `BooleanSubtraction`, `BooleanIntersection` | `union`, `subtraction`, `intersection` | safeties are conservative (0) in the flat model |
+| `G4MultiUnion` | ✅ `MultiUnion` | ❌ `multiUnion` | no acceleration structure over the components |
+| `G4Para` | ❌ | `para` | |
+| `G4GenericTrap` | ❌ | `arb8` | |
+| `G4GenericPolycone` | ❌ | `genericPolycone` | |
+| `G4EllipticalTube` | ❌ | `eltube` | |
+| `G4EllipticalCone` | ❌ | `elcone` | |
+| `G4Ellipsoid` | ❌ | `ellipsoid` | |
+| `G4Paraboloid` | ❌ | `paraboloid` | |
+| `G4Hype` | ❌ | `hype` | |
+| `G4Tet` | ❌ | `tet` | |
+| `G4ExtrudedSolid` | ❌ | `xtru` | |
+| `G4TessellatedSolid` | ❌ | `tessellated` | |
+| `G4TwistedBox`, `G4TwistedTrd`, `G4TwistedTrap`, `G4TwistedTubs` | ❌ | `twistedbox`, `twistedtrd`, `twistedtrap`, `twistedtubs` | |
+| `G4ScaledSolid` | ❌ | `scaledSolid` | |
+| `G4ReflectedSolid` | ❌ | `reflectedSolid` | |
+
+GDML solids that are not supported are replaced by `NoShape` with a warning.
 
 ## Navigation on CPUs and GPUs
 `close_geometry(world)` converts a hierarchy of volumes into a flat `GeometryModel`: all the data is stored
@@ -65,12 +100,20 @@ julia --project=examples -e 'using Pkg; Pkg.instantiate()'
 ```
 (on Julia 1.10 also run `julia --project=examples -e 'using Pkg; Pkg.develop(path=".")'`).
 
-### Benchmarks
-To run the predefined set of benchmarks for shapes do:
+### Benchmarks of the shapes
+`benchmark_shape` times the shape functions (`inside`, `contains`, `distance_to_in`, `safety_to_in`,
+`distance_to_out`, `safety_to_out`) with the methodology of the shape benchmarks of VecGeom (world box,
+sampling of the points and directions, 50% of the points inside, 80% of the rays hitting the shape),
+and `vecgeom_suite()` has the setups of the VecGeom benchmark programs (`test/benchmark/*Benchmark.cpp`)
+for the shapes of Geom4hep. The example runs the suite and reports the time per call, directly on the
+shapes and through the dispatch of the flat model:
 ```
-julia --project=examples examples/Benchmarks.jl
+julia --project=examples examples/Benchmarks.jl [name filter]
 ```
-Note that the times are the total time for all points being considered. Divide by the number of points to obtain the execution time per function invocation.
+With `--vecgeom DIR` it also runs the VecGeom benchmark programs found in `DIR` with the same numbers of
+points and repetitions, and compares the timings (VecGeom configured with `-DBUILD_TESTING=ON
+-DVECGEOM_TEST_BENCHMARK=ON`; the programs are in `<build>/test/benchmark`). The results are also
+written to a CSV file (`--csv FILE`, default `benchmarks.csv`).
 
 ### Draw a Detector
 The example `DrawDetector.jl` constructs a detector model and draws a 3D image of it. To keep the graphics window alive run it with the julia option `-i` (interactive).
