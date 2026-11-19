@@ -139,3 +139,6 @@ The example `Render.jl` draws the density of the material in slices of the CMS 2
 ```
 julia --project=examples -t auto examples/Render.jl
 ```
+
+## License
+Geom4hep.jl is distributed under the [Apache License 2.0](LICENSE).
