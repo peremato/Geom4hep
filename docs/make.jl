@@ -32,13 +32,13 @@ makedocs(;
     ],
     checkdocs = :exports,
     warnonly = [:missing_docs],
-    repo = Remotes.GitHub("peremato", "Geom4hep"),
+    repo = Remotes.GitHub("JuliaHEP", "Geom4hep.jl"),
     sitename = "Geom4hep.jl",
     authors = "Pere Mato",
 )
 
 #---Deploy the documentation-----------------------------------------------------------------------
 deploydocs(;
-    repo = "github.com/peremato/Geom4hep",
+    repo = "github.com/JuliaHEP/Geom4hep.jl",
     push_preview = true,
 )

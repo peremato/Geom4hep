@@ -34,7 +34,7 @@ Geom4hep.jl is not yet registered. Install it from GitHub:
 
 ```julia
 julia> using Pkg
-julia> Pkg.add(url="https://github.com/peremato/Geom4hep")
+julia> Pkg.add(url="https://github.com/JuliaHEP/Geom4hep.jl")
 ```
 
 The drawing functions are a package extension, activated when a Makie backend (`GLMakie`,
