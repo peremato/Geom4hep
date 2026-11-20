@@ -1,0 +1,96 @@
+# # Navigation
+#
+# This example closes a geometry into a flat `GeometryModel`, follows rays through it with the
+# navigator, and makes X-ray images of it. The same navigator runs on GPUs.
+
+#md # !!! note "Note that"
+#md #     You can also download this example as a
+#md #     [Jupyter notebook](Navigation.ipynb) and a plain
+#md #     [Julia source file](Navigation.jl).
+#
+#md # #### Table of contents
+#md # ```@contents
+#md # Pages = ["Navigation.md"]
+#md # Depth = 2:3
+#md # ```
+
+# ## Loading the modules
+using Geom4hep, Geom4hep.Units
+using CairoMakie: CairoMakie, Figure, Axis, heatmap!, lines!, Colorbar
+
+# ## A geometry
+# A box of water with a lead ball inside, a steel shell around it, and a hole along z.
+function build(T)
+    world = Volume{T}("world", Box{T}(50cm, 50cm, 50cm), Material{T}("air"; density=0.0012))
+    shell = Volume{T}("shell", Sphere{T}(36cm, 38cm), Material{T}("steel"; density=7.9))
+    tank  = Volume{T}("tank", BooleanSubtraction(Box{T}(20cm, 20cm, 20cm), Tube{T}(0, 3cm, 25cm, 0, 2π)),
+                      Material{T}("water"; density=1.0))
+    ball  = Volume{T}("ball", Sphere{T}(0, 8cm), Material{T}("lead"; density=11.35))
+    place_daughter!(tank, Transformation3D{T}(12cm, 0, 0), ball)
+    place_daughter!(world, one(Transformation3D{T}), shell)
+    place_daughter!(world, one(Transformation3D{T}), tank)
+    return world
+end
+world = build(Float64);
+
+# ## Closing the geometry
+# `close_geometry` converts the hierarchy into a `GeometryModel`: flat arrays of plain structures,
+# shapes called without dynamic dispatch and boolean shapes as CSG programs. With `with_index=true`
+# it also returns the `Volume` and `Material` of each index of the model, to get their names.
+model, index = close_geometry(world; with_index=true)
+model
+
+# ## Locating points
+# `locate` gives the navigation state of a point: the deepest volume that contains it, and the
+# path of placements to it.
+name(state) = in_world(state) ? index.volumes[state.volume].label : "outside"
+[name(locate(model, Point3(x, 0.0, 0.0))) for x in (0.0, 12cm, 25cm, 37cm, 45cm, 60cm)]
+
+# ## Following a ray
+# `compute_step` gives the distance to the next boundary along a direction, and the state after
+# crossing it. Repeating it until the ray leaves the world gives the volumes it crosses.
+function follow(model, point, dir)
+    state = locate(model, point)
+    crossings = []
+    while in_world(state)
+        step, next = compute_step(model, state, point, dir, Inf)
+        push!(crossings, (volume=name(state), step=step))
+        point += step * dir
+        state = next
+    end
+    return crossings
+end
+follow(model, Point3(-49cm, 1cm, 0.0), Vector3(1.0, 0.0, 0.0))
+
+# Along z the ray goes through the hole of the tank:
+follow(model, Point3(0.0, 0.0, -49cm), Vector3(0.0, 0.0, 1.0))
+
+# ## X-ray images
+# `xray` integrates the density along parallel rays (the mass thickness), on the CPU with Julia
+# threads or on a GPU. Here the rays are parallel to the z axis (axis 3) and to the x axis (axis 1).
+u, v, image, nsteps = xray(model, 3, 300)
+fig = Figure(size=(900, 400))
+ax = Axis(fig[1, 1], aspect=1, title="along z", xlabel="x (mm)", ylabel="y (mm)")
+hm = heatmap!(ax, u, v, image, colormap=:grays)
+u, v, image, nsteps = xray(model, 1, 300)
+ax = Axis(fig[1, 2], aspect=1, title="along x", xlabel="y (mm)", ylabel="z (mm)")
+heatmap!(ax, u, v, image, colormap=:grays)
+Colorbar(fig[1, 3], hm, label="mass thickness (g/cm³ × mm)")
+fig
+
+# ## Single precision and GPUs
+# The same geometry in single precision gives the same results within the precision of `Float32`.
+model32 = close_geometry(build(Float32))
+u, v, image32, _ = xray(model32, 1, 300)
+maximum(abs, image32 - image) / maximum(image)
+
+# To run on a GPU, load its KernelAbstractions backend and give it to `xray`; the model is copied to
+# the GPU (Apple GPUs need `Float32`):
+#
+# ```julia
+# using Metal
+# u, v, image, nsteps = xray(model32, 1, 1000; backend=MetalBackend())
+# ```
+#
+# The navigator functions (`locate`, `compute_step`) can also be called from your own kernels: the
+# model is a plain isbits structure once adapted to the GPU with `Adapt.adapt(backend, model)`.

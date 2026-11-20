@@ -1,0 +1,69 @@
+# # Benchmarks
+#
+# This example times the shape functions with the methodology of the shape benchmarks of
+# [VecGeom](https://gitlab.cern.ch/VecGeom/VecGeom), so that the results can be compared with it.
+
+#md # !!! note "Note that"
+#md #     You can also download this example as a
+#md #     [Jupyter notebook](Benchmarks.ipynb) and a plain
+#md #     [Julia source file](Benchmarks.jl).
+#
+#md # #### Table of contents
+#md # ```@contents
+#md # Pages = ["Benchmarks.md"]
+#md # Depth = 2:3
+#md # ```
+
+# ## Loading the modules
+using Geom4hep, Printf
+using CairoMakie: CairoMakie, Figure, Axis, barplot!
+
+# ## Benchmarking a shape
+# `benchmark_shape` places the shape in a world box, samples points in the box (half of them inside
+# the shape, as VecGeom) and directions (with 80% of the rays from outside hitting the shape), and
+# times each shape function. `:shape` calls the function on the shape directly, `:model` through the
+# dispatch of a `GeometryModel`, as the navigator does. The result has one row per mode and function,
+# with the time per call in ns.
+rows = benchmark_shape(Torus{Float64}(1.2, 3.1, 5, 0, 2π); npoints=1024, nrep=10, verbose=false)
+for r in rows
+    @printf "%-6s %-16s %8.1f ns\n" r.mode r.op r.ns
+end
+
+# ## The VecGeom suite
+# `vecgeom_suite` has the setups of the VecGeom benchmark programs (`test/benchmark/*Benchmark.cpp`)
+# for the shapes of Geom4hep: the same shape parameters, world box, placement and numbers of points.
+suite = vecgeom_suite(Float64)
+[(b.name, b.vecgeom) for b in suite][1:6]
+
+# Running the suite gives the time per call of each function for each shape:
+results = Dict(b.name => benchmark_shape(b; verbose=false) for b in suite)
+ops = (:inside, :distance_to_in, :distance_to_out, :safety_to_in, :safety_to_out)
+@printf "%-18s" "case"; foreach(op -> @printf("%16s", op), ops); println()
+for b in suite
+    @printf "%-18s" b.name
+    for op in ops
+        @printf "%16.1f" only(r.ns for r in results[b.name] if r.mode == :shape && r.op == op)
+    end
+    println()
+end
+
+# The times per call of `distance_to_in`, for each shape:
+names = [b.name for b in suite]
+times = [only(r.ns for r in results[n] if r.mode == :shape && r.op == :distance_to_in) for n in names]
+fig = Figure(size=(900, 400))
+ax = Axis(fig[1, 1], ylabel="ns per call", yscale=log10, xticks=(1:length(names), names),
+          xticklabelrotation=π/3, title="distance_to_in")
+barplot!(ax, 1:length(names), times)
+fig
+
+# ## Comparison with VecGeom
+# The script `examples/Benchmarks.jl` of the repository runs the suite and, given a VecGeom build
+# configured with `-DBUILD_TESTING=ON -DVECGEOM_TEST_BENCHMARK=ON`, the VecGeom benchmark programs
+# with the same numbers of points and repetitions, and prints the ratios of the times:
+#
+# ```
+# julia --project=examples examples/Benchmarks.jl --vecgeom <vecgeom-build>/test/benchmark
+# ```
+#
+# Note that the timings of these examples, run while building the documentation on a shared
+# machine, are only indicative.
