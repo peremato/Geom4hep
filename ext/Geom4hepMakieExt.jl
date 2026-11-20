@@ -130,7 +130,7 @@ function draw_distance_to_in(shape::AbstractShape{T}, N::Integer) where T<:Abstr
     fig = Figure()
     s = LScene(fig[1, 1])
     scatter!(s, _gbpoint.(result), color=:black, markersize=1)
-    scatter!(s, _gbpoint.([low, hi]), color=:blue, markersize=10)
+    scatter!(s, _gbpoint.([extent(shape)...]), color=:blue, markersize=10)
     return fig
 end
 
