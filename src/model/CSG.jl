@@ -169,6 +169,10 @@ function normal(c::CSGShape{T}, point::Point3{T})::Vector3{T} where T
     return zero(Vector3{T})
 end
 
-extent(c::CSGShape{T}) where T = (c.csg.aabb.min, c.csg.aabb.max)
+# the bounding box is enlarged by the tolerance (see _tol_aabb), the extent is not
+function extent(c::CSGShape{T}) where T
+    tol = Vector3{T}(tolerance(T), tolerance(T), tolerance(T))
+    (c.csg.aabb.min + tol, c.csg.aabb.max - tol)
+end
 safety_to_in(c::CSGShape{T}, point::Point3{T}) where T = zero(T)       # conservative
 safety_to_out(c::CSGShape{T}, point::Point3{T}) where T = zero(T)

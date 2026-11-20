@@ -38,10 +38,15 @@ const BooleanSubtraction{T} =  BooleanShape{T, :subtraction}
 "See [`BooleanUnion`](@ref)."
 const BooleanIntersection{T} = BooleanShape{T, :intersection}
 
-# Since all the other constructors only use 3 arguments we can sneak the AABB calc in here
+# Since all the other constructors only use 3 arguments we can sneak the AABB calc in here.
+# The boxes are enlarged by the tolerance, so that the points on the surface of an operand that touches
+# its bounding box are not discarded by the quick checks.
 function BooleanShape{T,OP}(left, right, place) where {T, OP}
-    left_aabb = AABB(extent(left)...)
-    right_aabb = AABB(transform_extent(extent(right), place)...)
+    tol = Vector3{T}(tolerance(T), tolerance(T), tolerance(T))
+    lo, hi = extent(left)
+    left_aabb = AABB{T}(lo - tol, hi + tol)
+    lo, hi = transform_extent(extent(right), place)
+    right_aabb = AABB{T}(lo - tol, hi + tol)
     BooleanShape{T,OP,TreeOperand{T},TreeOperand{T}}(left, right, place, left_aabb, right_aabb)
 end
 
@@ -122,6 +127,81 @@ function extent(shape::BooleanIntersection{T})::Tuple{Point3{T},Point3{T}} where
 end
 
  
+#---Probes for the points on the surface of both operands--------------------------------------------
+#   There the classification depends on the neighbourhood of the point: the operands may only touch
+#   (a seam of a union, or coinciding faces of a subtraction) or form an edge of the boolean shape. The
+#   normals of the operands give the candidate directions, and the points at a small distance along
+#   them are classified. The normals alone are not enough: they are averaged over the faces of edges.
+_probe_point(point::Point3{T}, dir::Vector3{T}) where T = point + 2 * tolerance(T) * normalize(dir)
+
+# Is the point at a small distance from `point` along `dir` outside both operands of the union?
+function _union_probe_outside(shape::BooleanUnion{T}, point::Point3{T}, dir::Vector3{T}) where T
+    dir ⋅ dir > 0 || return false
+    probe = _probe_point(point, dir)
+    inside(shape.left, probe) == kOutside && inside(shape.right, shape.transformation * probe) == kOutside
+end
+
+# The 26 directions to the neighbours of a cell in a cubic grid, and the sum of those along which the
+# points next to `point` are outside the union: for a point on its surface, the sum is along the
+# normal of a face, and along the bisector of an edge. It is zero for a point inside.
+const _NEIGHBOUR_DIRECTIONS = Tuple((i, j, k) for i in -1:1 for j in -1:1 for k in -1:1 if (i, j, k) != (0, 0, 0))
+function _union_outside_directions(shape::BooleanUnion{T}, point::Point3{T}) where T
+    sum = zero(Vector3{T})
+    for (i, j, k) in _NEIGHBOUR_DIRECTIONS
+        dir = Vector3{T}(i, j, k)
+        _union_probe_outside(shape, point, dir) && (sum += normalize(dir))
+    end
+    return sum
+end
+
+# Normal of `shape` at a point of its surface, from a plane through four points of the surface around
+# it, found by bisection along the approximate normal `c` (the points are symmetric, so the result is
+# exact on spheres and cylinders). Returns zero if the surface is not found.
+function _fitted_normal(shape::AbstractShape{T}, point::Point3{T}, c::Vector3{T})::Vector3{T} where T
+    δ = min(1000 * tolerance(T), T(0.1))     # the surface is known within the tolerance
+    e = abs(c[1]) < T(0.6) ? Vector3{T}(1, 0, 0) : Vector3{T}(0, 1, 0)
+    u = normalize(c × e)
+    v = c × u
+    function surface_point(q)
+        lo, hi = -2δ, 2δ                                     # inside at lo, outside at hi
+        inside(shape, q + lo * c) == kOutside && return nothing
+        inside(shape, q + hi * c) == kOutside || return nothing
+        while hi - lo > tolerance(T) / 4
+            mid = (lo + hi) / 2
+            inside(shape, q + mid * c) == kOutside ? (hi = mid) : (lo = mid)
+        end
+        return q + (lo + hi) / 2 * c
+    end
+    pu1, pu2 = surface_point(point + δ * u), surface_point(point - δ * u)
+    pv1, pv2 = surface_point(point + δ * v), surface_point(point - δ * v)
+    any(isnothing, (pu1, pu2, pv1, pv2)) && return zero(Vector3{T})
+    n = (pu1 - pu2) × (pv1 - pv2)
+    n ⋅ n > 0 || return zero(Vector3{T})
+    n = normalize(n)
+    return n ⋅ c < 0 ? -n : n
+end
+
+# Normal on an edge of a boolean shape from the approximate normal `c`, refined with the surface around
+# the point. One of the `candidates` (normals of the operands) is returned if it agrees, as it is exact.
+function _refined_normal(shape::BooleanShape{T}, point::Point3{T}, c::Vector3{T}, candidates::Vector3{T}...)::Vector3{T} where T
+    c = normalize(c)
+    f = _fitted_normal(shape, point, c)
+    f ⋅ f > 0 && (c = f)
+    for n in candidates
+        n ⋅ n > 0 || continue
+        n = normalize(n)
+        n ⋅ c > 1 - T(1e-4) && return n
+    end
+    return c
+end
+
+# Is the point at a small distance from `point` along `dir` inside A and outside B?
+function _subtraction_probe_inside(shape::BooleanSubtraction{T}, point::Point3{T}, dir::Vector3{T}) where T
+    dir ⋅ dir > 0 || return false
+    probe = _probe_point(point, dir)
+    inside(shape.left, probe) == kInside && inside(shape.right, shape.transformation * probe) == kOutside
+end
+
 function inside(shape::BooleanUnion{T}, point::Point3{T})::Int64 where {T}
 
     course_inside_left = inside(shape.left_aabb, point)
@@ -144,13 +224,16 @@ function inside(shape::BooleanUnion{T}, point::Point3{T})::Int64 where {T}
     positionB == kInside && return kInside
 
     if positionA == kSurface && positionB == kSurface
+        # On the surface of both operands: on the surface of the union if there are points outside
+        # both operands next to it, and inside if the operands touch there (a seam -)(-). The normals of
+        # the operands are averaged at their edges, so their sign alone does not tell: the candidate
+        # directions are probed instead.
         normalA = normal(left, point)
         normalB = normal(right, lpoint) * transformation
-        if dot(normalA, normalB) < 0
-            return kInside    # touching solids -)(-
-        else 
-            return kSurface   # overlapping solids =))
-        end
+        _union_probe_outside(shape, point, normalA + normalB) && return kSurface
+        _union_probe_outside(shape, point, normalA) && return kSurface
+        _union_probe_outside(shape, point, normalB) && return kSurface
+        return _union_outside_directions(shape, point) == zero(Vector3{T}) ? kInside : kSurface
     elseif positionA == kSurface || positionB == kSurface
         return kSurface
     else
@@ -203,12 +286,25 @@ function inside(shape::BooleanSubtraction{T}, point::Point3{T})::Int64  where {T
     elseif positionA == kInside && positionB == kSurface ||
            positionB == kOutside && positionA == kSurface
         return kSurface
+    elseif positionA == kSurface && positionB == kSurface
+        # On the surface of both operands: on an edge of the subtraction if there are points of A - B
+        # next to it, and outside if the faces of A and B coincide. As for the union, the candidate
+        # directions given by the normals are probed.
+        normalA = normal(left, point)
+        normalB = normal(right, lpoint) * transformation
+        _subtraction_probe_inside(shape, point, normalB - normalA) && return kSurface
+        _subtraction_probe_inside(shape, point, -normalA) && return kSurface
+        _subtraction_probe_inside(shape, point, normalB) && return kSurface
+        return kOutside
     else
         return kOutside
     end
 end
 
 #---Normals------------------------------------------------------------------------------------------
+#   On the surface of a single operand the normal is the one of the operand. On the surface of both
+#   (edges and seams) the combination of their normals is only an estimate, refined by probing the
+#   shape around the point (see _refined_normal).
 _unit_or_zero(n::Vector3{T}) where T = n ⋅ n > 0 ? normalize(n) : zero(Vector3{T})
 
 function normal(shape::BooleanUnion{T}, point::Point3{T})::Vector3{T} where {T}
@@ -219,8 +315,16 @@ function normal(shape::BooleanUnion{T}, point::Point3{T})::Vector3{T} where {T}
         return normal(left, point)
     elseif posB == kSurface && posA == kOutside
         return normal(right, lpoint) * transformation
-    elseif posA == kSurface && posB == kSurface      # overlapping faces (touching faces give zero)
-        return _unit_or_zero(normal(left, point) + normal(right, lpoint) * transformation)
+    elseif posA == kSurface && posB == kSurface
+        nA, nB = normal(left, point), normal(right, lpoint) * transformation
+        nA ⋅ nB > 1 - √eps(T) && return _unit_or_zero(nA + nB)     # coinciding faces
+        # Seams and edges: the normals of the operands are averaged over their own edges, and their sum
+        # is not the normal of the union when several operands meet (e.g. at a face divided into four).
+        # The directions to the outside give an estimate, refined with the surface around the point.
+        # An operand normal that agrees with it is returned as it is exact.
+        c = _union_outside_directions(shape, point)
+        c ⋅ c > 0 || return zero(Vector3{T})                       # on a seam inside the union
+        return _refined_normal(shape, point, c, nA + nB, nA, nB)
     end
     return zero(Vector3{T})
 end
@@ -234,7 +338,10 @@ function normal(shape::BooleanSubtraction{T}, point::Point3{T})::Vector3{T} wher
     elseif posB == kSurface && posA == kInside
         return -(normal(right, lpoint) * transformation)
     elseif posA == kSurface && posB == kSurface      # edge where the cut meets the outer surface
-        return _unit_or_zero(normal(left, point) - normal(right, lpoint) * transformation)
+        nA, nB = normal(left, point), normal(right, lpoint) * transformation
+        c = nA - nB
+        c ⋅ c > 0 || return zero(Vector3{T})
+        return _refined_normal(shape, point, c, nA - nB, nA, -nB)
     end
     return zero(Vector3{T})
 end
@@ -248,7 +355,10 @@ function normal(shape::BooleanIntersection{T}, point::Point3{T})::Vector3{T} whe
     elseif posB == kSurface && posA == kInside
         return normal(right, lpoint) * transformation
     elseif posA == kSurface && posB == kSurface
-        return _unit_or_zero(normal(left, point) + normal(right, lpoint) * transformation)
+        nA, nB = normal(left, point), normal(right, lpoint) * transformation
+        c = nA + nB
+        c ⋅ c > 0 || return zero(Vector3{T})
+        return _refined_normal(shape, point, c, nA + nB, nA, nB)
     end
     return zero(Vector3{T})
 end

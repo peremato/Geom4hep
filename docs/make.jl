@@ -12,7 +12,7 @@ function process_literate(names...)
     return mds
 end
 
-example_mds = process_literate("Shapes", "Volumes", "Navigation", "GDML", "Benchmarks")
+example_mds = process_literate("Shapes", "Volumes", "Navigation", "GDML", "RoundCube", "Benchmarks")
 
 #---Build the documentation-----------------------------------------------------------------------
 makedocs(;
