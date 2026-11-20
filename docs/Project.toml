@@ -4,5 +4,8 @@ Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Geom4hep = "eb5d0804-93e0-431a-a4d4-b4f95b95575a"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 
-[sources]
-Geom4hep = {path = ".."}
+[sources.Geom4hep]
+path = ".."
+
+[compat]
+Documenter = "1"
