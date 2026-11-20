@@ -17,3 +17,6 @@
     - Drawing functions moved to a Makie package extension.
 - Fixes:
     - Many fixes of the shape functions at surfaces and for grazing rays.
+    - Boolean shapes: `inside` and `normal` at the points on the surface of both operands (seams of
+      unions, edges where the cut of a subtraction meets the surface), and the quick bounding box
+      checks for the points on the surface of an operand.

@@ -52,6 +52,30 @@
         @test distance_to_out(i, P(5), mxdir) ≈ 5
     end
 
+    @testset "Seams and edges" begin
+        # a box x, y ∈ [-10, 10], z ∈ [-5, 5] made of four blocks: seams on the planes x = 0 and y = 0
+        b = Box{T}(5, 5, 5)
+        q(x, y) = Transformation3D{T}(x, y, 0)
+        u = BooleanUnion(BooleanUnion(BooleanUnion(b, b, q(5, 5)), b, q(-5, 5)), b, q(5, -5))
+        u = BooleanUnion(u, b, q(-5, -5))
+        @test inside(u, P(0, 3, 0)) == kInside             # on a seam inside the union
+        @test inside(u, P(0, 0, 0)) == kInside             # on the four blocks
+        @test normal(u, P(0, 3, 0)) == zero(Vector3{T})
+        @test inside(u, P(0, 10, 0)) == kSurface           # where a seam meets the surface
+        @test normal(u, P(0, 10, 0)) ≈ Vector3{T}(0, 1, 0)
+        @test inside(u, P(0, 0, 5)) == kSurface            # centre of a face divided in four
+        @test normal(u, P(0, 0, 5)) ≈ Vector3{T}(0, 0, 1)
+        @test inside(u, P(10, 0, 5)) == kSurface           # edge of the box on a seam
+        @test normal(u, P(10, 0, 5)) ≈ normalize(Vector3{T}(1, 0, 1))
+        # edge where the cut of a subtraction meets the outer surface: a slot x ∈ [5, 15], |y| < 5
+        s = BooleanSubtraction(b10, Box{T}(5, 5, 20), shiftx)
+        @test inside(s, P(7, 5, 10)) == kSurface
+        @test normal(s, P(7, 5, 10)) ≈ normalize(Vector3{T}(0, -1, 1))
+        @test inside(s, P(7, 0, 10)) == kOutside           # in the slot, on the removed part of the face
+        @test inside(s, P(7, 7, 10)) == kSurface
+        @test normal(s, P(7, 7, 10)) ≈ Vector3{T}(0, 0, 1)
+    end
+
     @testset "Nested" begin
         # (b10 ∪ b10@+10) − b5 : hole around the origin
         n = BooleanSubtraction(BooleanUnion(b10, b10, shiftx), b5)

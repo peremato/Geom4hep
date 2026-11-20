@@ -12,6 +12,7 @@ or a plain Julia script.
 | [Volumes](examples/Volumes.md) | Building a hierarchy of volumes and drawing it |
 | [Navigation](examples/Navigation.md) | Closing a geometry, following rays through it and X-ray images |
 | [GDML](examples/GDML.md) | Reading GDML files: the CMS 2018 detector |
+| [RoundCube](examples/RoundCube.md) | Porting a Geant4 solid built from boolean operations, and checking it |
 | [Benchmarks](examples/Benchmarks.md) | Timing the shape functions with the methodology of VecGeom |
 
 ## Setting up an environment
