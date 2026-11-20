@@ -101,8 +101,7 @@ function _convert_shape!(b::_ModelBuilder{T}, shape::_BooleanLike{T}) where T
     comps, prog = CSGComponent{T}[], Int32[]
     depth = _emit_csg!(b, comps, prog, shape, one(Transformation3D{T}))
     depth <= CSG_MAX_STACK || error("Boolean shape too complex: the CSG program needs a stack of $depth > $CSG_MAX_STACK")
-    lo, hi = extent(shape)
-    csg = FlatCSG{T}(length(b.csg_components), length(comps), length(b.csg_program), length(prog), AABB{T}(lo, hi))
+    csg = FlatCSG{T}(length(b.csg_components), length(comps), length(b.csg_program), length(prog), _tol_aabb(shape, one(Transformation3D{T})))
     append!(b.csg_components, comps)
     append!(b.csg_program, prog)
     _store!(b, csg, 1)

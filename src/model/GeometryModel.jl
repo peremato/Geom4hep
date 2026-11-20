@@ -81,7 +81,7 @@ struct FlatCSG{T<:AbstractFloat}
     ncomp::Int32
     first_op::Int32      # offset in `csg_program`
     nops::Int32
-    aabb::AABB{T}        # extent of the boolean shape
+    aabb::AABB{T}        # extent of the boolean shape (with tolerance)
 end
 
 "Shape that is never inside and never hit (replaces unsupported shapes)."
