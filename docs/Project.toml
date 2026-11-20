@@ -9,3 +9,5 @@ path = ".."
 
 [compat]
 Literate = "2"
+Documenter = "1"
+CairoMakie = "0.15"
